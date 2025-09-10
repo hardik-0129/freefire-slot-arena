@@ -1,0 +1,486 @@
+.match-slot-wrapper {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  padding: 20px;
+  background: #ffffff;
+  width: 100%;
+  max-width: 100%;
+}
+
+.match-slot {
+  width: 50%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  overflow-x: auto;
+  min-width: 0;
+  /* Allow flex items to shrink */
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  text-align: left;
+  padding: 7.5px 12px;
+  color: #111;
+}
+
+td {
+  padding: 7.5px 12px;
+  font-size: 16px;
+  color: #000;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid #888;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+}
+
+/* Checkmark default (black) */
+input[type="checkbox"]:checked::after {
+  content: '✔';
+  position: absolute;
+  font-size: 10px;
+  color: #fff;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Checked background */
+input[type="checkbox"]:checked {
+  background-color: #111;
+  border-color: #111;
+}
+
+/* Orange variation */
+input[type="checkbox"].orange:checked {
+  background-color: #f7931a;
+  border-color: #f7931a;
+}
+
+input[type="checkbox"].orange:checked::after {
+  color: #fff;
+}
+
+/* Disabled checkbox styles */
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+input[type="checkbox"]:disabled:checked {
+  background-color: #f7931a;
+  border-color: #f7931a;
+}
+
+input[type="checkbox"]:disabled:checked::after {
+  color: #fff;
+}
+
+
+.match-details-container {
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.match-form-box {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  flex: 1 1 300px;
+}
+
+.form-heading {
+  background: black;
+  color: white;
+  padding: 10px 20px;
+  margin: -1.5rem -1.5rem 1rem;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.details-table th{
+    font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+}
+
+.details-table th,
+.details-table td {
+  padding: 10px;
+  text-align: left;
+}
+
+.team-badge {
+  background-color: #ff9800;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.position-badge {
+  background-color: #eee;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.input-name {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #111;
+  color: white;
+  font-weight: bold;
+}
+
+.add-info {
+  color: #111;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.Current-Balance {
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.payment-details {
+  flex: 1 1 300px;
+}
+
+.payment-details p {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 25px;
+  display: flex;
+  gap: 5px;
+}
+
+.payment-details img {
+  width: 25px;
+  margin: 0 5px;
+  vertical-align: middle;
+}
+
+.error-note {
+  margin-top: 20px;
+  padding: 10px 16px;
+  background-color: #EC656B;
+  color: white;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.cancel-btn {
+  flex: 1;
+  background-color: #EC656B;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  margin: 12px 0 0 0px;
+}
+
+.join-btn {
+  flex: 3;
+  background-color: #000;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.join-btn img {
+  width: 22px;
+}
+
+@media (max-width: 768px) {
+  .match-slot-wrapper {
+    flex-direction: column;
+    gap: 16px;
+    padding: 15px;
+  }
+
+  .match-slot {
+    width: 100%;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  th {
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  td {
+    padding: 1px 8px;
+    font-size: 16px;
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .match-details-container {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  .details-table th,
+  .details-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* .cancel-btn,
+  .join-btn {
+    flex: none;
+    width: 100%;
+  } */
+}
+
+@media (max-width: 425px) {
+  .match-slot-wrapper {
+    flex-direction: column;
+    gap: 16px;
+    padding: 15px 10px;
+  }
+
+  .match-slot {
+    width: 100%;
+    padding: 15px 10px;
+    border-radius: 12px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th {
+    padding: 8px 4px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  td {
+    padding: 6px 4px;
+    font-size: 16px;
+    color: #000;
+    text-align: center;
+  }
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0 auto;
+  }
+
+  .payment-details {
+    flex: 1 1 222px;
+    padding: 15px;
+  }
+
+  /* .match-form-box {
+    padding: 1rem;
+  } */
+
+  .details-table {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .details-table th {
+    padding: 6px 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .details-table td {
+    padding: 6px 4px;
+    font-size: 12px;
+    vertical-align: middle;
+  }
+
+  .team-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+
+  .position-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+
+  .input-name {
+    padding: 4px 6px;
+    font-size: 12px;
+    min-width: 120px;
+  }
+
+  .form-heading {
+    font-size: 14px;
+    padding: 8px 15px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .Current-Balance {
+  font-size: 16px;
+  font-weight: 850;
+}
+
+  .cancel-btn,
+  .join-btn {
+    font-size: 14px;
+  }
+
+}
+
+@media (max-width: 375px) {
+  .match-slot-wrapper {
+    padding: 10px 5px;
+    gap: 12px;
+  }
+
+  .match-slot {
+    padding: 12px 8px;
+    border-radius: 8px;
+  }
+
+  table {
+    font-size: 11px;
+  }
+
+  th {
+    padding: 6px 2px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  td {
+    padding: 4px 2px;
+    font-size: 11px;
+    color: #000;
+  }
+
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+  }
+
+  .payment-details {
+    padding: 12px;
+  }
+
+  .payment-details p {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .details-table {
+    font-size: 11px;
+  }
+
+  .details-table th {
+    padding: 4px 2px;
+    font-size: 11px;
+  }
+
+  .details-table td {
+    padding: 4px 2px;
+    font-size: 11px;
+  }
+
+  .team-badge,
+  .position-badge {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+
+  .input-name {
+    padding: 3px 4px !important;
+    font-size: 11px !important;
+    min-width: 100px;
+  }
+
+  .form-heading {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+
+  /* .cancel-btn,
+  .join-btn {
+    padding: 10px;
+    font-size: 12px;
+  } */
+
+  .payment-details {
+    flex: 1 1 174px;
+  }
+
+  .match-form-box {
+    flex: 1 1 223px;
+  }
+}

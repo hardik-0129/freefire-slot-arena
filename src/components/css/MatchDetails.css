@@ -1,0 +1,95 @@
+
+/* Price badges row: default (desktop/tablet) */
+.price-badges-row {
+  display: flex;
+}
+
+@media (max-width: 767px) {
+  .price-badges-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+/* .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  color: #fff;
+} */
+
+/* Orange Badge */
+.badge.orange {
+  background-color: #FF8B00;
+  color: #ffffff;
+}
+
+/* Black Badge */
+.badge.black {
+  background-color: #000;
+  color: #fff;
+}
+
+/* Prize title */
+.match-title {
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Match header */
+.match-top {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Prize badges section */
+.badges-1 {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.badges-1 > div {
+  flex-shrink: 0;
+}
+
+.price-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* spacing between badges */
+  max-width: 300px; /* optional: limits badge row width */
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #FF8B00;
+  color: #ffffff;              
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .text-\[32px\] {
+    font-size: 18px !important;
+}
+.badge { 
+  font-size: 11px !important;
+}
+}

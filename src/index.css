@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Font Definitions */
+@font-face {
+  font-family: 'LL Riforma';
+  src: url('../public/assets/fonts/LL Riforma Heavy (1).ttf') format('truetype');
+  font-weight: 850;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fustat';
+  src: url('../public/assets/fonts/fustat-latin-400-normal.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Global Body Text Styles */
+body, p,  div, input, textarea, label,
+.text, .body-text {
+  font-family: 'Fustat', sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 16px;
+  line-height: 100%;
+  letter-spacing: 0;
+}
+
+/* Global Heading Styles */
+h1, h2, h3, h4, h5, h6, .h2,   
+.heading {
+  font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 850;
+  font-style: normal;
+  font-size: 42px;
+  text-transform: uppercase;
+  line-height: normal;
+}
+
+span, button, a {
+  font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+} 
+
+
+.Table-title{
+  font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 850;
+  font-style: normal;
+  font-size: 24px;
+  text-transform: uppercase;
+      line-height: normal;
+}
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+/* Custom Scrollbar Styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1A1A1A;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FF4D4F 0%, #FF7875 100%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FF7875 0%, #FFA39E 100%);
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #FF4D4F #1A1A1A;
+}
+
+.coin-icon {
+  width: 20px;
+  height: 20px;
+}
+

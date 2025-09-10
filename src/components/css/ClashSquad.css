@@ -1,0 +1,327 @@
+/* Clash Squad Specific Styles */
+.clash-squad-select {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0F0F0F 0%, #1A1A1A 100%);
+  color: white;
+}
+
+.team-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+  border-radius: 15px;
+  border: 2px solid #3A3A3A;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.team-title {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: linear-gradient(45deg, #FF4D4F, #FF7875);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(255, 77, 79, 0.3);
+}
+
+.team-table {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.team-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0F0F0F;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.team-table th {
+  background: linear-gradient(45deg, #2A2A2A, #3A3A3A);
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  border-bottom: 2px solid #FF4D4F;
+}
+
+.team-table td {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid #3A3A3A;
+}
+
+.position-btn {
+  width: 120px;
+  height: 50px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.position-btn.available {
+  background: linear-gradient(45deg, #52C41A, #73D13D);
+  color: white;
+  box-shadow: 0 4px 15px rgba(82, 196, 26, 0.3);
+}
+
+.position-btn.available:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);
+}
+
+.position-btn.selected {
+  background: linear-gradient(45deg, #FF4D4F, #FF7875);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 77, 79, 0.3);
+}
+
+.position-btn.selected:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 77, 79, 0.4);
+}
+
+.position-btn.booked {
+  background: linear-gradient(45deg, #8C8C8C, #BFBFBF);
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.player-details {
+  margin-top: 40px;
+  padding: 25px;
+  background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+  border-radius: 15px;
+  border: 2px solid #3A3A3A;
+}
+
+.player-details h3 {
+  color: #FF4D4F;
+  font-size: 22px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.player-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0F0F0F;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.player-table th {
+  background: linear-gradient(45deg, #2A2A2A, #3A3A3A);
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-weight: bold;
+  border-bottom: 2px solid #FF4D4F;
+}
+
+.player-table td {
+  padding: 15px;
+  text-align: center;
+  border-bottom: 1px solid #3A3A3A;
+}
+
+.team-badge {
+  background: linear-gradient(45deg, #FF4D4F, #FF7875);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.position-badge {
+  background: linear-gradient(45deg, #52C41A, #73D13D);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.input-name {
+  width: 200px;
+  padding: 10px 15px;
+  border: 2px solid #3A3A3A;
+  border-radius: 8px;
+  background: #2A2A2A;
+  color: white;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.input-name:focus {
+  outline: none;
+  border-color: #FF4D4F;
+  box-shadow: 0 0 10px rgba(255, 77, 79, 0.3);
+}
+
+.input-name::placeholder {
+  color: #8C8C8C;
+}
+
+.payment-details {
+  margin-top: 40px;
+  padding: 25px;
+  background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+  border-radius: 15px;
+  border: 2px solid #3A3A3A;
+}
+
+.payment-summary {
+  background: #0F0F0F;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #3A3A3A;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #3A3A3A;
+}
+
+.payment-row:last-child {
+  border-bottom: none;
+}
+
+.payment-row.total {
+  font-weight: bold;
+  font-size: 18px;
+  color: #52C41A;
+  border-top: 2px solid #FF4D4F;
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+.balance {
+  color: #52C41A;
+  font-weight: bold;
+}
+
+.fee, .count {
+  color: #FF4D4F;
+  font-weight: bold;
+}
+
+.amount {
+  color: #52C41A;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.booking-note {
+  background: linear-gradient(45deg, #FF4D4F, #FF7875);
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px 0;
+  font-weight: bold;
+}
+
+/* .action-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 25px;
+} */
+
+/* .cancel-btn, .join-btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 150px;
+} */
+
+.cancel-btn {
+  background: linear-gradient(45deg, #8C8C8C, #BFBFBF);
+  color: white;
+}
+
+.cancel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(140, 140, 140, 0.3);
+}
+
+.join-btn {
+  background: linear-gradient(45deg, #52C41A, #73D13D);
+  color: white;
+}
+
+.join-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);
+}
+
+.join-btn.disabled {
+  background: linear-gradient(45deg, #8C8C8C, #BFBFBF);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .select-slot-container {
+    flex-direction: column;
+  }
+  
+  .position-selector {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 20px;
+  }
+  
+  .match-details {
+    width: 100%;
+  }
+  
+  .team-table table {
+    font-size: 14px;
+  }
+  
+  .position-btn {
+    width: 100px;
+    height: 45px;
+    font-size: 12px;
+  }
+  
+  /* .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  } */
+  
+  /* .cancel-btn, .join-btn {
+    width: 100%;
+    max-width: 300px;
+  } */
+}

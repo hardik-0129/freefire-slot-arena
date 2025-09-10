@@ -1,0 +1,227 @@
+.winner-table-container {
+  max-width: 500px;
+  margin: 20px auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.winner-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.winner-table thead {
+  background-color: #000;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 16px;
+}
+
+.winner-table thead th {
+  background-color: #FF8B00;
+  padding: 12px;
+  text-align: left;
+  color: #fff;
+  font-size: 13px;
+}
+
+.winner-table tbody tr:nth-child(1) {
+  color: #000;
+  font-weight: 600;
+}
+
+.winner-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #111;
+}
+
+.winner-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-title {
+  background: #000;
+  color: white;
+  padding: 12px;
+  font-weight: bold;
+  font-size: 16px;
+  text-align: center;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+/* Responsive design for tablet/small desktop screens (1024px and below) */
+@media (max-width: 1024px) {
+  .winner-table-container {
+    max-width: 450px;
+    margin: 15px auto;
+    border-radius: 10px;
+  }
+
+  .table-title {
+    padding: 10px;
+    font-size: 15px;
+  }
+
+  .winner-table thead th {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .winner-table tbody td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  /* Optimize column widths for tablet screens */
+  .winner-table th:nth-child(1),
+  .winner-table td:nth-child(1) {
+    width: 10%;
+  }
+
+  .winner-table th:nth-child(2),
+  .winner-table td:nth-child(2) {
+    width: 20%;
+  }
+
+  .winner-table th:nth-child(3),
+  .winner-table td:nth-child(3) {
+    width: 35%;
+  }
+
+  .winner-table th:nth-child(4),
+  .winner-table td:nth-child(4) {
+    width: 15%;
+  }
+
+  .winner-table th:nth-child(5),
+  .winner-table td:nth-child(5) {
+    width: 20%;
+  }
+}
+
+/* Responsive design for mobile screens */
+@media (max-width: 425px) {
+  .winner-table-container {
+    max-width: 100%;
+    margin: 15px 10px;
+    border-radius: 8px;
+  }
+
+  .table-title {
+    padding: 10px;
+    font-size: 14px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+
+  .winner-table thead th {
+    padding: 8px 4px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .winner-table tbody td {
+    padding: 8px 4px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* Make first column (rank) smaller */
+  .winner-table th:nth-child(1),
+  .winner-table td:nth-child(1) {
+    width: 10%;
+    padding: 8px 2px;
+  }
+
+  /* Team column */
+  .winner-table th:nth-child(2),
+  .winner-table td:nth-child(2) {
+    width: 18%;
+    font-size: 10px;
+  }
+
+  /* Player name column - make it responsive */
+  .winner-table th:nth-child(3),
+  .winner-table td:nth-child(3) {
+    width: 35%;
+    word-break: break-word;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Kills column */
+  .winner-table th:nth-child(4),
+  .winner-table td:nth-child(4) {
+    width: 15%;
+  }
+
+  /* Winning column */
+  .winner-table th:nth-child(5),
+  .winner-table td:nth-child(5) {
+    width: 22%;
+    font-size: 11px;
+  }
+}
+
+/* Ultra-small screens (375px and below) */
+@media (max-width: 375px) {
+  .winner-table-container {
+    margin: 10px 5px;
+    border-radius: 6px;
+  }
+
+  .table-title {
+    padding: 8px;
+    font-size: 13px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+  }
+
+  .winner-table thead th {
+    padding: 6px 2px;
+    font-size: 10px;
+  }
+
+  .winner-table tbody td {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+
+  /* Further optimize column widths for very small screens */
+  .winner-table th:nth-child(1),
+  .winner-table td:nth-child(1) {
+    width: 8%;
+    padding: 6px 1px;
+  }
+
+  .winner-table th:nth-child(2),
+  .winner-table td:nth-child(2) {
+    width: 16%;
+    font-size: 9px;
+  }
+
+  .winner-table th:nth-child(3),
+  .winner-table td:nth-child(3) {
+    width: 38%;
+    font-size: 10px;
+  }
+
+  .winner-table th:nth-child(4),
+  .winner-table td:nth-child(4) {
+    width: 14%;
+    font-size: 10px;
+  }
+
+  .winner-table th:nth-child(5),
+  .winner-table td:nth-child(5) {
+    width: 24%;
+    font-size: 10px;
+  }
+}

@@ -1,0 +1,72 @@
+/* HeroBanner.css */
+.hero-banner {
+  position: relative;
+  width: 100%;
+  height: 995px; /* Default height */
+  overflow: hidden;
+}
+
+/* Make sure Swiper takes full height of container */
+.hero-banner .swiper {
+  height: 100%;
+}
+
+.hero-banner .swiper-slide {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+}
+
+/* Ensure images cover the entire slide */
+.hero-banner .swiper-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Responsive heights */
+@media (max-width: 1439px) {
+  .hero-banner {
+    height: 773px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .hero-banner {
+    height: 425px;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-banner {
+    height: 240px;
+  }
+  
+  .hero-banner .swiper-button-prev,
+  .hero-banner .swiper-button-next {
+    display: none;
+  }
+
+  .max-w-2xl {
+    display: none;
+}
+
+}
+
+/* Hide navigation and pagination elements */
+.hero-banner .swiper-button-prev,
+.hero-banner .swiper-button-next,
+.hero-banner .swiper-pagination {
+  display: none !important;
+}
+
+/* Content styling */
+.hero-banner .max-w-2xl h2 {
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.hero-banner .max-w-2xl p {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}

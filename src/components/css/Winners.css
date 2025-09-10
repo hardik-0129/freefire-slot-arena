@@ -1,0 +1,178 @@
+/* Winner Components Styles */
+.winners-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9));
+  border-radius: 12px;
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.winner-card {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.winner-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.winners-loading .animate-pulse > div {
+  background: linear-gradient(90deg, rgba(55, 65, 81, 0.5) 25%, rgba(75, 85, 99, 0.5) 50%, rgba(55, 65, 81, 0.5) 75%);
+  background-size: 200% 100%;
+  animation: pulse-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.winners-header {
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+.winners-container {
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(31, 41, 55, 0.3);
+}
+
+.winners-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.winners-container::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3);
+  border-radius: 3px;
+}
+
+.winners-container::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 3px;
+}
+
+.winners-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+.no-winners, .winners-error {
+  background: rgba(31, 41, 55, 0.5);
+  border: 2px dashed rgba(107, 114, 128, 0.5);
+  border-radius: 8px;
+}
+
+/* Admin Dashboard Styles */
+.admin-match-card {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.admin-match-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.admin-winner-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+/* Sidebar Styles */
+.admin-sidebar {
+  backdrop-filter: blur(20px);
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.3);
+}
+
+.admin-sidebar .form-input {
+  transition: all 0.3s ease;
+  background: rgba(31, 41, 55, 0.8);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+}
+
+.admin-sidebar .form-input:focus {
+  border-color: rgba(59, 130, 246, 0.7);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .winners-section {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+  
+  .admin-winner-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-sidebar {
+    width: 100vw;
+  }
+}
+
+/* Animation for adding winners */
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.winner-card.new-winner {
+  animation: slideInFromRight 0.5s ease-out;
+}
+
+/* Prize amount styling */
+.prize-amount {
+  background: linear-gradient(45deg, #10b981, #059669);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+/* Position badges */
+.position-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.875rem;
+}
+
+.position-1 {
+  background: linear-gradient(45deg, #fbbf24, #f59e0b);
+  color: #1f2937;
+}
+
+.position-2 {
+  background: linear-gradient(45deg, #9ca3af, #6b7280);
+  color: #1f2937;
+}
+
+.position-3 {
+  background: linear-gradient(45deg, #f97316, #ea580c);
+  color: white;
+}
+
+.position-other {
+  background: linear-gradient(45deg, #374151, #1f2937);
+  color: #d1d5db;
+}

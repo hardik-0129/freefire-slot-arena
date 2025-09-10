@@ -1,0 +1,57 @@
+.sb-join-btn {
+  background-color: #FF8B00;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  padding: 12px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  width: calc(50% - 8px);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  text-transform: capitalize;
+  box-shadow: 0 2px 8px rgba(255, 132, 0, 0.3);
+}
+
+/* .sb-join-btn:hover {
+  background-color: #e67700;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 132, 0, 0.4);
+} */
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Makes icon white */
+}
+
+.result-btn {
+  background-color: #FF8B00;
+}
+
+/* .result-btn:hover {
+  background-color: #218838;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+} */
+
+/* Container for both buttons */
+.join-btn-completed {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  width: 100%;
+}
+
