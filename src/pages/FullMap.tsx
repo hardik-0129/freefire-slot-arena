@@ -202,20 +202,13 @@ const FullMap = () => {
                             Completed Matches
                         </button>
                     </div>
-
-                    <div className="card-container">
-                        {error && (
-                            <div className="text-center py-8">
-                                <p className="text-xl text-red-500 mb-4">{error}</p>
-                            </div>
-                        )}
-
-                        {visibleSlots.length === 0 && !error ? (
-                            <div className="text-center">
-                                <p className="text-xl">No {activeFilter} tournaments available at the moment.</p>
-                            </div>
-                        ) : (
-                            visibleSlots.map((slot) => {
+                    {visibleSlots.length === 0 && !error ? (
+                        <div className="w-full flex items-center justify-center py-16">
+                            <p className="text-xl text-gray-600 text-center">No {activeFilter} tournaments available at the moment.</p>
+                        </div>
+                    ) : (
+                        <div className="card-container">
+                            {visibleSlots.map((slot) => {
                                     const currentSlots = slot.maxBookings - slot.remainingBookings;
 
                                     const handleJoinClick = () => {
@@ -345,9 +338,9 @@ const FullMap = () => {
                                             </button>
                                         </div>
                                     );
-                                })
-                        )}
-                    </div>
+                            })}
+                        </div>
+                    )}
                 </div>
             </section>
             <Footer />

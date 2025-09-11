@@ -80,7 +80,7 @@ const Register: React.FC = () => {
       }
 
       // Debug: Log payload contents
-      console.log('Payload being sent:', payload);
+      // console.log('Payload being sent:', payload);
        
       // Try JSON approach first
       let res;
@@ -91,7 +91,7 @@ const Register: React.FC = () => {
           },
         });
       } catch (jsonError: any) {
-        console.log('JSON approach failed, trying FormData approach...', jsonError.response?.data);
+        // console.log('JSON approach failed, trying FormData approach...', jsonError.response?.data);
         
         // Fallback to FormData approach
         const formData = new FormData();

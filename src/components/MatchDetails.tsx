@@ -1,4 +1,4 @@
-import "./css/matchDetails.css"
+import "./css/MatchDetails.css"
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 

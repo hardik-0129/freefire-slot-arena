@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 // Import Swiper React components
 import { Swiper, SwiperSlide } from 'swiper/react';
 // Import Swiper styles
@@ -31,6 +32,7 @@ export const HeroBanner = () => {
     const [bannerData, setBannerData] = useState<BannerData>(defaultBanner);
     const [bannerImages, setBannerImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchBannerData();
@@ -171,8 +173,8 @@ export const HeroBanner = () => {
                                         </p>
                                         <Button
                                             size="lg"
-                                            className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] hover:bg-[#FF6B6B] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
-                                        >
+                                            className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
+                                            onClick={() => navigate('/tournament')}>
                                             {bannerData.buttonText}
                                         </Button>
                                     </div>

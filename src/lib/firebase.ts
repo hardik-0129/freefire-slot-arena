@@ -41,7 +41,7 @@ export const requestForToken = async (vapidKey: string): Promise<string | null> 
     if (!messaging) {
       const supported = await initializeMessaging();
       if (!supported) {
-        console.log('Firebase messaging is not supported in this browser');
+        // console.log('Firebase messaging is not supported in this browser');
         return null;
       }
     }

@@ -82,7 +82,7 @@ export const Header = () => {
             requestForToken(vapidKey).then((deviceToken) => {
                 if (deviceToken) {
                     // Send deviceToken to backend or save as needed
-                    console.log("Device token:", deviceToken);
+                    // console.log("Device token:", deviceToken);
                 } else {
                     console.warn("No device token received");
                 }
@@ -99,7 +99,7 @@ export const Header = () => {
             if (isMessagingSupported && messaging) {
                 unsubscribe = onMessage(messaging, (payload) => {
                     // You can show a toast or notification here
-                    console.log('Received foreground message:', payload);
+                    // console.log('Received foreground message:', payload);
                 });
             }
         };
@@ -151,7 +151,7 @@ export const Header = () => {
 
                     {/* Desktop Navigation */}
                     <nav className="desktop-nav">
-                        <a href="#" className="nav-link">EVENTS</a>
+                        <a href="/" className="nav-link">EVENTS</a>
                         <a href="#" className="nav-link">ABOUT US</a>
                         <a href="/tournament" className="nav-link">TOURNAMENT</a>
                         <a href="#" className="nav-link">SHOP</a>
@@ -280,10 +280,10 @@ export const Header = () => {
                 {/* Mobile Navigation Menu */}
                 <div className={`mobile-menu ${isMobileMenuOpen ? 'show' : ''}`}>
                     <nav className="mobile-nav">
-                        <a href="#events" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
-                        <a href="#about" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
+                        <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
+                        <a href="#" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
                         <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>
-                        <a href="#shop" className="mobile-nav-link" onClick={closeMobileMenu}>SHOP</a>
+                        <a href="#" className="mobile-nav-link" onClick={closeMobileMenu}>SHOP</a>
                         <a href="/contact" className="mobile-nav-link" onClick={closeMobileMenu}>CONTACT US</a>
                     </nav>
                 </div>

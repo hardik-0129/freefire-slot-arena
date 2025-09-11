@@ -68,13 +68,13 @@ const Profile = () => {
         })
             .then(res => res.json())
             .then(data => {
-                console.log('Referral earnings response:', data);
+                // console.log('Referral earnings response:', data);
                 if (data.success && Array.isArray(data.referralEarnings)) {
                     setReferralHistory(data.referralEarnings);
                     const total = data.referralEarnings.reduce((sum: number, txn: any) => sum + (txn.amount || 0), 0);
                     setTotalReferralReward(total);
                 } else {
-                    console.log('No referral earnings found or API error:', data);
+                    // console.log('No referral earnings found or API error:', data);
                     setReferralHistory([]);
                     setTotalReferralReward(0);
                 }
@@ -137,7 +137,7 @@ const Profile = () => {
         setPendingPreview('');
     };
 
-    if (!profile) return <div>Loading...</div>;
+    if (!profile) return <div className="flex items-center justify-center min-h-screen text-xl">Loading...</div>;
 
     return (
         <>
