@@ -42,7 +42,6 @@ const Login: React.FC = () => {
     try {
       // Get device token for notifications
       const deviceToken = await getDeviceToken();
-      // console.log('Device Token:', deviceToken);
 
       const payload = { ...form, deviceToken };
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, payload);

@@ -78,9 +78,6 @@ const Register: React.FC = () => {
       if (deviceToken) {
         payload.deviceToken = deviceToken;
       }
-
-      // Debug: Log payload contents
-      // console.log('Payload being sent:', payload);
        
       // Try JSON approach first
       let res;
@@ -90,9 +87,7 @@ const Register: React.FC = () => {
             'Content-Type': 'application/json',
           },
         });
-      } catch (jsonError: any) {
-        // console.log('JSON approach failed, trying FormData approach...', jsonError.response?.data);
-        
+      } catch (jsonError: any) {        
         // Fallback to FormData approach
         const formData = new FormData();
         formData.append('name', form.name);

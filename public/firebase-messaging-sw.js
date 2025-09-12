@@ -18,12 +18,38 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
-  // Customize notification here
-  const notificationTitle = payload.notification.title;
+  
+  // Support data-only messages (preferred) and fall back to notification payload
+  const data = payload && payload.data ? payload.data : {};
+  const title = data.title || (payload.notification && payload.notification.title) || 'Notification';
+  const body = data.body || (payload.notification && payload.notification.body) || '';
+  const icon = data.icon || '/logo.svg';
+  
+  
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/logo.svg',
+    body,
+    icon,
+    badge: '/logo.svg',
+    data,
+    tag: 'fcm-notification'
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(title, notificationOptions)
+    .then(() => {
+    })
+    .catch((error) => {
+      console.error('Error showing notification:', error);
+    });
+});
+
+// Optional: focus/open app on click
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const urlToOpen = (event.notification && event.notification.data && event.notification.data.click_action) || '/';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+    for (const client of windowClients) {
+      if ('focus' in client) return client.focus();
+    }
+    if (clients.openWindow) return clients.openWindow(urlToOpen);
+  }));
 });

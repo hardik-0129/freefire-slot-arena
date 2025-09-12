@@ -91,25 +91,25 @@ export const Header = () => {
     }, [setWalletBalance]);
 
     // Listen for foreground FCM messages
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
+    // useEffect(() => {
+    //     let unsubscribe: (() => void) | undefined;
         
-        const initMessaging = async () => {
-            const isMessagingSupported = await initializeMessaging();
-            if (isMessagingSupported && messaging) {
-                unsubscribe = onMessage(messaging, (payload) => {
-                    // You can show a toast or notification here
-                    // console.log('Received foreground message:', payload);
-                });
-            }
-        };
+    //     const initMessaging = async () => {
+    //         const isMessagingSupported = await initializeMessaging();
+    //         if (isMessagingSupported && messaging) {
+    //             unsubscribe = onMessage(messaging, (payload) => {
+    //                 // You can show a toast or notification here
+    //                 // console.log('Received foreground message:', payload);
+    //             });
+    //         }
+    //     };
 
-        initMessaging().catch(console.error);
+    //     initMessaging().catch(console.error);
 
-        return () => {
-            if (typeof unsubscribe === 'function') unsubscribe();
-        };
-    }, []);
+    //     return () => {
+    //         if (typeof unsubscribe === 'function') unsubscribe();
+    //     };
+    // }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');

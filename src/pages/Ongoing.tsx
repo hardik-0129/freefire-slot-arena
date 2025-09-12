@@ -92,7 +92,6 @@ const Ongoing = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/slots/user/${userId}?status=upcoming`);
       if (response.ok) {
         const data = await response.json();
-        // console.log(data,'data');
         setBookings(Array.isArray(data.bookings) ? data.bookings : []);
       } else {
         setError('Failed to fetch bookings');
