@@ -7,7 +7,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/effect-fade';
 // Import required Swiper modules
-import { Autoplay, EffectFade } from 'swiper/modules';
+import { Autoplay } from 'swiper/modules';
 // Import custom CSS
 import "./css/HeroBanner.css";
 
@@ -18,18 +18,19 @@ interface BannerData {
     buttonText: string;
     backgroundImage: string;
     bannerImages?: string[];
+    imageGallery?: Array<{
+        url: string;
+        title?: string;
+        description?: string;
+        buttonText?: string;
+    }>;
     isActive?: boolean;
 }
 
 export const HeroBanner = () => {
-    const defaultBanner = {
-        title: `BOOK YOUR SPOT.DOMINATE THE ARENA.`,
-        description: 'Join daily Free Fire & Squad Tournaments.Compete, Win, Get Rewarded.',
-        buttonText: 'VIEW TOURNAMENTS',
-        backgroundImage: '/assets/banner/banner.jpg'
-    };
+    const fallbackImage = '/assets/banner/banner.jpg';
     
-    const [bannerData, setBannerData] = useState<BannerData>(defaultBanner);
+    const [bannerData, setBannerData] = useState<BannerData>();
     const [bannerImages, setBannerImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -43,60 +44,45 @@ export const HeroBanner = () => {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner`); // Using "banners" endpoint
             if (response.ok) {
                 const data = await response.json();
-                
-                // Check if the response is an array
-                if (Array.isArray(data) && data.length > 0) {
-                    // Use the first banner from the array
-                    const firstBanner = data[0];
-                    // Set the banner data
+                console.log('[HeroBanner] GET /api/banner response:', data);
+                const toArray = Array.isArray(data) ? data : [data];
+                const active = toArray.find((b: any) => b && b.isActive) || toArray[0];
+                console.log('[HeroBanner] Selected active banner:', active);
+                if (active) {
                     setBannerData({
-                        _id: firstBanner._id,
-                        title: firstBanner.title,
-                        description: firstBanner.description,
-                        buttonText: firstBanner.buttonText,
-                        backgroundImage: firstBanner.backgroundImage,
-                        isActive: firstBanner.isActive
+                        _id: active._id,
+                        title: active.title || '',
+                        description: active.description || '',
+                        buttonText: active.buttonText || '',
+                        backgroundImage: active.backgroundImage || fallbackImage,
+                        imageGallery: Array.isArray(active.imageGallery) ? active.imageGallery : [],
+                        isActive: active.isActive
                     });
-                    
-                    // Set banner images for the slider
-                    if (firstBanner.bannerImages && firstBanner.bannerImages.length > 0) {
-                        setBannerImages(firstBanner.bannerImages);
+                    if (Array.isArray(active.bannerImages) && active.bannerImages.length > 0) {
+                        setBannerImages(active.bannerImages);
+                        console.log('[HeroBanner] Using bannerImages:', active.bannerImages);
                     } else {
-                        // If no banner images, use the single background image
-                        setBannerImages([firstBanner.backgroundImage]);
-                    }
-                } else if (!Array.isArray(data)) {
-                    
-                    // Set the banner data
-                    setBannerData({
-                        _id: data._id,
-                        title: data.title,
-                        description: data.description,
-                        buttonText: data.buttonText,
-                        backgroundImage: data.backgroundImage,
-                        isActive: data.isActive
-                    });
-                    
-                    // Set banner images for the slider
-                    if (data.bannerImages && data.bannerImages.length > 0) {
-                        setBannerImages(data.bannerImages);
-                    } else {
-                        setBannerImages([data.backgroundImage]);
+                        const single = [active.backgroundImage || fallbackImage];
+                        console.log('[HeroBanner] Using single background image:', single);
+                        setBannerImages(single);
                     }
                 } else {
-                    console.error('No banner data found in response');
-                    // Use default image if no data
-                    setBannerImages([defaultBanner.backgroundImage]);
+                    setBannerData({
+                        title: '',
+                        description: '',
+                        buttonText: '',
+                        backgroundImage: fallbackImage
+                    } as any);
+                    console.log('[HeroBanner] No active banner. Falling back to image:', fallbackImage);
+                    setBannerImages([fallbackImage]);
                 }
             } else {
                 console.error('Failed to fetch banner data, status:', response.status);
-                // Use default image if API fails
-                setBannerImages([defaultBanner.backgroundImage]);
+                setBannerImages([fallbackImage]);
             }
         } catch (error) {
-            console.error('Error fetching banner data:', error);
-            // Use default image if API fails
-            setBannerImages([defaultBanner.backgroundImage]);
+            console.error('[HeroBanner] Error fetching banner data:', error);
+            setBannerImages([fallbackImage]);
         } finally {
             setLoading(false);
         }
@@ -115,6 +101,21 @@ export const HeroBanner = () => {
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
         e.currentTarget.src = '/assets/banner/banner.jpg';
     };
+
+    // Build slides with per-image metadata when available
+    const slides = (bannerData?.imageGallery && bannerData.imageGallery.length > 0)
+        ? bannerData.imageGallery.map(g => ({
+            url: g.url,
+            title: g.title || '',
+            description: g.description || '',
+            buttonText: g.buttonText || ''
+          }))
+        : bannerImages.map(url => ({
+            url,
+            title: bannerData?.title || '',
+            description: bannerData?.description || '',
+            buttonText: bannerData?.buttonText || ''
+          }));
 
     return (
         <div className="hero-banner w-full relative overflow-hidden">
@@ -147,12 +148,12 @@ export const HeroBanner = () => {
                     }
                 }}
             >
-                {bannerImages.map((imageUrl, index) => (
+                {slides.map((s, index) => (
                     <SwiperSlide key={index} className="relative">
                         {/* Background Image with Image fallback */}
                         <div className="w-full h-full relative">
                             <img 
-                                src={imageUrl} 
+                                src={s.url} 
                                 alt={`Banner ${index + 1}`}
                                 className="w-full h-full object-cover"
                                 onError={handleImageError}
@@ -166,16 +167,16 @@ export const HeroBanner = () => {
                                 <div className="container mx-auto px-4">
                                     <div className="max-w-2xl">
                                         <h2 className="text-[32px] sm:text-[36px] md:text-[42px] font-bold text-white mb-2 md:mb-4 leading-tight">
-                                            {bannerData.title}
+                                            {s.title || ''}
                                         </h2>
                                         <p className="text-[14px] sm:text-[15px] md:text-[16px] text-gray-200 mb-4 md:mb-8">
-                                            {bannerData.description}
+                                            {s.description || ''}
                                         </p>
                                         <Button
                                             size="lg"
                                             className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
                                             onClick={() => navigate('/tournament')}>
-                                            {bannerData.buttonText}
+                                            {s.buttonText || ''}
                                         </Button>
                                     </div>
                                 </div>

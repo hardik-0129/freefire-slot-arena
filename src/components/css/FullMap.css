@@ -340,29 +340,72 @@
 
 }
 
-/* Additional responsive adjustments for smaller screens */
-@media (max-width: 425px) {
-  .table-container-responsive {
-    gap: 10px;
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .match-section {
+    padding: 40px 0;
+  }
+
+  .card-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 0 15px;
   }
 
   h2[class*="text-[42px]"] {
-    font-size: 30px !important;
+    font-size: 28px !important;
+    margin-bottom: 20px !important;
   }
 
   .match-title {
-    font-size: 18px !important;
+    font-size: 16px !important;
+    padding: 0 15px !important;
   }
 
+  .match-top {
+    padding: 12px 15px 5px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+  }
+
+  .match-details-box {
+    margin: 8px 10px 0 !important;
+    padding: 10px 8px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .prize-pill-container {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .prize-pill {
+    min-width: 90px !important;
+    padding: 5px 8px !important;
+  }
+
+  .slots-row {
+    padding: 5px 15px !important;
+  }
+
+  .join-btn {
+    width: calc(100% - 30px) !important;
+    margin: 8px 15px 0 !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
 }
 
-@media (max-width: 425px) {
-  .table-container-responsive {
-    gap: 10px;
-  }
-
+@media (max-width: 480px) {
   h2[class*="text-[42px]"] {
-    font-size: 25px !important;
+    font-size: 24px !important;
   }
 
   .match-title {
@@ -370,12 +413,22 @@
   }
 
   .prize-pill {
-    min-width: 95px;
+    min-width: 80px !important;
+    font-size: 10px !important;
+  }
+
+  .prize-pill .pill-value {
+    font-size: 12px !important;
+  }
+
+  .prize-pill .pill-value img {
+    width: 12px !important;
+    height: 12px !important;
   }
 
   .spectator-btn,
   .result-btn {
-    font-size: 11px;
+    font-size: 11px !important;
+    padding: 10px 15px !important;
   }
-
 }

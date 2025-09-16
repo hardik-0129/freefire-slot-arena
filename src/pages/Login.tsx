@@ -134,10 +134,19 @@ const Login: React.FC = () => {
               {loading ? 'LOGGING IN...' : 'LOGIN NOW'}
             </button>
 
-            <div style={{ textAlign: 'right', marginBottom: 12 }}>
+            <div style={{ textAlign: 'right', marginBottom: 12, padding: '0 4px' }}>
               <button
                 type="button"
-                style={{ background: 'none', border: 'none', color: '#FF8B00', cursor: 'pointer', fontWeight: 600, fontSize: 14, padding: 0 }}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#FF8B00', 
+                  cursor: 'pointer', 
+                  fontWeight: 600, 
+                  fontSize: window.innerWidth <= 425 ? 13 : 14, 
+                  padding: 0,
+                  textDecoration: 'underline'
+                }}
                 onClick={async () => {
                   setForgotMsg('');
                   if (!form.email) {
@@ -158,8 +167,12 @@ const Login: React.FC = () => {
               </button>
             </div>
 
-            <div className="auth-link" style={{ textAlign: 'center' }}>
-              <p style={{ color: '#666', marginBottom: '8px' }}>Don't have an account?</p>
+            <div className="auth-link" style={{ textAlign: 'center', padding: '0 4px' }}>
+              <p style={{ 
+                color: '#666', 
+                marginBottom: '8px',
+                fontSize: window.innerWidth <= 425 ? 14 : 16
+              }}>Don't have an account?</p>
               <button
                 type="button"
                 onClick={() => navigate('/register')}
@@ -167,11 +180,12 @@ const Login: React.FC = () => {
                   background: 'transparent',
                   border: '2px solid #FF8B00',
                   color: '#FF8B00',
-                  padding: '8px 20px',
+                  padding: window.innerWidth <= 425 ? '6px 16px' : '8px 20px',
                   borderRadius: '25px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  fontSize: window.innerWidth <= 425 ? 13 : 14
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.background = '#FF8B00';

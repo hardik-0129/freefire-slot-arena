@@ -171,15 +171,15 @@ const FullMap = () => {
             <Header />
             <section className="py-16 match-section">
                 <div className="container">
-                    <h2 className="text-[42px] font-bold text-center mb-12">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-bold text-center mb-8 sm:mb-12 px-4">
                         {`${selectedGameType || 'Full Map'} Tournaments`}
                     </h2>
 
                     {/* Filter Buttons */}
-                    <div className="flex justify-center mb-8 gap-4">
+                    <div className="flex flex-col sm:flex-row justify-center mb-8 gap-2 sm:gap-4 px-4">
                         <button
                             onClick={() => handleFilterChange('upcoming')}
-                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
                                 activeFilter === 'upcoming' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                         >
@@ -187,7 +187,7 @@ const FullMap = () => {
                         </button>
                         <button
                             onClick={() => handleFilterChange('live')}
-                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
                                 activeFilter === 'live' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                         >
@@ -195,7 +195,7 @@ const FullMap = () => {
                         </button>
                         <button
                             onClick={() => handleFilterChange('completed')}
-                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-200 ${
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
                                 activeFilter === 'completed' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                         >
@@ -203,8 +203,8 @@ const FullMap = () => {
                         </button>
                     </div>
                     {visibleSlots.length === 0 && !error ? (
-                        <div className="w-full flex items-center justify-center py-16">
-                            <p className="text-xl text-gray-600 text-center">No {activeFilter} tournaments available at the moment.</p>
+                        <div className="w-full flex items-center justify-center py-16 px-4">
+                            <p className="text-lg sm:text-xl text-gray-600 text-center">No {activeFilter} tournaments available at the moment.</p>
                         </div>
                     ) : (
                         <div className="card-container">

@@ -412,6 +412,13 @@ const AdminDashboard = () => {
     backgroundImage: '',
     bannerImages: []
   });
+  
+  // Separate state for single banner form
+  const [singleBannerForm, setSingleBannerForm] = useState({
+    title: '',
+    description: '',
+    buttonText: ''
+  });
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerFiles, setBannerFiles] = useState<File[]>([]);
@@ -419,6 +426,13 @@ const AdminDashboard = () => {
   const [bannerPreviews, setBannerPreviews] = useState<string[]>([]);
   const [allBanners, setAllBanners] = useState([]);
   const [showMultipleUpload, setShowMultipleUpload] = useState(false);
+  const [multipleBannerData, setMultipleBannerData] = useState<Array<{
+    title: string;
+    description: string;
+    buttonText: string;
+    file: File | null;
+    preview: string;
+  }>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -896,18 +910,27 @@ const AdminDashboard = () => {
       const files = Array.from(e.target.files);
       setBannerFiles(files);
 
-      // Create previews for all files
-      const previews: string[] = [];
-      files.forEach((file, index) => {
+      // Create banner data objects for each file
+      const newBannerData = files.map((file, index) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-          previews[index] = e.target?.result as string;
-          if (previews.length === files.length) {
-            setBannerPreviews(previews);
-          }
+          const preview = e.target?.result as string;
+          setMultipleBannerData(prev => prev.map((item, i) => 
+            i === index ? { ...item, preview } : item
+          ));
         };
         reader.readAsDataURL(file);
+
+        return {
+          title: '',
+          description: '',
+          buttonText: '',
+          file: file,
+          preview: ''
+        };
       });
+
+      setMultipleBannerData(newBannerData);
     }
   };
 
@@ -930,7 +953,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Upload single banner image
+  // Upload single banner image with metadata
   const handleBannerUpload = async () => {
     if (!bannerFile) {
       toast({
@@ -946,6 +969,9 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('adminToken');
       const formData = new FormData();
       formData.append('banner', bannerFile);
+      formData.append('title', singleBannerForm.title);
+      formData.append('description', singleBannerForm.description);
+      formData.append('buttonText', singleBannerForm.buttonText);
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
         method: 'POST',
@@ -959,23 +985,29 @@ const AdminDashboard = () => {
         const data = await response.json();
         toast({
           title: "Success",
-          description: "Image uploaded successfully",
+          description: "Banner uploaded successfully",
         });
 
-        // Clear the file and preview
+        // Clear the file, preview, and form data
         setBannerFile(null);
         setBannerPreview('');
+        setSingleBannerForm({
+          title: '',
+          description: '',
+          buttonText: ''
+        });
 
         // Refresh banner data
         fetchBannerData();
+        fetchAllBanners();
       } else {
-        throw new Error('Failed to upload image');
+        throw new Error('Failed to upload banner');
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error uploading banner:', error);
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: "Failed to upload banner",
         variant: "destructive",
       });
     } finally {
@@ -983,9 +1015,9 @@ const AdminDashboard = () => {
     }
   };
 
-  // Upload multiple banner images
+  // Upload multiple banner images with metadata
   const handleUploadMultipleImages = async () => {
-    if (bannerFiles.length === 0) {
+    if (multipleBannerData.length === 0) {
       toast({
         title: "Error",
         description: "Please select images to upload",
@@ -997,45 +1029,49 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const formData = new FormData();
+      
+      // Upload each banner with its metadata
+      for (const banner of multipleBannerData) {
+        if (!banner.file) continue;
 
-      bannerFiles.forEach(file => {
-        formData.append('bannerImages', file);
-      });
+        const formData = new FormData();
+        formData.append('banner', banner.file);
+        formData.append('title', banner.title);
+        formData.append('description', banner.description);
+        formData.append('buttonText', banner.buttonText);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-multiple`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: "Success",
-          description: `${data.totalUploaded} images uploaded successfully`,
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
         });
 
-        // Clear the files and previews
-        setBannerFiles([]);
-        setBannerPreviews([]);
-        setShowMultipleUpload(false);
-
-        // Update banner data with new images
-        setBannerData(prev => ({
-          ...prev,
-          bannerImages: [...prev.bannerImages, ...data.relativePaths]
-        }));
-      } else {
-        throw new Error('Failed to upload images');
+        if (!response.ok) {
+          throw new Error(`Failed to upload banner: ${banner.title || 'Untitled'}`);
+        }
       }
+
+      toast({
+        title: "Success",
+        description: `${multipleBannerData.length} banners uploaded successfully`,
+      });
+
+      // Clear the data
+      setBannerFiles([]);
+      setBannerPreviews([]);
+      setMultipleBannerData([]);
+      setShowMultipleUpload(false);
+
+      // Refresh banner data
+      fetchBannerData();
+      fetchAllBanners();
     } catch (error) {
-      console.error('Error uploading multiple images:', error);
+      console.error('Error uploading multiple banners:', error);
       toast({
         title: "Error",
-        description: "Failed to upload images",
+        description: "Failed to upload banners",
         variant: "destructive",
       });
     } finally {
@@ -1810,17 +1846,58 @@ const AdminDashboard = () => {
           <div className="border-b border-[#2A2A2A] pb-6">
             <h3 className="text-lg font-medium text-white mb-3">Single Banner Upload</h3>
             <div className="flex flex-col space-y-4">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleBannerFileChange}
-                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-              />
-              {bannerPreview && (
-                <div className="w-full max-w-md">
-                  <img src={bannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
-                </div>
-              )}
+              {/* Banner Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Banner Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerFileChange}
+                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+                {bannerPreview && (
+                  <div className="w-full max-w-md mt-2">
+                    <img src={bannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                  </div>
+                )}
+              </div>
+
+              {/* Banner Title */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Banner Title</label>
+                <input
+                  type="text"
+                  value={singleBannerForm.title}
+                  onChange={(e) => setSingleBannerForm({ ...singleBannerForm, title: e.target.value })}
+                  placeholder="Enter banner title (use \n for line breaks)"
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Banner Description */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Banner Description</label>
+                <textarea
+                  value={singleBannerForm.description}
+                  onChange={(e) => setSingleBannerForm({ ...singleBannerForm, description: e.target.value })}
+                  placeholder="Enter banner description (use \n for line breaks)"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Button Text */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Button Text</label>
+                <input
+                  type="text"
+                  value={singleBannerForm.buttonText}
+                  onChange={(e) => setSingleBannerForm({ ...singleBannerForm, buttonText: e.target.value })}
+                  placeholder="Enter button text"
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
               <Button
                 onClick={handleBannerUpload}
                 disabled={!bannerFile || loading}
@@ -1845,38 +1922,101 @@ const AdminDashboard = () => {
 
             {showMultipleUpload && (
               <div className="space-y-4">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleMultipleBannerFiles}
-                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Select Multiple Banner Images</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleMultipleBannerFiles}
+                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
+                  />
+                </div>
 
-                {bannerPreviews.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {bannerPreviews.map((preview, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={preview}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <span className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                          {index + 1}
-                        </span>
+                {multipleBannerData.length > 0 && (
+                  <div className="space-y-6">
+                    <h4 className="text-md font-medium text-white">Configure Each Banner:</h4>
+                    {multipleBannerData.map((banner, index) => (
+                      <div key={index} className="border border-[#2A2A2A] rounded-lg p-4 bg-[#2A2A2A]">
+                        <div className="flex items-center mb-3">
+                          <span className="bg-green-600 text-white text-xs px-2 py-1 rounded mr-2">
+                            Banner {index + 1}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Image Preview */}
+                          <div>
+                            <label className="block text-sm font-medium text-white mb-2">Image Preview</label>
+                            {banner.preview && (
+                              <img
+                                src={banner.preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                            )}
+                          </div>
+
+                          {/* Form Fields */}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Title</label>
+                              <input
+                                type="text"
+                                value={banner.title}
+                                onChange={(e) => {
+                                  const newData = [...multipleBannerData];
+                                  newData[index].title = e.target.value;
+                                  setMultipleBannerData(newData);
+                                }}
+                                placeholder="Enter banner title"
+                                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Description</label>
+                              <textarea
+                                value={banner.description}
+                                onChange={(e) => {
+                                  const newData = [...multipleBannerData];
+                                  newData[index].description = e.target.value;
+                                  setMultipleBannerData(newData);
+                                }}
+                                placeholder="Enter banner description"
+                                rows={2}
+                                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 resize-none text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-white mb-1">Button Text</label>
+                              <input
+                                type="text"
+                                value={banner.buttonText}
+                                onChange={(e) => {
+                                  const newData = [...multipleBannerData];
+                                  newData[index].buttonText = e.target.value;
+                                  setMultipleBannerData(newData);
+                                }}
+                                placeholder="Enter button text"
+                                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ))}
+
+                    <Button
+                      onClick={handleUploadMultipleImages}
+                      disabled={multipleBannerData.length === 0 || loading}
+                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                    >
+                      {loading ? 'Uploading...' : `Upload ${multipleBannerData.length} Banners`}
+                    </Button>
                   </div>
                 )}
-
-                <Button
-                  onClick={handleUploadMultipleImages}
-                  disabled={bannerFiles.length === 0 || loading}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Uploading...' : `Upload ${bannerFiles.length} Images`}
-                </Button>
               </div>
             )}
           </div>
