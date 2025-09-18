@@ -40,32 +40,45 @@ const WithdrawalManagement: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchPendingWithdrawals();
-  }, []);
+    fetchWithdrawals();
+  }, [statusFilter]);
 
-  const fetchPendingWithdrawals = async () => {
+  const fetchWithdrawals = async () => {
     setLoading(true);
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/admin/pending-withdrawals`, {
+      // Prefer unified endpoint with status query; fallback to legacy pending endpoint
+      const base = `${import.meta.env.VITE_API_URL}/api/wallet/admin`;
+      // Map filter to available endpoints
+      const endpoint = statusFilter === 'pending'
+        ? `${base}/pending-withdrawals`
+        : `${base}/${statusFilter}-withdrawals`;
+      let response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json'
         }
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setWithdrawals(data.withdrawals);
+      if (!response.ok) {
+        // Endpoint not available or error: show empty list to avoid mixing statuses
+        setWithdrawals([]);
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to fetch pending withdrawals",
-          variant: "destructive"
-        });
+        const data = await response.json();
+        if (data.success) {
+          setWithdrawals(data.withdrawals || data.data || []);
+        } else {
+          setWithdrawals([]);
+          toast({
+            title: "Error",
+            description: data.error || "Failed to fetch withdrawals",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching withdrawals:', error);
@@ -97,7 +110,7 @@ const WithdrawalManagement: React.FC = () => {
           description: "Withdrawal approved successfully!",
           variant: "default"
         });
-        fetchPendingWithdrawals(); // Refresh the list
+        fetchWithdrawals(); // Refresh current filtered list
       } else {
         toast({
           title: "Error",
@@ -148,7 +161,7 @@ const WithdrawalManagement: React.FC = () => {
         setShowRejectModal(false);
         setRejectionReason('');
         setSelectedWithdrawal(null);
-        fetchPendingWithdrawals(); // Refresh the list
+        fetchWithdrawals(); // Refresh current filtered list
       } else {
         toast({
           title: "Error",
@@ -201,17 +214,28 @@ const WithdrawalManagement: React.FC = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-white flex items-center gap-2">
           <Clock className="h-5 w-5" />
-          Withdrawal Management ({withdrawals.length} pending)
+          Withdrawal Management ({withdrawals.length} {statusFilter})
         </CardTitle>
-        <Button 
-          onClick={fetchPendingWithdrawals}
-          variant="outline"
-          size="sm"
-          className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="bg-[#0F0F0F] text-white border border-[#2A2A2A] rounded px-2 py-1"
+          >
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <Button 
+            onClick={fetchWithdrawals}
+            variant="outline"
+            size="sm"
+            className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {withdrawals.length === 0 ? (
@@ -270,29 +294,31 @@ const WithdrawalManagement: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
-                  <Button
-                    onClick={() => handleApproveWithdrawal(withdrawal.transactionId)}
-                    disabled={processingId === withdrawal.transactionId}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    {processingId === withdrawal.transactionId ? 'Approving...' : 'Approve'}
-                  </Button>
-                  
-                  <Button
-                    onClick={() => {
-                      setSelectedWithdrawal(withdrawal);
-                      setShowRejectModal(true);
-                    }}
-                    disabled={processingId === withdrawal.transactionId}
-                    variant="destructive"
-                    className="text-white"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
-                  </Button>
-                </div>
+                {statusFilter === 'pending' && (
+                  <div className="flex gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
+                    <Button
+                      onClick={() => handleApproveWithdrawal(withdrawal.transactionId)}
+                      disabled={processingId === withdrawal.transactionId}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {processingId === withdrawal.transactionId ? 'Approving...' : 'Approve'}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => {
+                        setSelectedWithdrawal(withdrawal);
+                        setShowRejectModal(true);
+                      }}
+                      disabled={processingId === withdrawal.transactionId}
+                      variant="destructive"
+                      className="text-white"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

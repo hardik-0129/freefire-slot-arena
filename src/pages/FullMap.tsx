@@ -166,6 +166,37 @@ const FullMap = () => {
         return `${formattedHours}:${minutes} ${ampm}`;
     };
 
+  // Lightweight countdown badge for upcoming matches
+  const CountdownBadge: React.FC<{ target: string }> = ({ target }) => {
+    const [now, setNow] = useState<number>(Date.now());
+    useEffect(() => {
+      const id = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(id);
+    }, []);
+    const targetMs = new Date(target).getTime();
+    let diff = targetMs - now; // ms
+    if (diff <= 0) return null;
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const text = days > 0
+      ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+      : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    return (
+      <span
+        style={{
+          fontSize: 12,
+        }}
+        title={new Date(target).toLocaleString('en-IN')}
+      >
+        {text}
+      </span>
+    );
+  };
+
     return (
         <>
             <Header />
@@ -249,12 +280,13 @@ const FullMap = () => {
                                                     <span className="badge orange">
                                                     {(slot.gameMode || 'SOLO').toUpperCase()}
                                                     </span>
-                                                <span className="badge gray">Random</span>
-                                                <span className={`badge ${resolveStatus(slot) === 'upcoming' ? 'blue' : resolveStatus(slot) === 'live' ? 'green' : 'gray'}`}>
+                                                
+                                                <span className={`badge black`}>
                                                     {resolveStatus(slot).toUpperCase()}
                                                     </span>
-                                                </div>
-                                                <div>
+                                                    {resolveStatus(slot) === 'upcoming' && (
+                                                        <span className="badge black"><CountdownBadge target={slot.matchTime} /></span>
+                                                    )}
                                                     <span className="match-id">MATCH #{slot.matchIndex}</span>
                                                 </div>
                                             </div>
@@ -285,7 +317,7 @@ const FullMap = () => {
                                             <div className="slots-row">
                                                 <p className="text-sm font-medium">{currentSlots}/{slot.maxBookings}</p>
                                                 <div className="flex items-center gap-2 w-full">
-                                                    <div className="w-full bg-black rounded-full h-2 overflow-hidden">
+                                                    <div className="w-full bg-black rounded-full h-2 overflow-hidden">                
                                                         <div
                                                             className="bg-[#ff8400] h-full rounded-full"
                                                             style={{ width: `${(currentSlots / slot.maxBookings) * 100}%` }}

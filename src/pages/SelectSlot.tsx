@@ -263,6 +263,18 @@ const SelectSlot = () => {
 
   // Handle player name input
   const handlePlayerNameChange = (key: string, value: string) => {
+    // Check for duplicate names (case-insensitive)
+    const trimmedValue = value.trim();
+    if (trimmedValue !== '') {
+      const existingNames = Object.values(playerNames).map(name => name.trim().toLowerCase());
+      const isDuplicate = existingNames.includes(trimmedValue.toLowerCase());
+      
+      if (isDuplicate) {
+        toast.error('This Free Fire game name is already used! Please enter a different name.');
+        return; // Don't update the state if it's a duplicate
+      }
+    }
+    
     setPlayerNames(prev => ({
       ...prev,
       [key]: value
@@ -295,17 +307,34 @@ const SelectSlot = () => {
 
     // Validate player names for selected positions (flat key: TeamX-Y)
     const missingNames = [];
+    const duplicateNames = [];
+    const enteredNames = [];
+    
     Object.entries(selectedPositions).forEach(([team, positions]) => {
       positions.forEach(position => {
         const key = `${team}-${position}`;
-        if (!playerNames[key] || playerNames[key].trim() === '') {
+        const playerName = playerNames[key];
+        
+        if (!playerName || playerName.trim() === '') {
           missingNames.push(`${team} Position${position}`);
+        } else {
+          const trimmedName = playerName.trim().toLowerCase();
+          if (enteredNames.includes(trimmedName)) {
+            duplicateNames.push(`${team} Position${position}: "${playerName.trim()}"`);
+          } else {
+            enteredNames.push(trimmedName);
+          }
         }
       });
     });
 
     if (missingNames.length > 0) {
-  toast.error(`Please enter player names for: ${missingNames.join(', ')}`);
+      toast.error(`Please enter player names for: ${missingNames.join(', ')}`);
+      return;
+    }
+
+    if (duplicateNames.length > 0) {
+      toast.error(`Duplicate Free Fire game names found: ${duplicateNames.join(', ')}. Please use different names.`);
       return;
     }
 

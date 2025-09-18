@@ -66,6 +66,13 @@ const Ongoing = () => {
   } | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [slotStats, setSlotStats] = useState<{[key: string]: any}>({});
+  const [now, setNow] = useState<number>(Date.now());
+
+  // Tick every second for countdowns
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Fetch user's ongoing matches
   const fetchOngoingMatches = async () => {
@@ -223,6 +230,18 @@ const Ongoing = () => {
                           uniqueMatches.map((booking) => {
                             const slotId = booking.slot?._id;
                             const totalPositionsBooked = slotStats[slotId]?.totalPositionsBooked || 0;
+                            const matchTime = booking.slot?.matchTime || '';
+                            const targetMs = matchTime ? new Date(matchTime).getTime() : 0;
+                            const diff = Math.max(0, targetMs - now);
+                            const totalSeconds = Math.floor(diff / 1000);
+                            const days = Math.floor(totalSeconds / 86400);
+                            const hours = Math.floor((totalSeconds % 86400) / 3600);
+                            const minutes = Math.floor((totalSeconds % 3600) / 60);
+                            const seconds = totalSeconds % 60;
+                            const pad = (n: number) => n.toString().padStart(2, '0');
+                            const countdownText = days > 0
+                              ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+                              : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
                             
                             return (
                               <div 
@@ -233,6 +252,13 @@ const Ongoing = () => {
                                 <Card 
                                   booking={booking} 
                                   totalPositionsBooked={totalPositionsBooked}
+                                  renderExtra={targetMs > now ? () => (
+                                    booking.slot ? (
+                                      <div title={formatDateTime(booking.slot.matchTime)}>
+                                        {countdownText}
+                                      </div>
+                                    ) : null
+                                  ) : undefined}
                                 />
                               </div>
                             );

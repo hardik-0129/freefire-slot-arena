@@ -150,7 +150,7 @@ export const HeroBanner = () => {
             >
                 {slides.map((s, index) => (
                     <SwiperSlide key={index} className="relative">
-                        {/* Background Image with Image fallback */}
+                        {/* Background Image with optional overlay */}
                         <div className="w-full h-full relative">
                             <img 
                                 src={s.url} 
@@ -158,29 +158,33 @@ export const HeroBanner = () => {
                                 className="w-full h-full object-cover"
                                 onError={handleImageError}
                             />
-                            
-                            {/* Gradient Overlay for better text visibility */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
-                            
-                            {/* Content Overlay */}
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="container mx-auto px-4">
+                            { (s.title || s.description || s.buttonText) && (
+                              <>
+                                {/* Gradient Overlay for better text visibility */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
+                                {/* Content Overlay */}
+                                <div className="absolute inset-0 flex items-center">
+                                  <div className="container mx-auto px-4">
                                     <div className="max-w-2xl">
-                                        <h2 className="text-[32px] sm:text-[36px] md:text-[42px] font-bold text-white mb-2 md:mb-4 leading-tight">
-                                            {s.title || ''}
-                                        </h2>
-                                        <p className="text-[14px] sm:text-[15px] md:text-[16px] text-gray-200 mb-4 md:mb-8">
-                                            {s.description || ''}
-                                        </p>
+                                      {s.title && (
+                                        <h2 className="text-[32px] sm:text-[36px] md:text-[42px] font-bold text-white mb-2 md:mb-4 leading-tight">{s.title}</h2>
+                                      )}
+                                      {s.description && (
+                                        <p className="text-[14px] sm:text-[15px] md:text-[16px] text-gray-200 mb-4 md:mb-8">{s.description}</p>
+                                      )}
+                                      {s.buttonText && (
                                         <Button
-                                            size="lg"
-                                            className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
-                                            onClick={() => navigate('/tournament')}>
-                                            {s.buttonText || ''}
+                                          size="lg"
+                                          className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
+                                          onClick={() => navigate('/tournament')}>
+                                          {s.buttonText}
                                         </Button>
+                                      )}
                                     </div>
+                                  </div>
                                 </div>
-                            </div>
+                              </>
+                            )}
                         </div>
                     </SwiperSlide>
                 ))}

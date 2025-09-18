@@ -18,13 +18,11 @@ interface BannerData {
 
 export const HeroBannerFixed = () => {
     const defaultBanner = {
-        title: `BOOK YOUR SPOT.DOMINATE THE ARENA.`,
-        description: 'Join daily Free Fire & Squad Tournaments.Compete, Win, Get Rewarded.',
-        buttonText: 'VIEW TOURNAMENTS',
+       
         backgroundImage: '/assets/banner/banner.jpg'
     };
     
-    const [bannerData, setBannerData] = useState<BannerData>(defaultBanner);
+    const [bannerData, setBannerData] = useState<BannerData>();
     const [bannerImages, setBannerImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     

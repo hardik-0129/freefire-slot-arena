@@ -50,9 +50,10 @@ interface CardProps {
     };
     totalBookingsCount?: number; // Deprecated: use totalPositionsBooked instead
     totalPositionsBooked?: number; // Total positions booked from all users
+    renderExtra?: () => React.ReactNode; // Optional extra content area
 }
 
-const Card = ({ booking, totalBookingsCount, totalPositionsBooked }: CardProps) => {
+const Card = ({ booking, totalBookingsCount, totalPositionsBooked, renderExtra }: CardProps) => {
     // Calculate user's total booked positions for this match
     const userBookedPositions = booking ? Object.values(booking.selectedPositions).flat().length : 0;
     const maxPositions = booking?.slot?.maxPlayers || 48;
@@ -109,24 +110,27 @@ const Card = ({ booking, totalBookingsCount, totalPositionsBooked }: CardProps) 
             </div>
             <div className="match-top">
                 <div>
-                    <span className="badge orange">{booking?.slot?.slotType?.toUpperCase() || 'SOLO'}</span>
-                    <span className="badge gray">{booking?.slot?.mapName || 'RANDOM'}</span>
+                    <span className="badge orange">{booking?.slot?.slotType?.toUpperCase()}</span>
+                    <span className="badge gray">{booking?.slot?.mapName}</span>
+                    {renderExtra && (
+                        <span className="badge black">{renderExtra()}</span>
+                    )}
                 </div>
-                <div>
-                    <span className="match-id">MATCH #{booking?.slot?.matchIndex}</span>
-                </div>
+                
             </div>
             <h3 className="match-title">
                 {booking?.slot?.matchTitle || `FF ${booking?.slot?.slotType?.toUpperCase() || 'SOLO'} TOURNAMENT`}
                 {booking?.slot?.specialRules && ` (${booking.slot.specialRules})`}
                 <br />
-                {booking?.slot?.tournamentName || '#ALPHALIONS'}
+                <span className="match-id">MATCH #{booking?.slot?.matchIndex}</span>
             </h3>
             <div className="match-details-box">
                 <div className="date-time">
                     {booking?.slot?.matchTime ? formatDate(booking.slot.matchTime) : '27/07/2025'} <span className="time">{booking?.slot?.matchTime ? formatTime(booking.slot.matchTime) : '3:00am'}</span>
+                    
                 </div>
                 <div className="prize-pill-container">
+                    
                     <div className="prize-pill">
                         <div className="pill-label">PER KILL</div>
                         <div className="pill-value">

@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminWinnerSidebar from '../components/AdminWinnerSidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,7 +107,7 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
   );
 };
 
-const AdminWinnerDashboard: React.FC = () => {
+const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotId }) => {
   // Winner data state
   const [winnersBySlot, setWinnersBySlot] = useState<{ [slotId: string]: Winner[] }>({});
 
@@ -233,8 +232,17 @@ const AdminWinnerDashboard: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        const matchesWithBookings = data.slots || [];
+        let matchesWithBookings: Match[] = data.slots || [];
+        // If a filter is provided, keep only that match
+        if (filterSlotId) {
+          matchesWithBookings = matchesWithBookings.filter((m: Match) => String(m._id) === String(filterSlotId));
+        }
         setMatches(matchesWithBookings);
+        // Preselect filtered match for players view
+        if (filterSlotId && matchesWithBookings.length > 0) {
+          setSelectedMatch(matchesWithBookings[0]);
+          setSelectedMatchForPlayers(matchesWithBookings[0]);
+        }
         // fetchAllSlotBookings will be called by useEffect when users and matches are both loaded
         fetchWinnersForSlots(matchesWithBookings);
       } else {
@@ -612,7 +620,7 @@ const AdminWinnerDashboard: React.FC = () => {
     <div className="min-h-screen bg-[#121212] p-6">
       <div className="max-w-8xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">Player Management</h1>
+          <h1 className="text-2xl font-bold text-white">Winners Management</h1>
           <button
             onClick={fetchCompletedMatches}
             className="bg-[#52C41A] hover:bg-[#73D13D] text-white px-4 py-2 rounded"
@@ -958,12 +966,8 @@ const AdminWinnerDashboard: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
-      <AdminWinnerSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        selectedMatch={selectedMatch}
-        onWinnerAdded={handleWinnerAdded}
-      />
+      {/* Sidebar hidden when embedded from AdminDashboard with a specific match */}
+      {/* Sidebar removed per requirement - showing only header and content */}
     </div>
   );
 };

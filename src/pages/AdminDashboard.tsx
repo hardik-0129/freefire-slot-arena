@@ -8,6 +8,7 @@ import ContactMessagesTable from "@/components/ContactMessagesTable";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import MatchesManager from "@/components/MatchesManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -44,6 +45,28 @@ import {
   Trash,
   Trophy
 } from "lucide-react";
+
+// Live countdown component showing time left until match start (or elapsed after start)
+const MatchCountdown = ({ matchTime }: { matchTime: string }) => {
+  const target = new Date(matchTime).getTime();
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const diff = target - now; // ms
+  const abs = Math.abs(diff);
+  const sec = Math.floor(abs / 1000) % 60;
+  const min = Math.floor(abs / (1000 * 60)) % 60;
+  const hr = Math.floor(abs / (1000 * 60 * 60)) % 24;
+  const day = Math.floor(abs / (1000 * 60 * 60 * 24));
+  const two = (n: number) => n.toString().padStart(2, '0');
+  const prefix = diff >= 0 ? '' : '-';
+  const text = day > 0
+    ? `${prefix}${day}d ${two(hr)}:${two(min)}:${two(sec)}`
+    : `${prefix}${two(hr)}:${two(min)}:${two(sec)}`;
+  return <span className="text-gray-300 text-sm tabular-nums">{text}</span>;
+};
 
 interface SlotFormData {
   firstwin: string;
@@ -245,6 +268,119 @@ const AdminDashboard = () => {
   // Edit banner image state
   const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
   const [editBannerPreview, setEditBannerPreview] = useState<string>('');
+  // ID/Pass modal state
+  const [showIdPassModal, setShowIdPassModal] = useState(false);
+  const [idPassSlotId, setIdPassSlotId] = useState<string>('');
+  // Date display helpers for dd/MM/yyyy HH:mm in Edit modal
+  const formatToDisplay = (iso?: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  };
+  const parseDisplayToISO = (val: string) => {
+    const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (!m) return '';
+    const [, dd, mm, yyyy, hh, mi] = m;
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(mi));
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m2 = String(d.getMonth() + 1).padStart(2, '0');
+    const d2 = String(d.getDate()).padStart(2, '0');
+    const h2 = String(d.getHours()).padStart(2, '0');
+    const mi2 = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m2}-${d2}T${h2}:${mi2}`;
+  };
+  const [editMatchTimeDisplay, setEditMatchTimeDisplay] = useState<string>('');
+
+  // Auto status update function
+  const updateMatchStatuses = async () => {
+    try {
+      const now = new Date();
+      const token = localStorage.getItem('adminToken');
+
+      // Find matches that need status updates
+      const matchesToUpdate = slots.filter((slot: any) => {
+        if (!slot.matchTime) return false;
+        const matchTime = new Date(slot.matchTime);
+        const timeDiff = matchTime.getTime() - now.getTime();
+
+        // If match time is in the future and status is not 'upcoming', mark as 'upcoming'
+        if (timeDiff > 0 && slot.status !== 'upcoming') {
+          return true;
+        }
+
+        // If match time has passed and status is still 'upcoming', mark as 'live'
+        if (timeDiff <= 0 && slot.status === 'upcoming') {
+          return true;
+        }
+
+        // If match time was more than 2 hours ago and status is 'live', mark as 'completed'
+        if (timeDiff <= -2 * 60 * 60 * 1000 && slot.status === 'live') {
+          return true;
+        }
+
+        return false;
+      });
+
+      // Update each match that needs status change
+      for (const slot of matchesToUpdate) {
+        const matchTime = new Date(slot.matchTime);
+        const timeDiff = matchTime.getTime() - now.getTime();
+        let newStatus = '';
+
+        // If match time is in the future, set to upcoming
+        if (timeDiff > 0 && slot.status !== 'upcoming') {
+          newStatus = 'upcoming';
+        }
+        // If match time has passed and status is upcoming, set to live
+        else if (timeDiff <= 0 && slot.status === 'upcoming') {
+          newStatus = 'live';
+        }
+        // If match time was more than 2 hours ago and status is live, set to completed
+        else if (timeDiff <= -2 * 60 * 60 * 1000 && slot.status === 'live') {
+          newStatus = 'completed';
+        }
+
+        if (newStatus) {
+          try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${slot._id}/status`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ status: newStatus })
+            });
+
+            if (response.ok) {
+              console.log(`Auto-updated match ${slot.matchTitle} from ${slot.status} to ${newStatus}`);
+            }
+          } catch (error) {
+            console.error(`Failed to auto-update match ${slot._id}:`, error);
+          }
+        }
+      }
+
+      // Refresh slots if any were updated
+      if (matchesToUpdate.length > 0) {
+        fetchSlots();
+      }
+    } catch (error) {
+      console.error('Error in auto status update:', error);
+    }
+  };
+
+  // Set up interval for automatic status updates
+  useEffect(() => {
+    const interval = setInterval(updateMatchStatuses, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [slots]);
 
   // Save Rules handler
   const handleSaveRules = async () => {
@@ -263,6 +399,10 @@ const AdminDashboard = () => {
       });
       if (response.ok) {
         toast({ title: 'Rules updated', description: 'Tournament rules updated successfully.' });
+        // Update local slots cache so reopening shows latest rules
+        setSlots((prev: any[]) => prev.map((s: any) => s._id === selectedSlotId ? { ...s, rules: formData.rules } : s));
+        // Optionally refresh from server to be consistent
+        fetchSlots();
         setShowTournamentRules(false);
       } else {
         throw new Error('Failed to update rules');
@@ -283,12 +423,20 @@ const AdminDashboard = () => {
       totalWinningPrice: slot.totalWinningPrice ?? '',
       matchTime: slot.matchTime ? new Date(slot.matchTime).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
       bannerImage: slot.bannerImage || '',
-      status: slot.status || 'upcoming'
+      status: slot.status || 'upcoming',
+      streamLink: slot.streamLink || ''
     });
     // Reset edit banner state
     setEditBannerFile(null);
     setEditBannerPreview('');
     setShowEditSlot(true);
+    // set display string for match time
+    try {
+      const iso = slot.matchTime ? new Date(slot.matchTime).toISOString().slice(0, 16) : '';
+      setEditMatchTimeDisplay(formatToDisplay(iso));
+    } catch {
+      setEditMatchTimeDisplay('');
+    }
   };
 
   // Submit Edit API
@@ -306,6 +454,7 @@ const AdminDashboard = () => {
         if (editData.totalWinningPrice !== '') form.append('totalWinningPrice', String(Number(editData.totalWinningPrice)));
         if (editData.matchTime) form.append('matchTime', editData.matchTime);
         if (editData.status) form.append('status', editData.status);
+        if (editData.streamLink) form.append('streamLink', editData.streamLink);
         form.append('bannerImage', editBannerFile);
 
         response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${selectedSlotId}`, {
@@ -327,7 +476,8 @@ const AdminDashboard = () => {
             // ensure numbers are numbers if provided as strings
             entryFee: editData.entryFee === '' ? undefined : Number(editData.entryFee),
             perKill: editData.perKill === '' ? undefined : Number(editData.perKill),
-            totalWinningPrice: editData.totalWinningPrice === '' ? undefined : Number(editData.totalWinningPrice)
+            totalWinningPrice: editData.totalWinningPrice === '' ? undefined : Number(editData.totalWinningPrice),
+            streamLink: editData.streamLink || undefined
           })
         });
       }
@@ -336,6 +486,11 @@ const AdminDashboard = () => {
         toast({ title: 'Updated', description: 'Match updated successfully.' });
         setShowEditSlot(false);
         await fetchSlots();
+
+        // Trigger immediate status update check after updating match time
+        setTimeout(() => {
+          updateMatchStatuses();
+        }, 1000);
       } else {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.msg || 'Failed to update match');
@@ -401,18 +556,34 @@ const AdminDashboard = () => {
   const [gameModes, setGameModes] = useState<any[]>([]);
   const [gameModeName, setGameModeName] = useState('');
   const [editingGameMode, setEditingGameMode] = useState(null);
+  // Game Maps state
+  const [gameMaps, setGameMaps] = useState<any[]>([]);
+  const [gameMapName, setGameMapName] = useState('');
+  const [editingGameMap, setEditingGameMap] = useState<any | null>(null);
+  const [loadingGameMaps, setLoadingGameMaps] = useState(false);
+  const [isSubmittingGameMap, setIsSubmittingGameMap] = useState(false);
   const [isSubmittingGameMode, setIsSubmittingGameMode] = useState(false);
   const [loadingGameModes, setLoadingGameModes] = useState(false);
 
   // Banner management state
-  const [bannerData, setBannerData] = useState({
+  type BannerState = {
+    _id?: string;
+    title: string;
+    description: string;
+    buttonText: string;
+    backgroundImage: string;
+    bannerImages: string[];
+  };
+
+  const [bannerData, setBannerData] = useState<BannerState>({
+    _id: undefined,
     title: '',
     description: '',
     buttonText: '',
     backgroundImage: '',
     bannerImages: []
   });
-  
+
   // Separate state for single banner form
   const [singleBannerForm, setSingleBannerForm] = useState({
     title: '',
@@ -434,6 +605,57 @@ const AdminDashboard = () => {
     preview: string;
   }>>([]);
   const { toast } = useToast();
+  type StatusFilter = 'all' | 'upcoming' | 'live' | 'completed';
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('upcoming');
+  type DateFilter = 'all' | 'today' | 'yesterday' | 'tomorrow' | 'last3days' | 'custom';
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
+
+  // Legacy defaults to hide from UI
+  const DEFAULT_TITLE = 'BOOK YOUR SPOT.\nDOMINATE THE ARENA.';
+  const DEFAULT_DESC = 'Join daily Free Fire & Squad Tournaments.\nCompete, Win, Get Rewarded.';
+  const sanitizeText = (value?: string) => {
+    if (!value) return '';
+    if (value === DEFAULT_TITLE) return '';
+    if (value === DEFAULT_DESC) return '';
+    return value;
+  };
+
+  // Remove a single image from a banner
+  const handleRemoveBannerImage = async (bannerId: string, imagePath: string) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/remove-image`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ imagePath })
+      });
+      if (!res.ok) throw new Error('Failed to remove image');
+      toast({ title: 'Removed', description: 'Banner image deleted.' });
+      await fetchBannerData();
+      await fetchAllBanners();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Failed to remove image', variant: 'destructive' });
+    }
+  };
+
+  const toRelativeUploadsPath = (url: string): string => {
+    if (!url) return url;
+    const uploadsIdx = url.indexOf('/uploads/');
+    if (uploadsIdx !== -1) {
+      return url.substring(uploadsIdx);
+    }
+    // Fallback: strip API base if present
+    const apiBase = import.meta.env.VITE_API_URL as string;
+    if (apiBase && url.startsWith(apiBase)) {
+      return url.replace(apiBase, '');
+    }
+    return url;
+  };
 
   useEffect(() => {
     // Check if admin is logged in
@@ -667,6 +889,8 @@ const AdminDashboard = () => {
       fetchSlots();
       fetchUsers();
       fetchSlotBookings();
+      fetchGameModes();
+      fetchGameMaps();
     }
   }, [loading]);
 
@@ -873,12 +1097,13 @@ const AdminDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setBannerData({
+          _id: data._id,
           title: data.title,
           description: data.description,
           buttonText: data.buttonText,
           backgroundImage: data.backgroundImage,
           bannerImages: data.bannerImages || []
-        });
+        } as any);
       }
     } catch (error) {
       console.error('Error fetching banner data:', error);
@@ -915,7 +1140,7 @@ const AdminDashboard = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const preview = e.target?.result as string;
-          setMultipleBannerData(prev => prev.map((item, i) => 
+          setMultipleBannerData(prev => prev.map((item, i) =>
             i === index ? { ...item, preview } : item
           ));
         };
@@ -1029,7 +1254,7 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      
+
       // Upload each banner with its metadata
       for (const banner of multipleBannerData) {
         if (!banner.file) continue;
@@ -1079,36 +1304,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Set active banner
-  const handleSetActiveBanner = async (bannerId: string) => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/activate`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Banner activated successfully",
-        });
-        fetchBannerData();
-        fetchAllBanners();
-      } else {
-        throw new Error('Failed to activate banner');
-      }
-    } catch (error) {
-      console.error('Error activating banner:', error);
-      toast({
-        title: "Error",
-        description: "Failed to activate banner",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Delete banner
   const handleDeleteBanner = async (bannerId: string) => {
@@ -1229,8 +1424,8 @@ const AdminDashboard = () => {
       if (response.ok) {
         const data = await response.json();
 
-  // Ensure we always have an array, even if API returns object
-  const gameTypesArray = Array.isArray(data) ? data : (data.gameTypes || []);
+        // Ensure we always have an array, even if API returns object
+        const gameTypesArray = Array.isArray(data) ? data : (data.gameTypes || []);
 
         setGameTypes(gameTypesArray);
       } else {
@@ -1400,6 +1595,114 @@ const AdminDashboard = () => {
     setGameModeName('');
     setEditingGameMode(null);
     setIsSubmittingGameMode(false);
+  };
+
+  // Game Map Management Functions
+  const resetGameMapForm = () => {
+    setGameMapName('');
+    setEditingGameMap(null);
+    setIsSubmittingGameMap(false);
+  };
+
+  const fetchGameMaps = async () => {
+    try {
+      setLoadingGameMaps(true);
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/gamemaps`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const gameMapsArray = Array.isArray(data) ? data : (data.gameMaps || []);
+        setGameMaps(gameMapsArray);
+      } else {
+        throw new Error('Failed to fetch game maps');
+      }
+    } catch (error) {
+      console.error('Error fetching game maps:', error);
+      toast({ title: 'Error', description: 'Failed to fetch game maps', variant: 'destructive' });
+    } finally {
+      setLoadingGameMaps(false);
+    }
+  };
+
+  const handleCreateGameMap = async () => {
+    try {
+      setIsSubmittingGameMap(true);
+      if (!gameMapName.trim()) {
+        toast({ title: 'Error', description: 'Game map name is required', variant: 'destructive' });
+        return;
+      }
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/gamemaps`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameMap: gameMapName })
+      });
+      if (response.ok) {
+        toast({ title: 'Success', description: 'Game map created successfully' });
+        resetGameMapForm();
+        fetchGameMaps();
+      } else {
+        const err = await response.json();
+        throw new Error(err.msg || 'Failed to create game map');
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to create game map', variant: 'destructive' });
+    } finally {
+      setIsSubmittingGameMap(false);
+    }
+  };
+
+  const handleEditGameMap = (map: any) => {
+    setEditingGameMap(map);
+    setGameMapName(map.gameMap || map.name || '');
+  };
+
+  const handleUpdateGameMap = async () => {
+    if (!editingGameMap) return;
+    try {
+      setIsSubmittingGameMap(true);
+      if (!gameMapName.trim()) {
+        toast({ title: 'Error', description: 'Game map name is required', variant: 'destructive' });
+        return;
+      }
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/gamemaps/${editingGameMap._id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameMap: gameMapName })
+      });
+      if (response.ok) {
+        toast({ title: 'Success', description: 'Game map updated successfully' });
+        resetGameMapForm();
+        fetchGameMaps();
+      } else {
+        throw new Error('Failed to update game map');
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update game map', variant: 'destructive' });
+    } finally {
+      setIsSubmittingGameMap(false);
+    }
+  };
+
+  const handleDeleteGameMap = async (id: string) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/gamemaps/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        toast({ title: 'Success', description: 'Game map deleted successfully' });
+        fetchGameMaps();
+      } else {
+        throw new Error('Failed to delete game map');
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete game map', variant: 'destructive' });
+    }
   };
 
   const fetchGameModes = async () => {
@@ -1683,6 +1986,83 @@ const AdminDashboard = () => {
     );
   };
 
+  // Game Map Management UI
+  const renderGameMapManagement = () => {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+          <CardHeader>
+            <CardTitle className="text-white">Game Map Management</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Game Map Form */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="gameMapName" className="text-white">Game Map Name</Label>
+                  <Input
+                    id="gameMapName"
+                    placeholder="Enter game map name (e.g., Bermuda, Purgatory)"
+                    value={gameMapName}
+                    onChange={(e) => setGameMapName(e.target.value)}
+                    className="bg-[#2A2A2A] border-[#3A3A3A] text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                {editingGameMap ? (
+                  <>
+                    <Button type="button" variant="outline" onClick={resetGameMapForm} className="mr-2 text-white border-[#3A3A3A]">Cancel</Button>
+                    <Button type="button" onClick={handleUpdateGameMap} disabled={isSubmittingGameMap} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                      {isSubmittingGameMap ? 'Updating...' : 'Update Game Map'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button type="button" onClick={handleCreateGameMap} disabled={isSubmittingGameMap} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    {isSubmittingGameMap ? 'Creating...' : 'Create Game Map'}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Game Map List */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-white">Existing Game Maps</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {loadingGameMaps ? (
+                  <div className="col-span-3 flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div>
+                  </div>
+                ) : !Array.isArray(gameMaps) || gameMaps.length === 0 ? (
+                  <div className="col-span-3 text-center p-8 border border-dashed border-[#3A3A3A] rounded-lg">
+                    <p className="text-gray-400">No game maps found. Create your first game map above.</p>
+                  </div>
+                ) : (
+                  gameMaps.map((map, index) => (
+                    <Card key={map._id || `gamemap-${index}`} className="bg-[#222222] border-[#2A2A2A] overflow-hidden">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <h4 className="text-lg font-medium text-white">{map.gameMap || map.name}</h4>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEditGameMap(map)} className="h-8 w-8 p-0 text-white border-[#3A3A3A]">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => map._id && handleDeleteGameMap(map._id)} className="h-8 w-8 p-0">
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   // Game Type Management UI
   const renderGameTypeManagement = () => {
     // Add safety checks
@@ -1909,7 +2289,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Multiple Banner Upload */}
-          <div className="border-b border-[#2A2A2A] pb-6">
+          {/* <div className="border-b border-[#2A2A2A] pb-6">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-medium text-white">Multiple Banner Upload</h3>
               <Button
@@ -1924,13 +2304,13 @@ const AdminDashboard = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Select Multiple Banner Images</label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleMultipleBannerFiles}
-                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
-                  />
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleMultipleBannerFiles}
+                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
+                />
                 </div>
 
                 {multipleBannerData.length > 0 && (
@@ -1945,19 +2325,17 @@ const AdminDashboard = () => {
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Image Preview */}
                           <div>
                             <label className="block text-sm font-medium text-white mb-2">Image Preview</label>
                             {banner.preview && (
                               <img
                                 src={banner.preview}
-                                alt={`Preview ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
                             )}
-                          </div>
+                      </div>
 
-                          {/* Form Fields */}
                           <div className="space-y-3">
                             <div>
                               <label className="block text-sm font-medium text-white mb-1">Title</label>
@@ -1972,7 +2350,7 @@ const AdminDashboard = () => {
                                 placeholder="Enter banner title"
                                 className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 text-sm"
                               />
-                            </div>
+                  </div>
 
                             <div>
                               <label className="block text-sm font-medium text-white mb-1">Description</label>
@@ -2008,42 +2386,46 @@ const AdminDashboard = () => {
                       </div>
                     ))}
 
-                    <Button
-                      onClick={handleUploadMultipleImages}
+                <Button
+                  onClick={handleUploadMultipleImages}
                       disabled={multipleBannerData.length === 0 || loading}
                       className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-                    >
+                >
                       {loading ? 'Uploading...' : `Upload ${multipleBannerData.length} Banners`}
-                    </Button>
-                  </div>
-                )}
+                </Button>
               </div>
             )}
           </div>
+            )}
+          </div> */}
 
           {/* Current Banner Info */}
           {bannerData && (
             <div className="border-b border-[#2A2A2A] pb-6">
               <h3 className="text-lg font-medium text-white mb-3">Current Banner</h3>
               <div className="space-y-3">
-                <p className="text-gray-300"><strong className="text-white">Title:</strong> {bannerData.title}</p>
+                {/* <p className="text-gray-300"><strong className="text-white">Title:</strong> {sanitizeText(bannerData.title)}</p> */}
                 {/* <p className="text-gray-300"><strong className="text-white">Subtitle:</strong> {bannerData.subtitle}</p> */}
-                <p className="text-gray-300"><strong className="text-white">Status:</strong>
-                  {/* <span className={`ml-2 px-2 py-1 rounded text-sm ${bannerData.isActive ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                    {bannerData.isActive ? 'Active' : 'Inactive'}
-                  </span> */}
-                </p>
+                {/* Status removed by request */}
                 {bannerData.bannerImages && bannerData.bannerImages.length > 0 && (
                   <div>
                     <p className="mb-2 text-white"><strong>Banner Images ({bannerData.bannerImages.length}):</strong></p>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {bannerData.bannerImages.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image} // Now image contains full URL from backend
-                          alt={`Banner ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
-                        />
+                        <div key={index} className="relative group">
+                          <img
+                            src={image}
+                            alt={`Banner ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
+                          />
+                          <button
+                            className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                            title="Delete image"
+                            onClick={() => handleRemoveBannerImage(bannerData._id as any, toRelativeUploadsPath(image as any))}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -2079,24 +2461,15 @@ const AdminDashboard = () => {
                 <div key={banner._id} className="border border-[#2A2A2A] rounded-lg p-4 bg-[#2A2A2A]">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h4 className="font-medium text-white">{banner.title}</h4>
-                      <p className="text-sm text-gray-300">{banner.subtitle}</p>
+                      <h4 className="font-medium text-white">{sanitizeText(banner.title)}</h4>
+                      <p className="text-sm text-gray-300">{sanitizeText(banner.subtitle)}</p>
                     </div>
                     <div className="flex space-x-2">
-                      {!banner.isActive && (
-                        <Button
-                          onClick={() => handleSetActiveBanner(banner._id)}
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Set Active
-                        </Button>
-                      )}
                       <Button
                         onClick={() => handleDeleteBanner(banner._id)}
                         size="sm"
                         variant="destructive"
-                        className="bg-red-600 hover:bg-red-700"
+                        className="bg-red-600 hover:bg-red-700 text-white"
                       >
                         Delete
                       </Button>
@@ -2104,9 +2477,6 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="flex items-center space-x-4 text-sm mb-3">
-                    <span className={`px-2 py-1 rounded ${banner.isActive ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                      {banner.isActive ? 'Active' : 'Inactive'}
-                    </span>
                     <span className="text-gray-300">
                       Images: {banner.bannerImages?.length || 0}
                     </span>
@@ -2144,10 +2514,47 @@ const AdminDashboard = () => {
     </div>
   );
 
+  const [userSearch, setUserSearch] = useState('');
+  const [showUserBookingsModal, setShowUserBookingsModal] = useState(false);
+  const [selectedUserForBookings, setSelectedUserForBookings] = useState<any | null>(null);
+  const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [loadingUserBookings, setLoadingUserBookings] = useState(false);
+
+  const openUserBookings = async (user: any) => {
+    try {
+      setSelectedUserForBookings(user);
+      setShowUserBookingsModal(true);
+      setLoadingUserBookings(true);
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/user/${user._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch user bookings');
+      const data = await res.json();
+      // Expect data to be array; fallback to data.bookings
+      const list = Array.isArray(data) ? data : (data.bookings || []);
+      setUserBookings(list);
+    } catch (e: any) {
+      setUserBookings([]);
+      toast({ title: 'Error', description: e.message || 'Failed to load bookings', variant: 'destructive' });
+    } finally {
+      setLoadingUserBookings(false);
+    }
+  };
+
   const renderUsers = () => (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
-        <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
+          <input
+            type="text"
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            placeholder="Search by name, email, phone, username"
+            className="w-full max-w-md bg-[#222] border border-[#333] text-white rounded px-3 py-2"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {users.length === 0 ? (
@@ -2167,38 +2574,53 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-white">Free Fire Username</th>
                   <th className="text-left p-3 text-white">Wallet</th>
                   <th className="text-left p-3 text-white">Joined</th>
+                  <th className="text-right p-3 text-white">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user: any) => (
-                  <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-[#FF4D4F] rounded-full flex items-center justify-center text-white font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                {users
+                  .filter((user: any) => {
+                    if (!userSearch.trim()) return true;
+                    const q = userSearch.toLowerCase();
+                    return (
+                      (user.name || '').toLowerCase().includes(q) ||
+                      (user.email || '').toLowerCase().includes(q) ||
+                      (user.phone || '').toLowerCase().includes(q) ||
+                      (user.freeFireUsername || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((user: any) => (
+                    <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-[#FF4D4F] rounded-full flex items-center justify-center text-white font-bold">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-white">{user.name}</span>
                         </div>
-                        <span className="text-white">{user.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-white">{user.email}</td>
-                    <td className="p-3 text-white">{user.phone}</td>
-                    <td className="p-3">
-                      <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
-                        {user.freeFireUsername}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-green-400 font-bold">₹{user.wallet}</span>
-                    </td>
-                    <td className="p-3 text-gray-400">
-                      {new Date(user.createdAt).toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-3 text-white">{user.email}</td>
+                      <td className="p-3 text-white">{user.phone}</td>
+                      <td className="p-3">
+                        <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
+                          {user.freeFireUsername}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className="text-green-400 font-bold">₹{user.wallet}</span>
+                      </td>
+                      <td className="p-3 text-gray-400">
+                        {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </td>
+                      <td className="p-3 text-right">
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openUserBookings(user)}>View Bookings</Button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -2244,7 +2666,11 @@ const AdminDashboard = () => {
   );
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#121212]">
+        <div className="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -2273,28 +2699,13 @@ const AdminDashboard = () => {
           </Button>
           <Button
             variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'users' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('users')}
-          >
-            <Users className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Users</span>}
-          </Button>
-          <Button
-            variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'matches' ? 'bg-[#2A2A2A]' : ''}`}
             onClick={() => setActiveSection('matches')}
           >
             <GamepadIcon className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Matches</span>}
           </Button>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'revenue' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('revenue')}
-          >
-            <DollarSign className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Revenue</span>}
-          </Button>
+
           <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'banner' ? 'bg-[#2A2A2A]' : ''}`}
@@ -2303,6 +2714,7 @@ const AdminDashboard = () => {
             <Image className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Banner</span>}
           </Button>
+
           <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameTypes' ? 'bg-[#2A2A2A]' : ''}`}
@@ -2311,21 +2723,14 @@ const AdminDashboard = () => {
             <GamepadIcon className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Game Types</span>}
           </Button>
+
           <Button
             variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameModes' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('gameModes')}
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'users' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('users')}
           >
-            <GamepadIcon className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Game Modes</span>}
-          </Button>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'winners' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('winners')}
-          >
-            <Trophy className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Winners</span>}
+            <Users className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Users</span>}
           </Button>
           <Button
             variant="ghost"
@@ -2337,12 +2742,39 @@ const AdminDashboard = () => {
           </Button>
           <Button
             variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'revenue' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('revenue')}
+          >
+            <DollarSign className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Revenue</span>}
+          </Button>
+
+
+          <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameModes' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('gameModes')}
+          >
+            <GamepadIcon className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Game Modes</span>}
+          </Button>
+          {/* <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'winners' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('winners')}
+          >
+            <Trophy className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Winners</span>}
+          </Button> */}
+
+          {/* <Button
+            variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'slotCredentials' ? 'bg-[#2A2A2A]' : ''}`}
             onClick={() => setActiveSection('slotCredentials')}
           >
             <KeyRound className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">ID/Password</span>}
-          </Button>
+          </Button> */}
           {/* <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'slotCredentials' ? 'bg-[#2A2A2A]' : ''}`}
@@ -2352,13 +2784,13 @@ const AdminDashboard = () => {
             {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
           </Button> */}
           <Button
-              variant="ghost"
-              className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
-              onClick={() => setActiveSection('announcementSender')}
-            >
-              <KeyRound className="h-4 w-4 mr-3" />
-              {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
-            </Button>
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('announcementSender')}
+          >
+            <KeyRound className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+          </Button>
           <Button
             variant="ghost"
             className="w-full justify-start px-3 py-2 text-red-500 hover:text-red-400 hover:bg-[#2A2A2A]"
@@ -2374,14 +2806,14 @@ const AdminDashboard = () => {
       <main className={`flex-1 ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
         <header className="bg-[#1A1A1A] border-b border-[#2A2A2A] p-6">
           <h1 className="text-2xl font-bold text-white">
-          <Button
-            variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('announcementSender')}
-          >
-            <KeyRound className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
-          </Button>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
+              onClick={() => setActiveSection('announcementSender')}
+            >
+              <KeyRound className="h-4 w-4 mr-3" />
+              {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+            </Button>
             {activeSection === 'slotCredentials' && (
               <div>
                 <div className="mb-4">
@@ -2390,7 +2822,7 @@ const AdminDashboard = () => {
                     className="w-full p-2 rounded bg-[#222] text-white border border-[#333]"
                     value={selectedSlotId}
                     onChange={e => setSelectedSlotId(e.target.value)}
-                    // disabled={!!selectedSlotId}
+                  // disabled={!!selectedSlotId}
                   >
                     <option value="">-- Select Slot --</option>
                     {slots.map((slot: any) => (
@@ -2408,19 +2840,29 @@ const AdminDashboard = () => {
             {activeSection === 'banner' && 'Banner Management'}
             {activeSection === 'gameTypes' && 'Game Types Management'}
             {activeSection === 'gameModes' && 'Game Modes Management'}
-            {activeSection === 'winners' && 'Winners Management'}
+            {activeSection === 'winners' && (
+              <div className="flex items-center gap-3">
+                <span>Winners Management</span>
+                <Button
+                  variant="outline"
+                  className="ml-4 text-white border-[#2A2A2A]"
+                  onClick={() => setActiveSection('matches')}
+                >
+                  ← Back to Matches
+                </Button>
+              </div>
+            )}
           </h1>
         </header>
 
         <div className="p-6">
-    {activeSection === 'dashboard' && renderDashboard()}
-    {activeSection === 'users' && renderUsers()}
-    {activeSection === 'contactMessages' && <ContactMessagesTable />}
-    {activeSection === 'announcementSender' && <AnnouncementSender />}
-    {activeSection === 'matches' && (
+          {activeSection === 'dashboard' && renderDashboard()}
+          {activeSection === 'users' && renderUsers()}
+          {activeSection === 'contactMessages' && <ContactMessagesTable />}
+          {activeSection === 'announcementSender' && <AnnouncementSender />}
+          {activeSection === 'matches' && (
             <>
-              {/* Matches Overview Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                 <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
                   <CardHeader>
                     <CardTitle className="text-white">Total Matches</CardTitle>
@@ -2429,7 +2871,18 @@ const AdminDashboard = () => {
                     <p className="text-3xl font-bold text-white">{slots.length}</p>
                   </CardContent>
                 </Card>
-
+                <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      Auto Status Updates
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-300">Active</p>
+                    <p className="text-xs text-gray-400">Updates every minute</p>
+                  </CardContent>
+                </Card>
                 <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
                   <CardHeader>
                     <CardTitle className="text-white">Total Bookings</CardTitle>
@@ -2440,7 +2893,6 @@ const AdminDashboard = () => {
                     </p>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
                   <CardHeader>
                     <CardTitle className="text-white">Match Revenue</CardTitle>
@@ -2454,611 +2906,117 @@ const AdminDashboard = () => {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Match Management Header */}
-              <Card className="bg-[#1A1A1A] border-[#2A2A2A] mb-6">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-white">Active Matches</CardTitle>
-                  <div className="flex items-center gap-3">
-                    {/* <Button 
-                      onClick={handleAutoUpdateStatuses}
-                      disabled={loading}
-                      className="bg-[#52C41A] hover:bg-[#73D13D] text-white"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Auto Update Status
-                    </Button> */}
-                    <Dialog open={showAddSlot} onOpenChange={(open) => {
-                      setShowAddSlot(open);
-                      if (!open) {
-                        // Clear form and banner image state when dialog closes
-                        setFormData(initialFormData);
-                        setSlotBannerFile(null);
-                        setSlotBannerPreview('');
-                      }
-                    }}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Match
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] bg-[#0F0F0F] border border-[#2A2A2A] text-white overflow-y-auto">
-                        <DialogHeader>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-r from-[#FF4D4F] to-[#FF7875] rounded-lg">
-                              <Plus className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                              <DialogTitle className="text-xl font-bold text-white">
-                                Create New Match
-                              </DialogTitle>
-                              <p className="text-gray-400 text-sm">
-                                Set up a new tournament match
-                              </p>
-                            </div>
-                          </div>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateSlot} className="space-y-6">
-                          {/* Basic Match Information */}
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Basic Information</h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="matchTitle" className="text-white">Match Title</Label>
-                                <Input
-                                  id="matchTitle"
-                                  type="text"
-                                  value={formData.matchTitle}
-                                  onChange={(e) => setFormData({ ...formData, matchTitle: e.target.value })}
-                                  placeholder="FF SOLO TOURNAMENT"
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="tournamentName" className="text-white">Tournament Name</Label>
-                                <Input
-                                  id="tournamentName"
-                                  type="text"
-                                  value={formData.tournamentName}
-                                  onChange={(e) => setFormData({ ...formData, tournamentName: e.target.value })}
-                                  placeholder="#ALPHALIONS"
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="hostName" className="text-white">Host Name</Label>
-                                <Input
-                                  id="hostName"
-                                  type="text"
-                                  value={formData.hostName}
-                                  onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
-                                  placeholder="ALPHA LIONS"
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="matchDescription" className="text-white">Match Description</Label>
-                              <textarea
-                                id="matchDescription"
-                                value={formData.matchDescription}
-                                onChange={(e) => setFormData({ ...formData, matchDescription: e.target.value })}
-                                placeholder="Tournament description and details..."
-                                className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-20"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Game Settings */}
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Game Settings</h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="slotType" className="text-white">Game Type</Label>
-                                <Select
-                                  value={formData.slotType}
-                                  onValueChange={(value) => setFormData({ ...formData, slotType: value })}
-                                >
-                                  <SelectTrigger className="text-white bg-[#2A2A2A] border-[#3A3A3A]">
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#2A2A2A] border-[#3A3A3A]">
-                                    {gameTypes.length > 0 ? (
-                                      gameTypes.map((gameType) => (
-                                        <SelectItem
-                                          key={gameType._id}
-                                          value={gameType.gameType}
-                                          className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]"
-                                        >
-                                          {gameType.gameType}
-                                        </SelectItem>
-                                      ))
-                                    ) : (
-                                      // Fallback options in case the API hasn't loaded yet
-                                      <>
-                                        <SelectItem value="Solo" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Solo</SelectItem>
-                                        <SelectItem value="Duo" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Duo</SelectItem>
-                                        <SelectItem value="Squad" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Squad</SelectItem>
-                                      </>
-                                    )}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="mapName" className="text-white">Map</Label>
-                                <Select
-                                  value={formData.mapName}
-                                  onValueChange={(value) => setFormData({ ...formData, mapName: value })}
-                                >
-                                  <SelectTrigger className="text-white bg-[#2A2A2A] border-[#3A3A3A]">
-                                    <SelectValue placeholder="Select map" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#2A2A2A] border-[#3A3A3A]">
-                                    <SelectItem value="Bermuda" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Bermuda</SelectItem>
-                                    <SelectItem value="Purgatory" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Purgatory</SelectItem>
-                                    <SelectItem value="Kalahari" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Kalahari</SelectItem>
-                                    <SelectItem value="Alpine" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Alpine</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="gameMode" className="text-white">Game Mode</Label>
-                                <Select
-                                  value={formData.gameMode}
-                                  onValueChange={(value) => setFormData({ ...formData, gameMode: value })}
-                                >
-                                  <SelectTrigger className="text-white bg-[#2A2A2A] border-[#3A3A3A]">
-                                    <SelectValue placeholder="Select mode" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-[#2A2A2A] border-[#3A3A3A]">
-                                    {gameModes.length > 0 ? (
-                                      gameModes.map((gameMode) => (
-                                        <SelectItem
-                                          key={gameMode._id}
-                                          value={gameMode.gameMode}
-                                          className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]"
-                                        >
-                                          {gameMode.gameMode}
-                                        </SelectItem>
-                                      ))
-                                    ) : (
-                                      // Fallback options in case the API hasn't loaded yet
-                                      <>
-                                        <SelectItem value="Solo" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Solo</SelectItem>
-                                        <SelectItem value="Duo" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Duo</SelectItem>
-                                        <SelectItem value="Squad" className="text-white hover:bg-[#3A3A3A] focus:bg-[#3A3A3A]">Squad</SelectItem>
-                                      </>
-                                    )}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="specialRules" className="text-white">Special Rules</Label>
-                                <Input
-                                  id="specialRules"
-                                  type="text"
-                                  value={formData.specialRules}
-                                  onChange={(e) => setFormData({ ...formData, specialRules: e.target.value })}
-                                  placeholder="RYDEN BAN"
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="banList" className="text-white">Ban List</Label>
-                                <Input
-                                  id="banList"
-                                  type="text"
-                                  value={formData.banList}
-                                  onChange={(e) => setFormData({ ...formData, banList: e.target.value })}
-                                  placeholder="RYDEN, M1014"
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="bannerImage" className="text-white">Banner Image (Optional)</Label>
-                                <input
-                                  id="bannerImage"
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleSlotBannerFileChange}
-                                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                                />
-                                {slotBannerPreview && (
-                                  <div className="mt-2">
-                                    <img
-                                      src={slotBannerPreview}
-                                      alt="Banner Preview"
-                                      className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Timing & Players */}
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Timing & Players</h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="matchTime" className="text-white">Match Time</Label>
-                                <Input
-                                  id="matchTime"
-                                  type="datetime-local"
-                                  value={formData.matchTime}
-                                  min={new Date().toISOString().slice(0, 16)}
-                                  onChange={(e) => setFormData({ ...formData, matchTime: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="registrationDeadline" className="text-white">Registration Deadline</Label>
-                                <Input
-                                  id="registrationDeadline"
-                                  type="datetime-local"
-                                  value={formData.registrationDeadline}
-                                  min={new Date().toISOString().slice(0, 16)}
-                                  onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="maxPlayers" className="text-white">Slots</Label>
-                                <Input
-                                  id="maxPlayers"
-                                  type="number"
-                                  min="1"
-                                  value={formData.maxPlayers}
-                                  onChange={(e) => setFormData({ ...formData, maxPlayers: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="customStartInMinutes" className="text-white">Start In (minutes)</Label>
-                                <Input
-                                  id="customStartInMinutes"
-                                  type="number"
-                                  min="0"
-                                  value={formData.customStartInMinutes}
-                                  onChange={(e) => setFormData({ ...formData, customStartInMinutes: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          {/* Prize Information */}
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Prize Information</h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="entryFee" className="text-white">Entry Fee (₹)</Label>
-                                <Input
-                                  id="entryFee"
-                                  type="number"
-                                  min="0"
-                                  value={formData.entryFee}
-                                  onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="perKill" className="text-white">Per Kill Reward (₹)</Label>
-                                <Input
-                                  id="perKill"
-                                  type="number"
-                                  min="0"
-                                  value={formData.perKill}
-                                  onChange={(e) => setFormData({ ...formData, perKill: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="totalWinningPrice" className="text-white">Total Winning Prize (₹)</Label>
-                                <Input
-                                  id="totalWinningPrice"
-                                  type="number"
-                                  min="0"
-                                  value={formData.totalWinningPrice}
-                                  onChange={(e) => setFormData({ ...formData, totalWinningPrice: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="firstwin" className="text-white">1st Winner Prize (₹)</Label>
-                                <Input
-                                  id="firstwin"
-                                  type="number"
-                                  min="0"
-                                  value={formData.firstwin}
-                                  onChange={(e) => setFormData({ ...formData, firstwin: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="secwin" className="text-white">2nd Winner Prize (₹)</Label>
-                                <Input
-                                  id="secwin"
-                                  type="number"
-                                  min="0"
-                                  value={formData.secwin}
-                                  onChange={(e) => setFormData({ ...formData, secwin: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="thirdwin" className="text-white">3rd Winner Prize (₹)</Label>
-                                <Input
-                                  id="thirdwin"
-                                  type="number"
-                                  min="0"
-                                  value={formData.thirdwin}
-                                  onChange={(e) => setFormData({ ...formData, thirdwin: e.target.value })}
-                                  required
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="prizeDistribution" className="text-white">Prize Distribution</Label>
-                              <Input
-                                id="prizeDistribution"
-                                type="text"
-                                value={formData.prizeDistribution}
-                                onChange={(e) => setFormData({ ...formData, prizeDistribution: e.target.value })}
-                                placeholder="1st: 50%, 2nd: 30%, 3rd: 20%"
-                                className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                              />
-                            </div>
-                          </div>
-                          {/* Additional Information */}
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Additional Information</h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="contactInfo" className="text-white">Contact Info</Label>
-                                <Input
-                                  id="contactInfo"
-                                  type="text"
-                                  value={formData.contactInfo}
-                                  onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
-                                  placeholder="admin@tournament.com"
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="streamLink" className="text-white">Stream Link</Label>
-                                <Input
-                                  id="streamLink"
-                                  type="url"
-                                  value={formData.streamLink}
-                                  onChange={(e) => setFormData({ ...formData, streamLink: e.target.value })}
-                                  placeholder="https://youtube.com/..."
-                                  className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="discordLink" className="text-white">Discord Link</Label>
-                              <Input
-                                id="discordLink"
-                                type="url"
-                                value={formData.discordLink}
-                                onChange={(e) => setFormData({ ...formData, discordLink: e.target.value })}
-                                placeholder="https://discord.gg/..."
-                                className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="rules" className="text-white">Rules & Regulations</Label>
-                              <textarea
-                                id="rules"
-                                value={formData.rules}
-                                onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
-                                placeholder="Detailed tournament rules..."
-                                className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-24"
-                              />
-                            </div>
-                          </div>
-
-                          <DialogFooter>
-                            <Button
-                              type="submit"
-                              disabled={loading}
-                              className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white"
-                            >
-                              {loading ? "Creating..." : "Create Match"}
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* Rules Modal */}
-                    <Dialog open={showTournamentRules} onOpenChange={setShowTournamentRules}>
-                      <DialogContent className="max-w-3xl w-full bg-[#181818] border border-[#333] text-white flex flex-col justify-center items-center" style={{ maxHeight: '90vh', overflowY: 'auto', margin: 'auto', position: 'fixed' }}>
-                        <DialogHeader className="w-full flex flex-col items-center mb-2">
-                          <DialogTitle className="text-2xl font-extrabold text-white tracking-wide mb-2 text-center">Tournament Rules (HTML)</DialogTitle>
-                          <span className="text-gray-400 text-sm font-medium text-center">Edit and preview tournament rules below</span>
-                        </DialogHeader>
-                        <div className="w-full flex flex-col md:flex-row gap-6 items-start justify-center mt-2">
-                          <div className="flex-1 flex flex-col items-center">
-                            <label htmlFor="rulesHtml" className="block text-white font-semibold mb-2 text-lg">Edit Tournament Rules (HTML)</label>
-                            <textarea
-                              id="rulesHtml"
-                              value={formData.rules}
-                              onChange={e => setFormData({ ...formData, rules: e.target.value })}
-                              placeholder="Paste or write tournament rules HTML here..."
-                              className="w-full max-w-md min-h-[160px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#FF4D4F] focus:border-[#52C41A] rounded-lg shadow-md outline-none transition-all duration-200 resize-y mb-4 text-base"
-                              style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}
-                            />
-                          </div>
-                          <div className="flex-1 flex flex-col items-center">
-                            <label className="block text-white font-semibold mb-2 text-lg">Live Preview</label>
-                            <div className="w-full max-w-md min-h-[160px] bg-[#181C24] border-2 border-[#333] rounded-lg p-4 overflow-auto shadow-inner text-white" style={{ whiteSpace: 'normal' }}>
-                              <div dangerouslySetInnerHTML={{ __html: formData.rules }} />
-                            </div>
-                          </div>
-                        </div>
-                        <DialogFooter className="w-full flex flex-row justify-center gap-4 mt-8">
-                          <Button onClick={handleSaveRules} className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white font-semibold px-8 py-2 rounded-lg text-base shadow-md transition-all duration-150">Save Rules</Button>
-                          <Button onClick={() => setShowTournamentRules(false)} className="bg-[#52C41A] hover:bg-[#73D13D] text-white font-semibold px-8 py-2 rounded-lg text-base shadow-md transition-all duration-150">Close</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {slots.map((slot: any) => (
-                      <div
-                        key={slot._id}
-                        className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden"
-                      >
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-white" />
-                            <span className="text-white font-medium">{slot.matchTitle && slot.matchTitle.trim() ? slot.matchTitle : `${slot.slotType.charAt(0).toUpperCase() + slot.slotType.slice(1)} Match`}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(slot.status || 'upcoming')}`}>
-                              {(slot.status || 'upcoming').toUpperCase()}
-                            </span>
-                            <span className="text-white">₹{slot.entryFee}</span>
-                          </div>
-                        </div>
-
-                        {/* Banner Image */}
-                        {slot.bannerImage && (
-                          <div className="w-full h-32 overflow-hidden">
-                            <img
-                              src={slot.bannerImage}
-                              alt={`${slot.slotType} Banner`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        {/* Content */}
-                        <div className="p-4 space-y-4">
-                          {/* Prize Distribution */}
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <span className="text-yellow-500">⚡</span>
-                              <span className="text-gray-400">Per Kill</span>
-                            </div>
-                            <span className="text-yellow-500">₹{slot.perKill}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <span className="text-yellow-500">👑</span>
-                              <span className="text-gray-400">Winner</span>
-                            </div>
-                            <span className="text-yellow-500">₹{slot.totalWinningPrice}</span>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="mt-4 space-y-2">
-                            {/* Status Management */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-400">Status:</span>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(slot.status || 'upcoming')}`}>
-                                {(slot.status || 'upcoming').toUpperCase()}
-                              </span>
-                              {getNextStatus(slot.status || 'upcoming') && (
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-xs"
-                                  onClick={() => handleUpdateMatchStatus(slot._id, getNextStatus(slot.status || 'upcoming')!)}
-                                >
-                                  → {getNextStatus(slot.status || 'upcoming')?.toUpperCase()}
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Horizontal Button Row */}
-                            <div className="flex gap-2">
-                              <Button
-                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2"
-                                onClick={() => handleOpenEditSlot(slot)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                className="flex-1 bg-[#52C41A] hover:bg-[#73D13D] text-white text-xs py-2"
-                                onClick={() => {
-                                  setSelectedSlotId(slot._id);
-                                  setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
-                                  setShowTournamentRules(true);
-                                }}
-                              >
-                                📋 Rules
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                className="flex-1 bg-[#FF4D4F] hover:bg-[#FF7875] text-white text-xs py-2"
-                                onClick={() => handleDeleteSlot(slot._id)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <MatchesManager
+                slots={slots}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                customDateFrom={customDateFrom}
+                setCustomDateFrom={setCustomDateFrom}
+                customDateTo={customDateTo}
+                setCustomDateTo={setCustomDateTo}
+                showAddSlot={showAddSlot}
+                setShowAddSlot={setShowAddSlot}
+                formData={formData}
+                setFormData={setFormData}
+                initialFormData={initialFormData}
+                slotBannerFile={slotBannerFile}
+                setSlotBannerFile={setSlotBannerFile}
+                slotBannerPreview={slotBannerPreview}
+                setSlotBannerPreview={setSlotBannerPreview}
+                handleSlotBannerFileChange={handleSlotBannerFileChange}
+                gameTypes={gameTypes}
+                gameModes={gameModes}
+                gameMaps={gameMaps}
+                handleCreateSlot={handleCreateSlot}
+                getStatusColor={getStatusColor}
+                getNextStatus={getNextStatus}
+                handleUpdateMatchStatus={handleUpdateMatchStatus}
+                handleDeleteSlot={handleDeleteSlot}
+                Countdown={MatchCountdown}
+                onEditSlot={(slot) => handleOpenEditSlot(slot)}
+                onOpenRules={(slot) => {
+                  setSelectedSlotId(slot._id);
+                  setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
+                  setShowTournamentRules(true);
+                }}
+                onOpenWinnerDetails={(slot) => {
+                  setSelectedSlotId(slot._id);
+                  setActiveSection('winners');
+                }}
+                onOpenIdPass={(slot) => {
+                  setIdPassSlotId(slot._id);
+                  setShowIdPassModal(true);
+                }}
+              />
             </>
           )}
           {activeSection === 'revenue' && renderRevenue()}
           {activeSection === 'banner' && renderBannerManagement()}
           {activeSection === 'gameTypes' && renderGameTypeManagement()}
-          {activeSection === 'gameModes' && renderGameModeManagement()}
-          {activeSection === 'winners' && <AdminWinnerDashboard />}
+          {activeSection === 'gameModes' && (
+            <>
+              {renderGameModeManagement()}
+              {renderGameMapManagement()}
+            </>
+          )}
+          {activeSection === 'winners' && (
+            <div>
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  className="text-white border-[#2A2A2A]"
+                  onClick={() => setActiveSection('matches')}
+                >
+                  ← Back to Matches
+                </Button>
+              </div>
+              <AdminWinnerDashboard filterSlotId={selectedSlotId || undefined} />
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Tournament Rules Modal */}
+      <Dialog open={showTournamentRules} onOpenChange={setShowTournamentRules}>
+        <DialogContent className="max-w-3xl w-full bg-[#181818] border border-[#333] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Tournament Rules (HTML)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="rulesHtml" className="text-white">Rules Content</Label>
+            <textarea
+              id="rulesHtml"
+              value={formData.rules}
+              onChange={e => setFormData({ ...formData, rules: e.target.value })}
+              placeholder="Paste or write tournament rules HTML here..."
+              className="w-full min-h-[200px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#FF4D4F] focus:border-[#52C41A] rounded-lg outline-none"
+              style={{ fontFamily: 'monospace' }}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSaveRules} className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white">Save Rules</Button>
+            <Button variant="outline" onClick={() => setShowTournamentRules(false)} className="border-[#2A2A2A] text-white">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ID/Pass Sender Modal */}
+      <Dialog open={showIdPassModal} onOpenChange={setShowIdPassModal}>
+        <DialogContent className="max-w-lg bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Send ID / Password</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            {idPassSlotId ? (
+              <SendSlotCredentials slotId={idPassSlotId} />
+            ) : (
+              <div className="text-gray-400 text-sm">No match selected.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Slot Edit Modal */}
       <Dialog open={showEditSlot} onOpenChange={setShowEditSlot}>
@@ -3087,7 +3045,28 @@ const AdminDashboard = () => {
             </div>
             <div>
               <Label className="text-white">Match Time</Label>
-              <Input type="datetime-local" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTime || ''} onChange={(e) => setEditData({ ...editData, matchTime: e.target.value })} />
+              <Input
+                type="text"
+                placeholder="dd/mm/yyyy hh:mm"
+                className="bg-[#1A1A1A] border-[#2A2A2A] text-white"
+                value={editMatchTimeDisplay}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setEditMatchTimeDisplay(v);
+                  const iso = parseDisplayToISO(v);
+                  if (iso) setEditData({ ...editData, matchTime: iso });
+                }}
+              />
+            </div>
+            <div>
+              <Label className="text-white">Stream Link</Label>
+              <Input
+                type="url"
+                placeholder="https://youtube.com/watch?v=..."
+                className="bg-[#1A1A1A] border-[#2A2A2A] text-white"
+                value={editData.streamLink || ''}
+                onChange={(e) => setEditData({ ...editData, streamLink: e.target.value })}
+              />
             </div>
             <div>
               <Label className="text-white">Banner Image</Label>
@@ -3205,6 +3184,53 @@ const AdminDashboard = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Bookings Modal */}
+      <Dialog open={showUserBookingsModal} onOpenChange={setShowUserBookingsModal}>
+        <DialogContent className="max-w-5xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForBookings ? `${selectedUserForBookings.name}'s Bookings` : 'User Bookings'}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]">
+            {loadingUserBookings ? (
+              <div className="p-8 flex justify-center">
+                <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : userBookings.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">No bookings found for this user.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-[#141414] sticky top-0 z-10">
+                  <tr className="border-b border-[#2A2A2A]">
+                    <th className="text-left px-4 py-3 text-white">Match Title</th>
+                    <th className="text-left px-4 py-3 text-white">Slot Type</th>
+                    <th className="text-left px-4 py-3 text-white">Status</th>
+                    <th className="text-left px-4 py-3 text-white">Match Time</th>
+                    <th className="text-right px-4 py-3 text-white">Entry Fee</th>
+                    <th className="text-right px-4 py-3 text-white">Total Amount</th>
+                    <th className="text-left px-4 py-3 text-white">Booked On</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2A]">
+                  {userBookings.map((b: any) => (
+                    <tr key={b._id} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
+                      <td className="px-4 py-3 text-white max-w-[260px] truncate" title={b.slot?.matchTitle || '-'}>{b.slot?.matchTitle || '-'}</td>
+                      <td className="px-4 py-3 text-white">{b.slot?.slotType || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`${(b.slot?.status || 'upcoming') === 'live' ? 'bg-green-600' : (b.slot?.status === 'completed' ? 'bg-gray-600' : 'bg-blue-600')} text-white text-xs px-2 py-1 rounded`}>{(b.slot?.status || '-')}</span>
+                      </td>
+                      <td className="px-4 py-3 text-white whitespace-nowrap">{b.slot?.matchTime ? new Date(b.slot.matchTime).toLocaleString('en-IN') : '-'}</td>
+                      <td className="px-4 py-3 text-right text-white">₹{b.slot?.entryFee ?? 0}</td>
+                      <td className="px-4 py-3 text-right text-white">₹{b.totalAmount ?? 0}</td>
+                      <td className="px-4 py-3 text-white whitespace-nowrap">{b.createdAt ? new Date(b.createdAt).toLocaleString('en-IN') : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
