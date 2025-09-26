@@ -44,7 +44,7 @@
 
 .footer-left ul li a {
   text-decoration: none;
-  color: #FFA500;
+  color: #ff8b00;
   font-weight: 600;
   font-size: 14px;
   text-transform: uppercase;
@@ -52,7 +52,7 @@
 }
 
 .footer-left ul li a:hover {
-  color: #FFD700;
+  color: #ff8b00;
 }
 
 .footer-left .copyright {
@@ -105,7 +105,7 @@
 
 .social-section p,
 .language-section p {
-  color: #FFA500;
+  color: #ff8b00;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -137,7 +137,7 @@
 }
 
 .social-icons i:hover {
-  color: #FFA500;
+  color: #ff8b00;
 }
 
 .language-dropdown {

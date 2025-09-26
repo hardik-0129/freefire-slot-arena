@@ -55,11 +55,11 @@
 }
 
 .mobile-nav-link:hover {
-  background-color: rgba(255, 132, 0, 0.15) !important;
-  color: #ff8400 !important;
-  border-color: #ff8400;
+  background-color: rgba(255, 139, 0, 0.15) !important;
+  color: #ff8b00 !important;
+  border-color: #ff8b00;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 132, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 139, 0, 0.3);
 }
 
 .mobile-nav-link:active {
@@ -82,8 +82,8 @@
 }
 
 .mobile-menu-toggle:hover {
-  background-color: rgba(255, 132, 0, 0.2);
-  border-color: #ff8400;
+  background-color: rgba(255, 139, 0, 0.2);
+  border-color: #ff8b00;
 }
 
 .mobile-menu-toggle:active {
@@ -109,7 +109,7 @@
 }
 
 .nav-link:hover {
-  color: #ff8400;
+  color: #ff8b00;
 }
 
 /* Header Base Styles */
@@ -764,9 +764,9 @@
 /* Focus states for accessibility */
 .mobile-nav-link:focus,
 .mobile-menu-toggle:focus {
-  outline: 2px solid #ff8400 !important;
+  outline: 2px solid #ff8b00 !important;
   outline-offset: 2px;
-  background-color: rgba(255, 132, 0, 0.1) !important;
+  background-color: rgba(255, 139, 0, 0.1) !important;
 }
 
 /* Remove any old mobile user action styles */

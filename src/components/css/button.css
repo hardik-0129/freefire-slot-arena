@@ -1,5 +1,5 @@
 .sb-join-btn {
-  background-color: #FF8B00;
+  background-color: #ff8b00;
   color: #fff;
   font-weight: 600;
   border: none;
@@ -14,7 +14,7 @@
   justify-content: center;
   transition: all 0.3s ease;
   text-transform: capitalize;
-  box-shadow: 0 2px 8px rgba(255, 132, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 139, 0, 0.3);
 }
 
 /* .sb-join-btn:hover {
@@ -39,7 +39,7 @@
 }
 
 .result-btn {
-  background-color: #FF8B00;
+  background-color: #ff8b00;
 }
 
 /* .result-btn:hover {

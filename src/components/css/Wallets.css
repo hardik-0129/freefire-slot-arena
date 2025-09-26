@@ -211,6 +211,12 @@
   color: #dc3545 !important;
 }
 
+/* Approved badge styled to mirror success look */
+.status-badge.approved {
+  color: #28a745 !important;
+  
+}
+
 .action-buttons {
   display: flex;
   justify-content: flex-end;

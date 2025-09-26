@@ -18,17 +18,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Users } from "lucide-react";
+import axios from 'axios';
 
-type StatusFilter = 'all' | 'upcoming' | 'live' | 'completed';
+type StatusFilter = 'all' | 'upcoming' | 'live' | 'completed' | 'cancelled';
 type DateFilter = 'all' | 'today' | 'yesterday' | 'tomorrow' | 'last3days' | 'custom';
 
 type MatchesManagerProps = {
   slots: any[];
   // filters
   statusFilter: StatusFilter;
-  setStatusFilter: (v: StatusFilter) => void;
+  setStatusFilter: React.Dispatch<React.SetStateAction<StatusFilter>>;
   dateFilter: DateFilter;
-  setDateFilter: (v: DateFilter) => void;
+  setDateFilter: React.Dispatch<React.SetStateAction<DateFilter>>;
   customDateFrom: string;
   setCustomDateFrom: (v: string) => void;
   customDateTo: string;
@@ -126,6 +127,14 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
 
   const [matchTimeDisplay, setMatchTimeDisplay] = useState<string>("");
   const [registrationDeadlineDisplay, setRegistrationDeadlineDisplay] = useState<string>("");
+  const [cancelSlotId, setCancelSlotId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [savingCancel, setSavingCancel] = useState<boolean>(false);
+  const [localSlots, setLocalSlots] = useState<any[]>(slots || []);
+
+  useEffect(() => {
+    setLocalSlots(slots || []);
+  }, [slots]);
 
   useEffect(() => {
     setMatchTimeDisplay(formatToDisplay(formData.matchTime));
@@ -136,6 +145,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   }, [formData.registrationDeadline]);
 
   return (
+    <>
     <Card className="bg-[#1A1A1A] border-[#2A2A2A] mb-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-white">Active Matches</CardTitle>
@@ -149,6 +159,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
               <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="live">Live</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
           <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
@@ -563,7 +574,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {slots
+          {localSlots
             .filter((slot: any) => {
               if (statusFilter !== 'all') {
                 const st = (slot.status || 'upcoming').toLowerCase();
@@ -720,6 +731,12 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   >
                     Delete
                   </Button>
+                  <Button
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs py-2"
+                    onClick={() => { setCancelSlotId(slot._id); setCancelReason(''); }}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </div>
             </div>
@@ -727,6 +744,50 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
         </div>
       </CardContent>
     </Card>
+    {/* Cancel Match Modal */}
+    <Dialog open={!!cancelSlotId} onOpenChange={(open) => { if (!open) { setCancelSlotId(null); setCancelReason(''); } }}>
+      <DialogContent className="max-w-md bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">Cancel Match</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Label htmlFor="cancelReason" className="text-white">Reason</Label>
+          <textarea
+            id="cancelReason"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="Enter reason for cancellation (visible to admins)"
+            className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-24"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => { setCancelSlotId(null); setCancelReason(''); }} className="border-[#2A2A2A] text-white">Close</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={savingCancel || !cancelReason.trim()}
+              onClick={async () => {
+                if (!cancelSlotId || !cancelReason.trim()) return;
+                try {
+                  setSavingCancel(true);
+                  const token = localStorage.getItem('adminToken');
+                  await axios.put(`${import.meta.env.VITE_API_URL}/api/admin/slots/${cancelSlotId}/status`, { status: 'cancelled', cancelReason }, { headers: { Authorization: `Bearer ${token}` } });
+                  // Optimistically update list without full page refresh
+                  setLocalSlots(prev => prev.map(s => s._id === cancelSlotId ? { ...s, status: 'cancelled', cancelReason } : s));
+                  setCancelSlotId(null);
+                  setCancelReason('');
+                } catch (e: any) {
+                  console.error(e);
+                } finally {
+                  setSavingCancel(false);
+                }
+              }}
+            >
+              {savingCancel ? 'Cancelling...' : 'Confirm Cancel'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

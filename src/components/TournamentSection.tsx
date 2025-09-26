@@ -64,6 +64,29 @@ export const TournamentSection = () => {
         <section className="tournament-section">
             <div className="container">
                 <h2 className="tournament-title">Tournament</h2>
+                {/* Success alert banner */}
+                    <div style={{
+                        background: '#dff0d8',
+                        border: '1px solid #c8e5bc',
+                        color: '#3c763d',
+                        padding: '10px 12px',
+                        borderRadius: 6,
+                        marginBottom: 16,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <span aria-hidden="true" style={{ display: 'inline-flex' }}>
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <rect x="1" y="1" width="14" height="14" rx="2" fill="#2dbd3a"/>
+                                <path d="M4 8.2l2.3 2.3L12 5.5" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </span>
+                        <span style={{ flex: 1 }}>
+                            Complete your task and verify your NFT ownership with your wallet address.
+                        </span>
+                        <a href="/task" style={{ textDecoration: 'underline', color: '#2f6f2f', fontWeight: 700, whiteSpace: 'nowrap' }}>Go to verification ↗</a>
+                    </div>
                 <div className="card-container">
                     {!loading && gameTypes.map((gameType) => {
                         const imgSrc = getImageUrl(gameType.image);

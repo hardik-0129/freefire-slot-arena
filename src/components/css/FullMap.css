@@ -58,7 +58,7 @@
 }
 
 .badge.orange {
-  background-color: #ff8400;
+  background-color: #ff8b00;
 }
 
 .badge.gray {
@@ -118,7 +118,7 @@
 }
 
 .info-value.orange {
-  color: #ff8400;
+  color: #ff8b00;
 }
 
 .vertical-divider {
@@ -200,7 +200,7 @@
 }
 
 .match-details-box .date-time .time {
-  color: #ff8400;
+  color: #ff8b00;
   margin-left: 4px;
 }
 
@@ -211,7 +211,7 @@
 }
 
 .prize-pill {
-  background-color: #ff8400;
+  background-color: #ff8b00;
   color: #fff;
   border-radius: 8px;
   padding: 6px 12px;
@@ -282,12 +282,12 @@
 }
 
 .spectator-btn {
-  background: #FF8B00;
+  background: #ff8b00;
   color: white;
 }
 
 .result-btn {
-  background: #FF8B00;
+  background: #ff8b00;
   color: white;
 }
 

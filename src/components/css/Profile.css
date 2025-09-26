@@ -113,6 +113,135 @@
   gap: 8px;
 }
 
+/* Security card layout (2FA) */
+.security-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 4px;
+}
+
+.security-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.security-status {
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.security-status.enabled { color: #16a34a; }
+.security-status.disabled { color: #e11d48; }
+
+.btn-2fa {
+  color: #fff;
+  font-weight: 700;
+}
+
+.security-actions .btn-2fa {
+  min-width: 120px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-2fa.enable { background: #16a34a; }
+.btn-2fa.disable { background: #e11d48; }
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 58px;
+  height: 30px;
+}
+.toggle input { display: none; }
+.toggle .track {
+  position: absolute;
+  inset: 0;
+  background: #e5e7eb;
+  border-radius: 999px;
+  transition: background .2s ease;
+}
+.toggle .thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform .2s ease;
+}
+.toggle input:checked + .track { background: #16a34a; }
+.toggle input:checked ~ .thumb { transform: translateX(28px); }
+
+/* TOTP setup card */
+.totp-setup {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: start;
+  gap: 24px;
+}
+.totp-qr img {
+  width: 180px;
+  height: 180px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.totp-qr { display: flex; justify-content: center; }
+.totp-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.totp-secret {
+  word-break: break-all;
+  background: #fff7e6;
+  border: 1px solid #ffe0b2;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 600;
+  color: #ff8b00;
+}
+.totp-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.totp-code-input {
+  max-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+.btn-verify { background: #16a34a; color: #fff; font-weight: 700; border: none; border-radius: 8px; padding: 8px 14px; }
+.btn-cancel { background: #e11d48; color: #fff; font-weight: 700; border: none; border-radius: 8px; padding: 8px 14px; }
+
+@media (max-width: 600px) {
+  .totp-setup {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .totp-qr img { width: 160px; height: 160px; }
+  .totp-qr { justify-content: center; }
+
+  /* Stack security buttons on mobile */
+  .security-card { gap: 12px; }
+  .security-actions { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .security-actions .btn-2fa { width: 100%; padding: 10px 14px; }
+  .security-actions button { width: 100%; }
+
+  /* TOTP setup inputs/buttons full width on mobile */
+  .totp-input-row { flex-direction: column; align-items: stretch; }
+  .totp-code-input { max-width: 100%; width: 100%; }
+  .btn-verify, .btn-cancel { width: 100%; }
+}
+
 .referral-row {
   display: flex;
   align-items: center;
@@ -386,6 +515,23 @@
     margin: 8px 0;
     border-radius: 12px;
   }
+
+  /* Put toggle on right and text on left for mobile */
+  .security-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .security-left { flex: 1; }
+  .security-actions { width: auto; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+  .toggle { margin-left: auto; width: 48px; height: 26px; }
+  .toggle .thumb { width: 20px; height: 20px; top: 3px; left: 3px; }
+  .toggle input:checked ~ .thumb { transform: translateX(22px); }
+
+  .security-left .profile-grid-label { font-size: 1rem; }
+  .security-status { font-size: 0.98rem; }
+  .security-actions .btn-2fa { font-size: 1rem; padding: 12px 16px; border-radius: 10px; }
 
   /* Ensure Edit button fits on small screens despite inline styles */
   .edit-profile-btn {

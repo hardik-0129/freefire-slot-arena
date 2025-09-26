@@ -53,6 +53,14 @@ const SelectSlot = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const slotData: Slot | null = location.state?.slotData || null;
+  // Ensure page opens at the top on navigation to this screen
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    } catch (_) {
+      window.scrollTo(0, 0);
+    }
+  }, []);
   // --- SOCKET.IO LOGIC (inside component) ---
   const socketRef = useRef<Socket | null>(null);
   const [lockedPositions, setLockedPositions] = useState<{ [team: string]: string[] }>({});

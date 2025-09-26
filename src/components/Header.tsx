@@ -221,6 +221,16 @@ export const Header = () => {
                                             </button>
                                             <button 
                                                 onClick={() => {
+                                                    navigate('/cancelled');
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="dropdown-item"
+                                            >
+                                                <History className="dropdown-icon text-red-500" />
+                                                Cancelled Matches
+                                            </button>
+                                            <button 
+                                                onClick={() => {
                                                     navigate('/wallets');
                                                     setIsDropdownOpen(false);
                                                 }}

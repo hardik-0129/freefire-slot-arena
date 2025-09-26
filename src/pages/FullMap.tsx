@@ -7,7 +7,7 @@ import "../components/css/FullMap.css"
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
-interface Slot {
+    interface Slot {
     _id: string;
     slotType: string;
     entryFee: number;
@@ -22,7 +22,7 @@ interface Slot {
     gameMode?: string;
     bannerImage?: string;
     matchIndex?: number;
-    status?: 'upcoming' | 'live' | 'completed';
+        status?: 'upcoming' | 'live' | 'completed' | 'cancelled' | 'canceled' | string;
     matchTitle?: string;
     specialRules?: string;
     tournamentName?: string;
@@ -84,10 +84,11 @@ const FullMap = () => {
         }
     };
 
-    const resolveStatus = (slot: Slot): 'upcoming' | 'live' | 'completed' => {
-        if (slot.status === 'upcoming' || slot.status === 'live' || slot.status === 'completed') {
-            return slot.status;
-        }
+    const resolveStatus = (slot: Slot): 'upcoming' | 'live' | 'completed' | 'cancelled' => {
+        // Normalize any explicit status first
+        const raw = String(slot.status || '').toLowerCase();
+        if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
+        if (raw === 'upcoming' || raw === 'live' || raw === 'completed') return raw as any;
         // Fallback by time window (live = within 2 hours after start)
         const now = new Date();
         const start = new Date(slot.matchTime);
@@ -123,6 +124,8 @@ const FullMap = () => {
 
     // Filter slots by status and game type
     const visibleSlots = slots.filter(slot => {
+        // Hide all cancelled matches from any tab
+        if (resolveStatus(slot) === 'cancelled') return false;
         const statusMatches = resolveStatus(slot) === activeFilter;
         if (!statusMatches) return false;
         return matchesSelectedType(slot);
@@ -202,8 +205,9 @@ const FullMap = () => {
             <Header />
             <section className="py-16 match-section">
                 <div className="container">
+                    
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-bold text-center mb-8 sm:mb-12 px-4">
-                        {`${selectedGameType || 'Full Map'} Tournaments`}
+                        {`${selectedGameType } Tournaments`}
                     </h2>
 
                     {/* Filter Buttons */}

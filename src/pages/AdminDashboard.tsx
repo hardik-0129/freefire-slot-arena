@@ -1,5 +1,6 @@
 import AnnouncementSender from '../components/AnnouncementSender';
 import SendSlotCredentials from "@/components/SendSlotCredentials";
+import NftHoldersManagement from "@/components/NftHoldersManagement";
 import { KeyRound } from "lucide-react";
 
 import { Mail } from "lucide-react";
@@ -298,6 +299,20 @@ const AdminDashboard = () => {
   };
   const [editMatchTimeDisplay, setEditMatchTimeDisplay] = useState<string>('');
 
+  // User editing state
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editUserData, setEditUserData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    freeFireUsername: '',
+    wallet: '',
+    isAdmin: false
+  });
+  const [winMoneyAmount, setWinMoneyAmount] = useState('');
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+
   // Auto status update function
   const updateMatchStatuses = async () => {
     try {
@@ -307,6 +322,8 @@ const AdminDashboard = () => {
       // Find matches that need status updates
       const matchesToUpdate = slots.filter((slot: any) => {
         if (!slot.matchTime) return false;
+        // Never auto-change cancelled matches
+        if ((slot.status || '').toLowerCase() === 'cancelled' || slot.isCancelledPermanently) return false;
         const matchTime = new Date(slot.matchTime);
         const timeDiff = matchTime.getTime() - now.getTime();
 
@@ -583,7 +600,7 @@ const AdminDashboard = () => {
     backgroundImage: '',
     bannerImages: []
   });
-
+  
   // Separate state for single banner form
   const [singleBannerForm, setSingleBannerForm] = useState({
     title: '',
@@ -678,6 +695,9 @@ const AdminDashboard = () => {
     // Initialize game modes as empty array first
     setGameModes([]);
     fetchGameModes();
+
+    // Initialize users
+    fetchUsers();
 
     setLoading(false);
   }, [navigate]);
@@ -867,6 +887,7 @@ const AdminDashboard = () => {
       console.error('Error fetching users:', error);
     }
   };
+
 
   const fetchSlotBookings = async () => {
     try {
@@ -1140,7 +1161,7 @@ const AdminDashboard = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const preview = e.target?.result as string;
-          setMultipleBannerData(prev => prev.map((item, i) =>
+          setMultipleBannerData(prev => prev.map((item, i) => 
             i === index ? { ...item, preview } : item
           ));
         };
@@ -1254,7 +1275,7 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-
+      
       // Upload each banner with its metadata
       for (const banner of multipleBannerData) {
         if (!banner.file) continue;
@@ -1266,28 +1287,28 @@ const AdminDashboard = () => {
         formData.append('buttonText', banner.buttonText);
 
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
 
         if (!response.ok) {
           throw new Error(`Failed to upload banner: ${banner.title || 'Untitled'}`);
         }
       }
 
-      toast({
-        title: "Success",
+        toast({
+          title: "Success",
         description: `${multipleBannerData.length} banners uploaded successfully`,
-      });
+        });
 
       // Clear the data
-      setBannerFiles([]);
-      setBannerPreviews([]);
+        setBannerFiles([]);
+        setBannerPreviews([]);
       setMultipleBannerData([]);
-      setShowMultipleUpload(false);
+        setShowMultipleUpload(false);
 
       // Refresh banner data
       fetchBannerData();
@@ -1424,8 +1445,8 @@ const AdminDashboard = () => {
       if (response.ok) {
         const data = await response.json();
 
-        // Ensure we always have an array, even if API returns object
-        const gameTypesArray = Array.isArray(data) ? data : (data.gameTypes || []);
+  // Ensure we always have an array, even if API returns object
+  const gameTypesArray = Array.isArray(data) ? data : (data.gameTypes || []);
 
         setGameTypes(gameTypesArray);
       } else {
@@ -2229,17 +2250,17 @@ const AdminDashboard = () => {
               {/* Banner Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Banner Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBannerFileChange}
-                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                />
-                {bannerPreview && (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBannerFileChange}
+                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+              {bannerPreview && (
                   <div className="w-full max-w-md mt-2">
-                    <img src={bannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
-                  </div>
-                )}
+                  <img src={bannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                </div>
+              )}
               </div>
 
               {/* Banner Title */}
@@ -2413,11 +2434,11 @@ const AdminDashboard = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {bannerData.bannerImages.map((image, index) => (
                         <div key={index} className="relative group">
-                          <img
+                        <img
                             src={image}
-                            alt={`Banner ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
-                          />
+                          alt={`Banner ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
+                        />
                           <button
                             className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
                             title="Delete image"
@@ -2520,6 +2541,7 @@ const AdminDashboard = () => {
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
+
   const openUserBookings = async (user: any) => {
     try {
       setSelectedUserForBookings(user);
@@ -2542,11 +2564,97 @@ const AdminDashboard = () => {
     }
   };
 
+  // User editing functions
+  const openEditUser = (user: any) => {
+    setEditingUser(user);
+    setEditUserData({
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      freeFireUsername: user.freeFireUsername || '',
+      wallet: user.wallet?.toString() || '0',
+      isAdmin: user.isAdmin || false
+    });
+    setShowEditUserModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      setIsUpdatingUser(true);
+      const token = localStorage.getItem('adminToken');
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/admin/update/${editingUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editUserData)
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "User updated successfully",
+        });
+        setShowEditUserModal(false);
+        fetchUsers(); // Refresh users list
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user');
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update user",
+      });
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  };
+
+  const handleAddWinMoney = async () => {
+    if (!editingUser || !winMoneyAmount) return;
+
+    try {
+      setIsUpdatingUser(true);
+      const token = localStorage.getItem('adminToken');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/update-user-win-money`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: editingUser._id,
+          amount: parseFloat(winMoneyAmount)
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: 'Success', description: `Added ₹${winMoneyAmount} to win money` });
+        setWinMoneyAmount('');
+        fetchUsers();
+      } else {
+        const err = await response.json();
+        throw new Error(err?.error || 'Failed to add win money');
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e?.message || 'Request failed' });
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  };
+
   const renderUsers = () => (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
-          <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
+        <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
           <input
             type="text"
             value={userSearch}
@@ -2590,37 +2698,40 @@ const AdminDashboard = () => {
                     );
                   })
                   .map((user: any) => (
-                    <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-[#FF4D4F] rounded-full flex items-center justify-center text-white font-bold">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-white">{user.name}</span>
+                  <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#FF4D4F] rounded-full flex items-center justify-center text-white font-bold">
+                          {user.name.charAt(0).toUpperCase()}
                         </div>
-                      </td>
-                      <td className="p-3 text-white">{user.email}</td>
-                      <td className="p-3 text-white">{user.phone}</td>
-                      <td className="p-3">
-                        <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
-                          {user.freeFireUsername}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-green-400 font-bold">₹{user.wallet}</span>
-                      </td>
-                      <td className="p-3 text-gray-400">
-                        {new Date(user.createdAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openUserBookings(user)}>View Bookings</Button>
-                      </td>
-                    </tr>
-                  ))}
+                        <span className="text-white">{user.name}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-white">{user.email}</td>
+                    <td className="p-3 text-white">{user.phone}</td>
+                    <td className="p-3">
+                      <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
+                        {user.freeFireUsername}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className="text-green-400 font-bold">₹{user.wallet}</span>
+                    </td>
+                    <td className="p-3 text-gray-400">
+                      {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </td>
+                  <td className="p-3 text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openEditUser(user)}>Edit</Button>
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openUserBookings(user)}>View Bookings</Button>
+                    </div>
+                  </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -2628,6 +2739,7 @@ const AdminDashboard = () => {
       </CardContent>
     </Card>
   );
+
 
   // Revenue and Withdrawals UI
   const renderRevenue = () => (
@@ -2734,6 +2846,14 @@ const AdminDashboard = () => {
           </Button>
           <Button
             variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'nftHolders' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('nftHolders')}
+          >
+            <Trophy className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">NFT Holders</span>}
+          </Button>
+          <Button
+            variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'contactMessages' ? 'bg-[#2A2A2A]' : ''}`}
             onClick={() => setActiveSection('contactMessages')}
           >
@@ -2748,8 +2868,8 @@ const AdminDashboard = () => {
             <DollarSign className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Revenue</span>}
           </Button>
-
-
+         
+         
           <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameModes' ? 'bg-[#2A2A2A]' : ''}`}
@@ -2766,7 +2886,7 @@ const AdminDashboard = () => {
             <Trophy className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Winners</span>}
           </Button> */}
-
+         
           {/* <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'slotCredentials' ? 'bg-[#2A2A2A]' : ''}`}
@@ -2784,13 +2904,13 @@ const AdminDashboard = () => {
             {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
           </Button> */}
           <Button
-            variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('announcementSender')}
-          >
-            <KeyRound className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
-          </Button>
+              variant="ghost"
+              className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
+              onClick={() => setActiveSection('announcementSender')}
+            >
+              <KeyRound className="h-4 w-4 mr-3" />
+              {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+            </Button>
           <Button
             variant="ghost"
             className="w-full justify-start px-3 py-2 text-red-500 hover:text-red-400 hover:bg-[#2A2A2A]"
@@ -2806,14 +2926,14 @@ const AdminDashboard = () => {
       <main className={`flex-1 ${isSidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
         <header className="bg-[#1A1A1A] border-b border-[#2A2A2A] p-6">
           <h1 className="text-2xl font-bold text-white">
-            <Button
-              variant="ghost"
-              className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
-              onClick={() => setActiveSection('announcementSender')}
-            >
-              <KeyRound className="h-4 w-4 mr-3" />
-              {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
-            </Button>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'announcementSender' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('announcementSender')}
+          >
+            <KeyRound className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+          </Button>
             {activeSection === 'slotCredentials' && (
               <div>
                 <div className="mb-4">
@@ -2822,7 +2942,7 @@ const AdminDashboard = () => {
                     className="w-full p-2 rounded bg-[#222] text-white border border-[#333]"
                     value={selectedSlotId}
                     onChange={e => setSelectedSlotId(e.target.value)}
-                  // disabled={!!selectedSlotId}
+                    // disabled={!!selectedSlotId}
                   >
                     <option value="">-- Select Slot --</option>
                     {slots.map((slot: any) => (
@@ -2835,6 +2955,7 @@ const AdminDashboard = () => {
             )}
             {activeSection === 'dashboard' && 'Dashboard'}
             {activeSection === 'users' && 'Users Management'}
+            {activeSection === 'nftHolders' && 'NFT Holders Management'}
             {activeSection === 'matches' && 'Matches Management'}
             {activeSection === 'revenue' && 'Revenue & Withdrawals'}
             {activeSection === 'banner' && 'Banner Management'}
@@ -2856,11 +2977,12 @@ const AdminDashboard = () => {
         </header>
 
         <div className="p-6">
-          {activeSection === 'dashboard' && renderDashboard()}
-          {activeSection === 'users' && renderUsers()}
-          {activeSection === 'contactMessages' && <ContactMessagesTable />}
-          {activeSection === 'announcementSender' && <AnnouncementSender />}
-          {activeSection === 'matches' && (
+    {activeSection === 'dashboard' && renderDashboard()}
+    {activeSection === 'users' && renderUsers()}
+    {activeSection === 'nftHolders' && <NftHoldersManagement />}
+    {activeSection === 'contactMessages' && <ContactMessagesTable />}
+    {activeSection === 'announcementSender' && <AnnouncementSender />}
+    {activeSection === 'matches' && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                 <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
@@ -2950,8 +3072,8 @@ const AdminDashboard = () => {
                   setShowIdPassModal(true);
                 }}
               />
-            </>
-          )}
+                                      </>
+                                    )}
           {activeSection === 'revenue' && renderRevenue()}
           {activeSection === 'banner' && renderBannerManagement()}
           {activeSection === 'gameTypes' && renderGameTypeManagement()}
@@ -2975,32 +3097,32 @@ const AdminDashboard = () => {
               <AdminWinnerDashboard filterSlotId={selectedSlotId || undefined} />
             </div>
           )}
-        </div>
+                              </div>
       </main>
 
       {/* Tournament Rules Modal */}
-      <Dialog open={showTournamentRules} onOpenChange={setShowTournamentRules}>
+                    <Dialog open={showTournamentRules} onOpenChange={setShowTournamentRules}>
         <DialogContent className="max-w-3xl w-full bg-[#181818] border border-[#333] text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Tournament Rules (HTML)</DialogTitle>
-          </DialogHeader>
+                        </DialogHeader>
           <div className="space-y-3">
             <Label htmlFor="rulesHtml" className="text-white">Rules Content</Label>
-            <textarea
-              id="rulesHtml"
-              value={formData.rules}
-              onChange={e => setFormData({ ...formData, rules: e.target.value })}
-              placeholder="Paste or write tournament rules HTML here..."
+                            <textarea
+                              id="rulesHtml"
+                              value={formData.rules}
+                              onChange={e => setFormData({ ...formData, rules: e.target.value })}
+                              placeholder="Paste or write tournament rules HTML here..."
               className="w-full min-h-[200px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#FF4D4F] focus:border-[#52C41A] rounded-lg outline-none"
               style={{ fontFamily: 'monospace' }}
-            />
-          </div>
+                            />
+                          </div>
           <DialogFooter>
             <Button onClick={handleSaveRules} className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white">Save Rules</Button>
             <Button variant="outline" onClick={() => setShowTournamentRules(false)} className="border-[#2A2A2A] text-white">Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
 
       {/* ID/Pass Sender Modal */}
       <Dialog open={showIdPassModal} onOpenChange={setShowIdPassModal}>
@@ -3231,6 +3353,129 @@ const AdminDashboard = () => {
               </table>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
+        <DialogContent className="max-w-2xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white tracking-wide">Edit User Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editUserName" className="text-white">Name</Label>
+                <Input
+                  id="editUserName"
+                  value={editUserData.name}
+                  onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editUserEmail" className="text-white">Email</Label>
+                <Input
+                  id="editUserEmail"
+                  type="email"
+                  value={editUserData.email}
+                  onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editUserPhone" className="text-white">Phone</Label>
+                <Input
+                  id="editUserPhone"
+                  value={editUserData.phone}
+                  onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editUserFFUsername" className="text-white">Free Fire Username</Label>
+                <Input
+                  id="editUserFFUsername"
+                  value={editUserData.freeFireUsername}
+                  onChange={(e) => setEditUserData({ ...editUserData, freeFireUsername: e.target.value })}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editUserWallet" className="text-white">Wallet Balance</Label>
+                <Input
+                  id="editUserWallet"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editUserData.wallet}
+                  onChange={(e) => setEditUserData({ ...editUserData, wallet: e.target.value })}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div className="flex items-center space-x-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="editUserIsAdmin"
+                  checked={editUserData.isAdmin}
+                  onChange={(e) => setEditUserData({ ...editUserData, isAdmin: e.target.checked })}
+                  className="w-4 h-4 text-green-600 bg-[#1A1A1A] border-[#2A2A2A] rounded focus:ring-green-500 focus:ring-2"
+                />
+                <Label htmlFor="editUserIsAdmin" className="text-white cursor-pointer">Admin Access</Label>
+              </div>
+            </div>
+
+            {/* Add win money (counts in totalEarnings) */}
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="winMoneyAmount" className="text-white">Add Win Money (totalEarnings)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="winMoneyAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={winMoneyAmount}
+                  onChange={(e) => setWinMoneyAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddWinMoney}
+                  disabled={isUpdatingUser || !winMoneyAmount}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Add Win Money
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400">Creates a WIN transaction like NFT distribution, so it shows in earnings.</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEditUserModal(false)}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUpdateUser}
+              disabled={isUpdatingUser}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isUpdatingUser ? 'Updating...' : 'Update User'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -212,7 +212,12 @@ const Ongoing = () => {
             <section className="py-16 match-section">
                 <div className="container">
                 <h2 className="text-[42px] font-bold text-center mb-12">Ongoing</h2>
-                    <div className="card-container">
+                    <div
+                      className="card-container"
+                      style={(!isLoading && !error && uniqueMatches.length === 0)
+                        ? { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', width: '100%' }
+                        : undefined}
+                    >
                         {isLoading ? (
                           <div className="text-center py-8">
                             <p className="text-xl">Loading your matches...</p>
@@ -222,7 +227,7 @@ const Ongoing = () => {
                             <p className="text-xl text-red-500">{error}</p>
                           </div>
                         ) : uniqueMatches.length === 0 ? (
-                          <div className="text-center py-8">
+                          <div className="text-center" style={{ display: 'flex', flexDirection: 'column' }}>
                             <p className="text-xl text-gray-600">No ongoing matches found</p>
                             <p className="text-gray-500 mt-2">Book a match to see it here!</p>
                           </div>

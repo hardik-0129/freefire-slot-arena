@@ -31,6 +31,7 @@ interface WithdrawalRequest {
   };
   createdAt: string;
   status: string;
+  externalTxnId?: string;
 }
 
 const WithdrawalManagement: React.FC = () => {
@@ -41,6 +42,8 @@ const WithdrawalManagement: React.FC = () => {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approveRefId, setApproveRefId] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -91,7 +94,7 @@ const WithdrawalManagement: React.FC = () => {
     setLoading(false);
   };
 
-  const handleApproveWithdrawal = async (transactionId: string) => {
+  const handleApproveWithdrawal = async (transactionId: string, externalTxnId?: string) => {
     setProcessingId(transactionId);
     try {
       const adminToken = localStorage.getItem('adminToken');
@@ -100,7 +103,8 @@ const WithdrawalManagement: React.FC = () => {
         headers: {
           'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ externalTxnId })
       });
 
       const data = await response.json();
@@ -127,6 +131,20 @@ const WithdrawalManagement: React.FC = () => {
       });
     }
     setProcessingId(null);
+  };
+
+  const openApproveModal = (withdrawal: WithdrawalRequest) => {
+    setSelectedWithdrawal(withdrawal);
+    setApproveRefId('');
+    setShowApproveModal(true);
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!selectedWithdrawal) return;
+    await handleApproveWithdrawal(selectedWithdrawal.transactionId, approveRefId || undefined);
+    setShowApproveModal(false);
+    setApproveRefId('');
+    setSelectedWithdrawal(null);
   };
 
   const handleRejectWithdrawal = async () => {
@@ -297,12 +315,12 @@ const WithdrawalManagement: React.FC = () => {
                 {statusFilter === 'pending' && (
                   <div className="flex gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
                     <Button
-                      onClick={() => handleApproveWithdrawal(withdrawal.transactionId)}
+                      onClick={() => openApproveModal(withdrawal)}
                       disabled={processingId === withdrawal.transactionId}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      {processingId === withdrawal.transactionId ? 'Approving...' : 'Approve'}
+                      Approve
                     </Button>
                     
                     <Button
@@ -385,6 +403,70 @@ const WithdrawalManagement: React.FC = () => {
               className="text-white"
             >
               {processingId === selectedWithdrawal?.transactionId ? 'Rejecting...' : 'Reject Withdrawal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Modal */}
+      <Dialog open={showApproveModal} onOpenChange={setShowApproveModal}>
+        <DialogContent className="max-w-md bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-[#10B981] to-[#34D399] rounded-lg">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-white">
+                  Approve Withdrawal
+                </DialogTitle>
+                <p className="text-gray-400 text-sm">
+                  Enter payout Transaction/Reference ID to show the user (optional).
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedWithdrawal && (
+              <div className="bg-[#2A2A2A] p-3 rounded">
+                <p className="text-white"><strong>Amount:</strong> ₹{selectedWithdrawal.amount}</p>
+                <p className="text-white"><strong>User:</strong> {selectedWithdrawal.userId.name}</p>
+                <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata.upiId}</p>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="approve-ref" className="text-white">
+                Payout Transaction ID (displayed to user)
+              </Label>
+              <Input
+                id="approve-ref"
+                value={approveRefId}
+                onChange={(e) => setApproveRefId(e.target.value)}
+                placeholder="e.g. UTR/Ref #1236544"
+                className="bg-[#2A2A2A] border-[#3A3A3A] text-white mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowApproveModal(false);
+                setApproveRefId('');
+                setSelectedWithdrawal(null);
+              }}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApproveConfirm}
+              disabled={processingId === selectedWithdrawal?.transactionId}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {processingId === selectedWithdrawal?.transactionId ? 'Approving...' : 'Approve Withdrawal'}
             </Button>
           </DialogFooter>
         </DialogContent>

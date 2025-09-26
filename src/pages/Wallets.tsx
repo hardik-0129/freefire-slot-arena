@@ -146,7 +146,10 @@ const Wallets = () => {
             socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
             socket.emit('join', userId);
             socket.on('walletUpdate', (data) => {
+                // Update immediate wallet balance and refresh derived values (earnings/join money)
                 setWalletBalance(data.balance);
+                // Re-fetch balance so earnings and payouts reflect without manual refresh
+                fetchWalletBalance();
                 fetchTransactionHistory();
             });
         }
@@ -426,8 +429,8 @@ const Wallets = () => {
             return;
         }
 
-        if (parseFloat(withdrawAmount) > walletBalance) {
-            setMessage('Insufficient balance');
+        if (parseFloat(withdrawAmount) > totalEarnings) {
+            setMessage('You can withdraw only from your winnings balance.');
             return;
         }
 
@@ -520,7 +523,7 @@ const Wallets = () => {
                             <div>
                                 <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {walletBalance.toFixed(2)}</div>
                                 <p className="coin-label"><span style={{ width: '100px' }}>Win money :</span> <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {totalEarnings.toFixed(2)}</p>
-                                <p className="coin-label">Join money : <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {walletBalance.toFixed(2)}</p>
+                                <p className="coin-label">Join money : <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {Math.max(0, (walletBalance - totalEarnings)).toFixed(2)}</p>
                             </div>
                             <div className="action-buttons">
                                 <button
@@ -555,6 +558,7 @@ const Wallets = () => {
                 {/* Add Money Modal */}
                 {showAddModal && (
                     <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+                        
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <h3>Add Money via TranzUPI</h3>
@@ -608,14 +612,19 @@ const Wallets = () => {
                                 </button>
                             </div>
                             <div className="modal-body">
+                                {message && (
+                    <div className={`message-alert ${message.includes('success') ? 'success' : 'error'}`}>
+                        {message}
+                    </div>
+                )}
                                 <div className="form-group">
                                     <label>Amount (INR)</label>
                                     <input
                                         type="number"
                                         value={withdrawAmount}
                                         onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        placeholder="Enter amount to withdraw"
-                                        max={walletBalance}
+                                        placeholder={`Max withdrawable: ${totalEarnings.toFixed(2)}`}
+                                        max={totalEarnings}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -674,9 +683,27 @@ const Wallets = () => {
                                         {transaction.status === 'ADMIN_REJECTED' && (
                                             <span className="status-badge rejected"> • REJECTED</span>
                                         )}
+                                        {(transaction.status === 'SUCCESS' || transaction.status === 'ADMIN_APPROVED') && (
+                                            <span className="status-badge approved"> • SUCCESS</span>
+                                        )}
                                     </span>
                                     <div>
-                                        {transaction.description} - #{transaction.transactionId.slice(-6)} {formatDate(transaction.createdAt)}
+                                        {transaction.description}
+                                        {transaction.metadata?.externalTxnId ? (
+                                            <> • Ref: {transaction.metadata.externalTxnId} {formatDate(transaction.createdAt)}</>
+                                        ) : (
+                                            <> - #{transaction.transactionId.slice(-6)} {formatDate(transaction.createdAt)}</>
+                                        )}
+                                        {transaction.type === 'REFUND' && transaction.metadata?.cancelReason && (
+                                            <div className="text-sm" style={{ color: '#e11d48', marginTop: 4 }}>
+                                                Cancel reason: {transaction.metadata.cancelReason}
+                                            </div>
+                                        )}
+                                        {transaction.type === 'REFUND' && transaction.metadata?.matchTitle && (
+                                            <div className="text-sm" style={{ color: '#999' }}>
+                                                Match: {transaction.metadata.matchTitle}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="right">

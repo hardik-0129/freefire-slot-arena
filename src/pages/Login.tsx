@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import ResetPasswordModal from '@/components/ResetPasswordModal';
 import axios from 'axios';
@@ -19,6 +19,14 @@ const Login: React.FC = () => {
   });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  // OTP login state
+  // 2-step: email+password -> send OTP -> verify
+  const [otp, setOtp] = useState('');
+  const [otpPhase, setOtpPhase] = useState<'idle' | 'sent'>('idle');
+  const [otpMethod, setOtpMethod] = useState<'email' | 'totp' | null>(null);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -40,25 +48,41 @@ const Login: React.FC = () => {
     setLoading(true);
     setMessage('');
     try {
-      // Get device token for notifications
       const deviceToken = await getDeviceToken();
-
-      const payload = { ...form, deviceToken };
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, payload);
-      if (res.data.token) {
-        toast.success('Login successful!');
-        localStorage.setItem('token', res.data.token);
-        setForm({
-          email: '',
-          password: ''
-        });
-        setTimeout(() => {
-          // Redirect to original page if redirected from protected route, otherwise go to home
-          const redirectTo = '/tournament';
-          navigate(redirectTo);
-        }, 1000);
-      } else {
-        toast.error(res.data.message || 'Login failed.');
+      if (otpPhase === 'idle') {
+        // Try normal login (server will send OTP if 2FA enabled)
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { ...form, deviceToken });
+        if (res.data?.otpRequired) {
+          toast.success('OTP sent to your email');
+          setOtpPhase('sent');
+          setOtpMethod(res.data.method || 'email');
+          setShowOtpModal(true);
+        } else if (res.data?.token) {
+          toast.success('Login successful!');
+          localStorage.setItem('token', res.data.token);
+          setForm({ email: '', password: '' });
+          setTimeout(() => navigate('/tournament'), 800);
+        } else {
+          toast.error(res.data?.message || 'Login failed.');
+        }
+      } else if (otpPhase === 'sent') {
+        // Step 2: verify OTP (email or totp)
+        let res;
+        const code = otpDigits.join('') || otp;
+        if (otpMethod === 'totp') {
+          res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login/totp-verify`, { email: form.email, token: code, deviceToken });
+        } else {
+          res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login/verify-otp`, { email: form.email, otp: code, deviceToken });
+        }
+        if (res.data.token) {
+          toast.success('Login successful!');
+          localStorage.setItem('token', res.data.token);
+          setForm({ email: '', password: '' });
+          setOtp(''); setOtpPhase('idle'); setOtpMethod(null); setShowOtpModal(false); setOtpDigits(['','','','','','']);
+          setTimeout(() => navigate('/tournament'), 800);
+        } else {
+          toast.error(res.data.message || 'OTP verification failed.');
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed.');
@@ -97,7 +121,111 @@ const Login: React.FC = () => {
                 onChange={handleChange}
                 placeholder="Enter your password"
                 required
+                disabled={otpPhase !== 'idle'}
               />
+            </div>
+
+            {otpPhase === 'sent' && showOtpModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                <div style={{ width: 520, maxWidth: '92vw', background: '#fff', padding: '24px 18px', borderRadius: 16, boxShadow: '0 14px 34px rgba(0,0,0,.25)' }}>
+                    <h3 style={{ margin: 0, textAlign: 'center', fontWeight: 800, color: '#111', fontSize: 22 }}>Verify Your OTP</h3>
+                    <p style={{ margin: '8px 0 16px', textAlign: 'center', color: '#666' }}>{otpMethod === 'totp' ? 'Enter the 6-digit code from your Authenticator app.' : 'Enter the 6-digit OTP sent to your email.'}</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
+                      {otpDigits.map((d, i) => (
+                        <input
+                          key={i}
+                          ref={(el) => (otpRefs.current[i] = el)}
+                          value={d}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 1);
+                            const next = [...otpDigits];
+                            next[i] = val;
+                            setOtpDigits(next);
+                            if (val && i < 5) otpRefs.current[i + 1]?.focus();
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Backspace' && !otpDigits[i] && i > 0) {
+                              otpRefs.current[i - 1]?.focus();
+                            }
+                          }}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder=""
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 10,
+                            border: '1.5px solid #d6d6d6',
+                            textAlign: 'center',
+                            fontSize: 20,
+                            fontWeight: 700,
+                            outline: 'none'
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSubmit as any}
+                      disabled={loading}
+                      style={{ width: '100%', background: 'rgb(249 115 22)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 16px', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      {loading ? 'VERIFYING...' : 'Verify OTP'}
+                    </button>
+                    {/* <div style={{ textAlign: 'center', marginTop: 12 }}>
+                      <span style={{ color: '#666' }}>Didn't receive the code? </span>
+                      {otpMethod === 'email' && (
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', color: 'rgb(249 115 22)', fontWeight: 700, cursor: 'pointer' }}
+                          onClick={async () => {
+                            try {
+                              await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login/send-otp`, { email: form.email });
+                              toast.success('OTP re-sent');
+                            } catch (e: any) {
+                              toast.error(e.response?.data?.message || 'Failed to resend');
+                            }
+                          }}
+                        >
+                          Resend OTP
+                        </button>
+                      )}
+                    </div> */}
+                    <div style={{ textAlign: 'center', marginTop: 6 }}>
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontWeight: 600 }}
+                        onClick={() => { setShowOtpModal(false); setOtpPhase('idle'); setOtpDigits(['','','','','','']); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#FF8B00', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                onClick={async () => {
+                  setForgotMsg('');
+                  if (!form.email) {
+                    setForgotMsg('Please enter your email above first.');
+                    setShowForgotModal(true);
+                    return;
+                  }
+                  try {
+                    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email: form.email });
+                    setForgotMsg(res.data.msg || 'OTP sent to your email.');
+                  } catch (err) {
+                    setForgotMsg((err as any).response?.data?.msg || 'Failed to send OTP.');
+                  }
+                  setShowForgotModal(true);
+                }}
+              >
+                Forgot Password?
+              </button>
             </div>
 
             {/* OTP Verify Modal */}
@@ -131,7 +259,7 @@ const Login: React.FC = () => {
               className="login-submit-button"
               disabled={loading}
             >
-              {loading ? 'LOGGING IN...' : 'LOGIN NOW'}
+              {loading ? 'LOGGING IN...' : (otpPhase === 'sent' ? 'VERIFY OTP' : 'LOGIN NOW')}
             </button>
 
             <div style={{ textAlign: 'right', marginBottom: 12, padding: '0 4px' }}>

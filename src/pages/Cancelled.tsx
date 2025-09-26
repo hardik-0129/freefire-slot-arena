@@ -37,18 +37,17 @@ interface Slot {
     matchTitle?: string;
 }
 
-const Compeleted = () => {
-    const [completedMatches, setCompletedMatches] = useState<Slot[]>([]);
+const Cancelled = () => {
+    const [cancelledMatches, setCancelledMatches] = useState<Slot[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Fetch completed matches for the logged-in user
+    // Fetch cancelled matches for the logged-in user
     const fetchCompletedMatches = async () => {
         try {
             // Get userId from JWT token
             const token = localStorage.getItem('token');
             if (!token) {
-                setCompletedMatches([]);
                 setLoading(false);
                 return;
             }
@@ -58,25 +57,54 @@ const Compeleted = () => {
                 userId = (decoded as any).userId;
             } catch (err) {
                 console.error('Failed to decode token:', err);
-                setCompletedMatches([]);
                 setLoading(false);
                 return;
             }
             if (!userId) {
                 console.error('No userId found in decoded token');
-                setCompletedMatches([]);
                 setLoading(false);
                 return;
             }
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/slots/user/${userId}?status=completed`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/slots/user/${userId}?status=cancelled`);
             if (response.ok) {
                 const data = await response.json();
-                setCompletedMatches(data.bookings || []);
+                const bookings = Array.isArray(data?.bookings) ? data.bookings : [];
+                const mapped = bookings.map((b: any) => ({
+                    _id: b._id || b.slot?._id,
+                    slotType: (b.slotType || b.slot?.slotType || '').toString(),
+                    entryFee: b.slot?.entryFee ?? b.entryFee ?? 0,
+                    matchTime: b.slot?.matchTime,
+                    perKill: b.slot?.perKill ?? 0,
+                    totalWinningPrice: b.slot?.totalWinningPrice ?? 0,
+                    maxBookings: b.slot?.maxBookings ?? 0,
+                    remainingBookings: b.slot?.remainingBookings ?? 0,
+                    customStartInMinutes: b.slot?.customStartInMinutes ?? 0,
+                    createdAt: b.slot?.createdAt ?? b.createdAt,
+                    updatedAt: b.slot?.updatedAt ?? b.updatedAt,
+                    status: 'cancelled',
+                    matchIndex: b.slot?.matchIndex,
+                    banList: b.slot?.banList,
+                    contactInfo: b.slot?.contactInfo,
+                    discordLink: b.slot?.discordLink,
+                    gameMode: b.slot?.gameMode,
+                    mapName: b.slot?.mapName,
+                    matchDescription: b.slot?.matchDescription,
+                    prizeDistribution: b.slot?.prizeDistribution,
+                    rules: b.slot?.rules,
+                    specialRules: b.slot?.specialRules,
+                    streamLink: b.slot?.streamLink,
+                    tournamentName: b.slot?.tournamentName,
+                    hostName: b.slot?.hostName,
+                    matchTitle: b.slot?.matchTitle,
+                    bannerImage: b.slot?.bannerImage,
+                    cancelReason: b.slot?.cancelReason || b.cancelReason
+                }));
+                setCancelledMatches(mapped);
             } else {
-                console.error('Failed to fetch matches');
+                console.error('Failed to fetch cancelled matches');
             }
         } catch (error) {
-            console.error('Error fetching completed matches:', error);
+            console.error('Error fetching cancelled matches:', error);
         } finally {
             setLoading(false);
         }
@@ -123,9 +151,9 @@ const Compeleted = () => {
                 <Header />
                 <section className="py-16 match-section">
                     <div className="container">
-                        <h2 className="text-[42px] font-bold text-center mb-12">Completed</h2>
+                        <h2 className="text-[42px] font-bold text-center mb-12">Cancelled Matches</h2>
                         <div className="text-center">
-                            <p className="text-white text-lg">Loading completed matches...</p>
+                            <p className="text-white text-lg">Loading cancelled matches...</p>
                         </div>
                     </div>
                 </section>
@@ -138,20 +166,14 @@ const Compeleted = () => {
             <Header />
             <section className="py-16 match-section">
                 <div className="container">
-                    <h2 className="text-[42px] font-bold text-center mb-12">Completed</h2>
-                    {!completedMatches || completedMatches.length === 0 ? (
-                        <div
-                            className="text-center"
-                            style={{
-                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh'
-                            }}
-                        >
-                            <p className="text-xl text-gray-600">No completed matches found</p>
-                            <p className="text-gray-500 mt-2">Play and finish a match to see it here!</p>
+                    <h2 className="text-[42px] font-bold text-center mb-12">Cancelled Matches</h2>
+                    {!cancelledMatches || cancelledMatches.length === 0 ? (
+                        <div className="text-center">
+                            <p className="text-white text-lg">No cancelled matches found.</p>
                         </div>
                     ) : (
-                        <div className="card-container">    
-                            {completedMatches.map((match) => (
+                        <div className="card-container">
+                            {cancelledMatches.map((match) => (
                                 <div key={match._id} className="match-card">
                                     <div style={{ position: 'relative' }}>
                                         <Skeleton height={0} style={{ paddingBottom: '56.25%', borderRadius: 12 }} baseColor="#eeeeee" highlightColor="#f5f5f5" />
@@ -175,7 +197,7 @@ const Compeleted = () => {
                                             <span className={`badge orange ${getGameTypeColor(match.slotType)}`}>
                                                 {match.slotType.toUpperCase()}
                                             </span>
-                                            <span className="badge gray">COMPLETED</span>
+                                            <span className="badge gray">CANCELLED</span>
                                         </div>
                                         <div>
                                             <span className="match-id">#
@@ -186,6 +208,7 @@ const Compeleted = () => {
                                                         : match._id?.slice(-6).toUpperCase()}
                                             </span>
                                         </div>
+                                       
                                     </div>
                                     <h3 className="match-title">
                                         {match.matchTitle || `FF ${match.slotType.toUpperCase()} TOURNAMENT`}
@@ -193,10 +216,19 @@ const Compeleted = () => {
                                         <br />
                                         {match.tournamentName || '#TOURNAMENT'}
                                     </h3>
+                                    {/* Consistent reason line with fixed height to avoid card shift */}
+                                    <div style={{ minHeight: 20, marginTop: 6, padding: '0 20px' }}>
+                                      {(match as any).cancelReason ? (
+                                        <div className="text-red-500 text-sm font-semibold">
+                                          Reason: {(match as any).cancelReason}
+                                        </div>
+                                      ) : null}
+                                    </div>
                                     <div className="match-details-box">
                                         <div className="date-time">
                                             {formatDate(match.matchTime || (typeof (match as any).slot === 'object' && (match as any).slot.matchTime))}
                                         </div>
+                                       
                                         <div className="prize-pill-container">
                                             <div className="prize-pill">
                                                 <div className="pill-label">PER KILL</div>
@@ -260,4 +292,4 @@ const Compeleted = () => {
     )
 }
 
-export default Compeleted
+export default Cancelled
