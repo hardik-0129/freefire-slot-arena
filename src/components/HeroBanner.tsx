@@ -44,10 +44,8 @@ export const HeroBanner = () => {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner`); // Using "banners" endpoint
             if (response.ok) {
                 const data = await response.json();
-                console.log('[HeroBanner] GET /api/banner response:', data);
                 const toArray = Array.isArray(data) ? data : [data];
                 const active = toArray.find((b: any) => b && b.isActive) || toArray[0];
-                console.log('[HeroBanner] Selected active banner:', active);
                 if (active) {
                     setBannerData({
                         _id: active._id,
@@ -60,10 +58,8 @@ export const HeroBanner = () => {
                     });
                     if (Array.isArray(active.bannerImages) && active.bannerImages.length > 0) {
                         setBannerImages(active.bannerImages);
-                        console.log('[HeroBanner] Using bannerImages:', active.bannerImages);
                     } else {
                         const single = [active.backgroundImage || fallbackImage];
-                        console.log('[HeroBanner] Using single background image:', single);
                         setBannerImages(single);
                     }
                 } else {
@@ -73,7 +69,6 @@ export const HeroBanner = () => {
                         buttonText: '',
                         backgroundImage: fallbackImage
                     } as any);
-                    console.log('[HeroBanner] No active banner. Falling back to image:', fallbackImage);
                     setBannerImages([fallbackImage]);
                 }
             } else {

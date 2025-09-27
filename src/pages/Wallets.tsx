@@ -124,6 +124,7 @@ const Wallets = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [transactions, setTransactions] = useState([]);
+    const [bookings, setBookings] = useState([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
 
 
@@ -299,6 +300,7 @@ const Wallets = () => {
             if (response.ok) {
                 const data = await response.json();
                 setTransactions(data.transactions || []);
+                setBookings(data.bookings || []);
                 // Calculate total payouts (sum of all successful withdrawals)
                 const total = (data.transactions || [])
                     .filter((tx) => (tx.type === 'WITHDRAW' || tx.type === 'DEBIT') && (tx.status === 'SUCCESS' || tx.status === 'ADMIN_APPROVED'))
@@ -361,6 +363,46 @@ const Wallets = () => {
         }
     };
 
+    // Function to combine and sort transactions and bookings
+    const getCombinedHistory = () => {
+        const combined = [];
+
+        // Add transactions
+        transactions.forEach(tx => {
+            combined.push({
+                ...tx,
+                itemType: 'transaction',
+                sortDate: new Date(tx.createdAt)
+            });
+        });
+
+        // Add bookings
+        bookings.forEach(booking => {
+            combined.push({
+                _id: booking._id,
+                type: 'BOOKING',
+                amount: booking.totalAmount,
+                description: `Match booking: ${booking.slot?.matchTitle || 'Unknown Match'} (${booking.slotType})`,
+                createdAt: booking.createdAt,
+                status: booking.status === 'confirmed' ? 'SUCCESS' : booking.status.toUpperCase(),
+                balanceAfter: walletBalance, // Use current wallet balance for bookings
+                itemType: 'booking',
+                sortDate: new Date(booking.createdAt),
+                metadata: {
+                    matchTitle: booking.slot?.matchTitle,
+                    slotType: booking.slotType,
+                    tournamentName: booking.slot?.tournamentName,
+                    entryFee: booking.entryFee,
+                    selectedPositions: booking.selectedPositions,
+                    playerNames: booking.playerNames
+                }
+            });
+        });
+
+        // Sort by date (newest first)
+        return combined.sort((a, b) => b.sortDate - a.sortDate);
+    };
+
     const handleAddMoney = async () => {
         if (!addAmount || parseFloat(addAmount) <= 0) {
             setMessage('Please enter a valid amount');
@@ -381,7 +423,7 @@ const Wallets = () => {
             }
             const decoded = jwtDecode<{ userId: string, phone?: string }>(token);
             const userId = decoded.userId;
-            const phone = '8547585458';
+            const phone = '';
             if (!userId || !phone) {
                 setMessage('User info missing');
                 setLoading(false);
@@ -558,7 +600,7 @@ const Wallets = () => {
                 {/* Add Money Modal */}
                 {showAddModal && (
                     <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-                        
+
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <h3>Add Money via TranzUPI</h3>
@@ -613,10 +655,10 @@ const Wallets = () => {
                             </div>
                             <div className="modal-body">
                                 {message && (
-                    <div className={`message-alert ${message.includes('success') ? 'success' : 'error'}`}>
-                        {message}
-                    </div>
-                )}
+                                    <div className={`message-alert ${message.includes('success') ? 'success' : 'error'}`}>
+                                        {message}
+                                    </div>
+                                )}
                                 <div className="form-group">
                                     <label>Amount (INR)</label>
                                     <input
@@ -671,46 +713,61 @@ const Wallets = () => {
                         <div className="history-item" style={{ textAlign: 'center', padding: '20px' }}>
                             <span>Loading transaction history...</span>
                         </div>
-                    ) : transactions.length > 0 ? (
-                        transactions.map((transaction, index) => (
-                            <div key={transaction._id || index} className="history-item">
+                    ) : getCombinedHistory().length > 0 ? (
+                        getCombinedHistory().map((item, index) => (
+                            <div key={item._id || index} className="history-item">
                                 <div className="left">
-                                    <span className={`history-type ${transaction.type === 'CREDIT' || transaction.type === 'WIN' || transaction.type === 'REFUND' ? 'credit' : 'debit'}`}>
-                                        {formatTransactionType(transaction.type)}
-                                        {transaction.status === 'PENDING_ADMIN_APPROVAL' && (
+                                    <span className={`history-type ${item.type === 'CREDIT' || item.type === 'WIN' || item.type === 'REFUND' ? 'credit' : 'debit'}`}>
+                                        {formatTransactionType(item.type)}
+                                        {item.status === 'PENDING_ADMIN_APPROVAL' && (
                                             <span className="status-badge pending"> • PENDING APPROVAL</span>
                                         )}
-                                        {transaction.status === 'ADMIN_REJECTED' && (
+                                        {item.status === 'ADMIN_REJECTED' && (
                                             <span className="status-badge rejected"> • REJECTED</span>
                                         )}
-                                        {(transaction.status === 'SUCCESS' || transaction.status === 'ADMIN_APPROVED') && (
+                                        {(item.status === 'SUCCESS' || item.status === 'ADMIN_APPROVED') && (
                                             <span className="status-badge approved"> • SUCCESS</span>
+                                        )}
+                                        {item.status === 'CANCELLED' && (
+                                            <span className="status-badge cancelled"> • CANCELLED</span>
                                         )}
                                     </span>
                                     <div>
-                                        {transaction.description}
-                                        {transaction.metadata?.externalTxnId ? (
-                                            <> • Ref: {transaction.metadata.externalTxnId} {formatDate(transaction.createdAt)}</>
+                                        {item.itemType === 'booking' ? (
+                                            <>
+                                                {item.description}
+                                                {item.metadata?.tournamentName && (
+                                                    <> • Tournament: {item.metadata.tournamentName}</>
+                                                )}
+                                                {item.metadata?.selectedPositions && (
+                                                    <> • Positions: {Object.keys(item.metadata.selectedPositions).join(', ')}</>
+                                                )}
+                                                <> - #{item._id.slice(-6)} {formatDate(item.createdAt)}</>
+                                            </>
                                         ) : (
-                                            <> - #{transaction.transactionId.slice(-6)} {formatDate(transaction.createdAt)}</>
-                                        )}
-                                        {transaction.type === 'REFUND' && transaction.metadata?.cancelReason && (
-                                            <div className="text-sm" style={{ color: '#e11d48', marginTop: 4 }}>
-                                                Cancel reason: {transaction.metadata.cancelReason}
-                                            </div>
-                                        )}
-                                        {transaction.type === 'REFUND' && transaction.metadata?.matchTitle && (
-                                            <div className="text-sm" style={{ color: '#999' }}>
-                                                Match: {transaction.metadata.matchTitle}
-                                            </div>
+                                            <>
+                                                {item.description}
+                                                {item.metadata?.externalTxnId ? (
+                                                    <> • Ref: {item.metadata.externalTxnId}</>
+                                                ) : (
+                                                    <> - #{item.transactionId ? item.transactionId.slice(-6) : item._id.slice(-6)}</>
+                                                )}
+                                                {item.type === 'REFUND' && item.metadata?.cancelReason && (
+                                                    <> • Cancel reason: {item.metadata.cancelReason}</>
+                                                )}
+                                                {item.type === 'REFUND' && item.metadata?.matchTitle && (
+                                                    <> • Match: {item.metadata.matchTitle}</>
+                                                )}
+                                                <> {formatDate(item.createdAt)}</>
+                                            </>
                                         )}
                                     </div>
                                 </div>
                                 <div className="right">
-                                    <span className={transaction.type === 'CREDIT' || transaction.type === 'WIN' || transaction.type === 'REFUND' ? 'plus' : 'minus'}>
-                                        {getTransactionIcon(transaction.type)}<img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {transaction.amount.toFixed(2)}
+                                    <span className={item.type === 'CREDIT' || item.type === 'WIN' || item.type === 'REFUND' ? 'plus' : 'minus'}>
+                                        {getTransactionIcon(item.type)}<img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {item.amount.toFixed(2)}
                                     </span>
-                                    <span className="coin"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {transaction.balanceAfter.toFixed(2)}</span>
+                                    <span className="coin"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {item.balanceAfter.toFixed(2)}</span>
                                 </div>
                             </div>
                         ))

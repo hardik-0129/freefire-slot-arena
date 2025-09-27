@@ -376,7 +376,6 @@ const AdminDashboard = () => {
             });
 
             if (response.ok) {
-              console.log(`Auto-updated match ${slot.matchTitle} from ${slot.status} to ${newStatus}`);
             }
           } catch (error) {
             console.error(`Failed to auto-update match ${slot._id}:`, error);
