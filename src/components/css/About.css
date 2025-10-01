@@ -1,0 +1,114 @@
+.about-root {
+    background: #000;
+    color: #fff;
+}
+
+.about-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.about-hero {
+    padding: 120px 0 40px;
+    background: radial-gradient(1200px 500px at 50% -120px, rgba(255,139,0,0.25), rgba(0,0,0,0));
+}
+
+.about-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.about-badge-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: #ff8b00;
+}
+
+.about-badge span {
+    color: #ffb84d;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.about-title {
+    margin: 0;
+    font-size: 64px;
+    line-height: 1.05;
+    letter-spacing: 1px;
+    font-weight: 800;
+    text-shadow: 0 6px 24px rgba(255,139,0,0.35);
+}
+
+.about-subtitle {
+    max-width: 860px;
+    margin-top: 16px;
+    font-size: 18px;
+    color: #d1d5db;
+}
+
+.about-content {
+    padding: 24px 0 80px;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.about-col-left {
+    grid-column: span 7;
+}
+
+.about-col-right {
+    grid-column: span 5;
+}
+
+.about-cta {
+    margin-top: 8px;
+    background: linear-gradient(90deg, #ff8b00 0%, #ffb84d 100%);
+    border-radius: 16px;
+    padding: 20px;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.about-cta-title {
+    font-weight: 800;
+    font-size: 20px;
+}
+
+.about-cta-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1024px) {
+    .about-title { font-size: 42px; }
+    .about-col-left { grid-column: span 12; }
+    .about-col-right { grid-column: span 12; }
+}
+
+@media (max-width: 768px) {
+    .about-hero { padding: 90px 0 30px; }
+    .about-title { font-size: 34px; }
+    .about-subtitle { font-size: 16px; }
+}
+
+@media (max-width: 480px) {
+    .about-title { font-size: 24px; }
+    .about-subtitle { font-size: 15px; }
+}
+
+
+

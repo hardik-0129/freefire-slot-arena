@@ -44,6 +44,8 @@ const Task: React.FC = () => {
   const [checkingVerification, setCheckingVerification] = useState(false);
 
   const walletInputRef = useRef<HTMLInputElement | null>(null);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoMuted, setVideoMuted] = useState(true);
 
   const CONTRACT_ADDRESS = '0x8420B95bEac664b6E8E89978C3fDCaA1A71c8350';
   const RPC_URLS = [
@@ -57,6 +59,14 @@ const Task: React.FC = () => {
       setTimeout(() => walletInputRef.current?.focus(), 0);
     }
   }, [modalOpen]);
+
+  function toggleHeroMute() {
+    const el = heroVideoRef.current;
+    if (!el) return;
+    const next = !videoMuted;
+    el.muted = next;
+    setVideoMuted(next);
+  }
 
   // Check verification status on component mount
   useEffect(() => {
@@ -398,6 +408,154 @@ const Task: React.FC = () => {
             </div>
           )}
         </div>
+        
+      </div>
+       {/* Alpha Lions NFT Section */}
+      <section
+      className="alpha-nft-section"
+      style={{
+        marginTop: 24,
+        background: '#ff8b00'
+      }}
+    >
+      <div className="container" style={{ padding: '48px 16px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            gap: 24
+          }}
+        >
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'linear-gradient(180deg,#7c5cff,#6144ff)' }} />
+              <span className="small" style={{ color: '#fff', letterSpacing: 1 }}>ALPHA LIONS NFT</span>
+            </div>
+            <h2 style={{
+              margin: 0,
+              fontSize: 50,
+              lineHeight: 1.2,
+              color: 'white',
+              textShadow: '0 2px 16px rgba(124,92,255,0.25)'
+            }}>
+              What is Alpha Lions NFT?
+            </h2>
+            <p className="lead" style={{ color: '#fff', marginTop: 10, maxWidth: 820 }}>
+              Alpha Lions NFTs are your membership pass into the Alpha Lions ecosystem — unlocking access
+              to exclusive tournaments, early announcements, community perks, and evolving utilities across our gaming
+              experiences. Hold more to climb the pride, earn status, and roar louder.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+              <a
+                className="btn"
+                href="https://alphalions.io"
+                target="_blank"
+                rel="noopener"
+                style={{ fontSize: 14 }}
+              >
+                Visit AlphaLions.io
+              </a>
+              <a
+                className="btn"
+                href="https://magiceden.io/collections/apechain/0x8420b95beac664b6e8e89978c3fdcaa1a71c8350" 
+                target="_blank" 
+                rel="noopener"
+                style={{ fontSize: 14 }}
+              >
+                View Collection
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 12
+              }}
+            >
+              {[
+                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2Bv8Z4fuwA6Ygh3gkp65AjPXb3hwexDsPSw91xN6X9ALw%3D%3D.png',
+                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2B%2FnoMJ1o4TyMgMEC7u8lXJCCFc97pA%2BGXno6FA2kDtTw%3D%3D.png',
+                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2B%2FobN85oUu006Spm8by6DZS1x8%2BXwTv7MGuFeYLJiLeg%3D%3D.png',
+                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2FkH46UWUvmqynIYBd03dmzPuzt%2BEfseO4tdDkC06Twnw%3D%3D.png'
+              ].map((src, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: 14,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)'
+                  }}
+                >
+                  <img
+                    src={src}
+                    alt={`Alpha Lions NFT ${idx + 1}`}
+                    style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="small" style={{ color: '#fff', marginTop: 8 }}>Preview from collection. Art subject to change.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+      {/* Hero Section */}
+      <div className="sw-hero-section-main-contetnt">
+        <video
+          ref={heroVideoRef}
+          id="heroVideo"
+          className="sw-hero-video"
+          autoPlay
+          loop
+          playsInline
+          preload="auto"
+          muted={videoMuted}
+          poster="/assets/video-poster-CHbTF0Uv.png"
+        >
+          <source src="https://alphalions.io/assets/alpha-k8joGREE.mp4" type="video/mp4" />
+          Your browser doesn't support HTML5 video. Please try a different browser.
+        </video>
+        <div className="sw-hero-overlay" />
+        <button
+          aria-label="Toggle mute"
+          className="sw-hero-mute-btn"
+          onClick={toggleHeroMute}
+          title={videoMuted ? 'Unmute' : 'Mute'}
+        >
+          {/* simple speaker icon with x when muted */}
+          {videoMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#fff">
+              <path d="M3 10v4h4l5 5V5L7 10H3zm13.59 2l2.3 2.29 1.42-1.41L18.41 12l1.9-1.88-1.42-1.41L16.17 10l-1.88-1.89-1.41 1.41L13.34 12l-1.89 1.88 1.41 1.41L16.17 14l2.32 2.29 1.42-1.41L18.41 12z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#fff">
+              <path d="M3 10v4h4l5 5V5L7 10H3zm13 2a4 4 0 0 1-2 3.46v-6.92A4 4 0 0 1 16 12zm2 0c0-2.97-2.16-5.43-5-5.91v1.53a4.99 4.99 0 0 1 0 8.76v1.53c2.84-.48 5-2.94 5-5.91z" />
+            </svg>
+          )}
+        </button>
+        <section className="sw-hero-content-section">
+          <div className="sw-hero-content">
+            <h1 className="world-title">Alpha Lions</h1>
+            <p className="world-desc">
+              Step into the wild and witness the birth of something never seen before on any blockchain
+              — Alpha Lions, a groundbreaking 1,111-piece collection forged in hand crafted clay style,
+              brought to life with over 160 traits and crowned with 33 legendary 1/1 masterpieces.
+              Every Alpha Lion tells a story crafted with precision, purpose, and soul. These are not random pixels;
+              they are powerful digital totems, sculpted to inspire, lead, and dominate the chain they walk on.
+              But Alpha Lions isn't just about the art. It's about the community behind the roar. We're building a pride —
+              a powerful, creative, and united force that will shape the future. Holders aren't just collectors; they're
+              founding members of a legacy, the heart of a new digital tribe. Our mission is bold: Make a great Alpha Lions
+              community. Roar louder than anyone ever has. This is art with meaning. A movement with momentum. Join the pride.
+              Become an Alpha. Rule with us.
+            </p>
+          </div>
+        </section>
       </div>
 
       {/* Modal */}
@@ -564,8 +722,11 @@ const Task: React.FC = () => {
       )}
 
       
-    </div>
+    
 
+   
+    
+    </div>
     <Footer />
     </>
   );

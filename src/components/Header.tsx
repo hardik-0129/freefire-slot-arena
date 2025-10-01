@@ -152,9 +152,9 @@ export const Header = () => {
                     {/* Desktop Navigation */}
                     <nav className="desktop-nav">
                         <a href="/" className="nav-link">EVENTS</a>
-                        <a href="#" className="nav-link">ABOUT US</a>
                         <a href="/tournament" className="nav-link">TOURNAMENT</a>
-                        <a href="#" className="nav-link">SHOP</a>
+                        <a href="/task" className="nav-link">Lions NFT</a>
+                        <a href="/about" className="nav-link">ABOUT US</a>
                         <a href="/contact" className="nav-link">CONTACT US</a>
                     </nav>
 
@@ -308,9 +308,9 @@ export const Header = () => {
                             Download App
                         </button>
                         <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
-                        <a href="#" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
                         <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>
-                        <a href="#" className="mobile-nav-link" onClick={closeMobileMenu}>SHOP</a>
+                        <a href="/task" className="mobile-nav-link" onClick={closeMobileMenu}>Lions NFT</a>
+                        <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
                         <a href="/contact" className="mobile-nav-link" onClick={closeMobileMenu}>CONTACT US</a>
                     </nav>
                 </div>

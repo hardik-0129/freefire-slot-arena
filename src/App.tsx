@@ -26,6 +26,7 @@ import EditProfile from "./pages/EditProfile";
 import { WalletProvider } from './context/WalletContext';
 import Tournament from "./pages/Tournament";
 import Task from "./pages/Task";
+import About from "./pages/About";
 
 // Admin Route Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/free-matches" element={<FullMap />} />
             <Route path="/detail" element={<DetailsPage />} />
             <Route path="/contact" element={<Contect />} />
+            <Route path="/about" element={<About />} />
             <Route path="/edit" element={<EditProfile />} />
             <Route path="/task" element={<ProtectedRoute><Task /></ProtectedRoute>} />
 
