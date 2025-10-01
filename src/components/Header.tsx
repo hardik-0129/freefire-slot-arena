@@ -133,6 +133,17 @@ export const Header = () => {
         setIsMobileMenuOpen(false);
     };
 
+    const handleDownloadApk = () => {
+        try {
+            const apkUrl = 'https://api1.alphalions.io/uploads/apk/alpha_lions_v001.apk';
+            // Prefer opening in the same tab to allow direct download on most browsers
+            window.location.href = apkUrl;
+        } catch (e) {
+            // Fallback
+            window.open('https://api1.alphalions.io/uploads/apk/alpha_lions_v001.apk', '_blank');
+        }
+    };
+
 
     return (
         <header className="header-responsive bg-black text-white">
@@ -164,6 +175,7 @@ export const Header = () => {
                         <button
                             className="wallet-button app-button desktop-only"
                             title="Click to view wallet options"
+                            onClick={handleDownloadApk}
                         >
                             Download App
                         </button>
@@ -304,7 +316,7 @@ export const Header = () => {
                 <div className={`mobile-menu ${isMobileMenuOpen ? 'show' : ''}`}>
                     <nav className="mobile-nav">
                         {/* Mobile-only Download App button */}
-                        <button className="wallet-button app-button mobile-only" onClick={closeMobileMenu}>
+                        <button className="wallet-button app-button mobile-only" onClick={() => { handleDownloadApk(); closeMobileMenu(); }}>
                             Download App
                         </button>
                         <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
