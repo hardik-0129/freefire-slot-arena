@@ -181,7 +181,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
         description: "Please log in to access the admin panel",
         variant: "destructive",
       });
-      navigate('/admin/login');
+      navigate('/al-admin-128900441');
       return;
     }
     fetchUsers();
@@ -204,7 +204,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
         variant: "destructive",
       });
       localStorage.removeItem('adminToken');
-      navigate('/admin/login');
+      navigate('/al-admin-128900441');
       throw new Error('Token expired');
     }
     return response;
@@ -217,7 +217,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        navigate('/admin/login');
+        navigate('/al-admin-128900441');
         return;
       }
 
@@ -262,7 +262,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        navigate('/admin/login');
+        navigate('/al-admin-128900441');
         return;
       }
 
@@ -361,7 +361,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
           description: "Please log in to update winner stats.",
           variant: "destructive",
         });
-        navigate('/admin/login');
+        navigate('/al-admin-128900441');
         return;
       }
 
@@ -635,7 +635,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
               <span>{error}</span>
               {error.includes('Authentication') || error.includes('Token') ? (
                 <Button
-                  onClick={() => navigate('/admin/login')}
+                  onClick={() => navigate('/al-admin-128900441')}
                   className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white ml-4"
                 >
                   Login Again

@@ -75,9 +75,7 @@ const Register: React.FC = () => {
 
       // Get device token for notifications
       const deviceToken = await getDeviceToken();
-      if (deviceToken) {
-        payload.deviceToken = deviceToken;
-      }
+      payload.deviceToken = deviceToken;
        
       // Try JSON approach first
       let res;
@@ -104,9 +102,7 @@ const Register: React.FC = () => {
           formData.append('profilePhoto', form.profilePhoto);
         }
         
-        if (deviceToken) {
-          formData.append('deviceToken', deviceToken);
-        }
+        formData.append('deviceToken', deviceToken);
         
         res = await axios.post(`${import.meta.env.VITE_API_URL}/api/register`, formData, {
           headers: {
@@ -174,9 +170,15 @@ const Register: React.FC = () => {
                   type="tel"
                   name="phone"
                   value={form.phone}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    // Only allow numbers
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setForm({ ...form, phone: value });
+                  }}
                   placeholder="Enter your mobile number"
                   required
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
               </div>
 

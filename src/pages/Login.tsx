@@ -172,25 +172,7 @@ const Login: React.FC = () => {
                     >
                       {loading ? 'VERIFYING...' : 'Verify OTP'}
                     </button>
-                    {/* <div style={{ textAlign: 'center', marginTop: 12 }}>
-                      <span style={{ color: '#666' }}>Didn't receive the code? </span>
-                      {otpMethod === 'email' && (
-                        <button
-                          type="button"
-                          style={{ background: 'none', border: 'none', color: 'rgb(249 115 22)', fontWeight: 700, cursor: 'pointer' }}
-                          onClick={async () => {
-                            try {
-                              await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login/send-otp`, { email: form.email });
-                              toast.success('OTP re-sent');
-                            } catch (e: any) {
-                              toast.error(e.response?.data?.message || 'Failed to resend');
-                            }
-                          }}
-                        >
-                          Resend OTP
-                        </button>
-                      )}
-                    </div> */}
+                    
                     <div style={{ textAlign: 'center', marginTop: 6 }}>
                       <button
                         type="button"
@@ -204,29 +186,17 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <button
                 type="button"
                 style={{ background: 'none', border: 'none', color: '#FF8B00', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
-                onClick={async () => {
-                  setForgotMsg('');
-                  if (!form.email) {
-                    setForgotMsg('Please enter your email above first.');
-                    setShowForgotModal(true);
-                    return;
-                  }
-                  try {
-                    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email: form.email });
-                    setForgotMsg(res.data.msg || 'OTP sent to your email.');
-                  } catch (err) {
-                    setForgotMsg((err as any).response?.data?.msg || 'Failed to send OTP.');
-                  }
-                  setShowForgotModal(true);
+                onClick={() => {
+                  navigate('/contact');
                 }}
               >
-                Forgot Password?
+                Forgot Two-Factor Authentication
               </button>
-            </div>
+            </div> */}
 
             {/* OTP Verify Modal */}
             {showForgotModal && (
@@ -262,7 +232,7 @@ const Login: React.FC = () => {
               {loading ? 'LOGGING IN...' : (otpPhase === 'sent' ? 'VERIFY OTP' : 'LOGIN NOW')}
             </button>
 
-            <div style={{ textAlign: 'right', marginBottom: 12, padding: '0 4px' }}>
+            <div style={{ textAlign: 'right', padding: '0 4px' }}>
               <button
                 type="button"
                 style={{ 
@@ -294,6 +264,35 @@ const Login: React.FC = () => {
                 Forgot Password?
               </button>
             </div>
+            <div style={{ textAlign: 'right', marginBottom: 12, padding: '0 4px' }}>
+              <button
+                type="button"
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#FF8B00', 
+                  cursor: 'pointer', 
+                  fontWeight: 600, 
+                  fontSize: window.innerWidth <= 425 ? 13 : 14, 
+                  padding: 0,
+                  textDecoration: 'underline'
+                }}
+                onClick={() => {
+                  navigate('/contact');
+                }}
+              >
+                Forgot Two-Factor Authentication
+              </button>
+            </div>
+            {/* <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#FF8B00', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                onClick={() => {
+                  navigate('/contact');
+                }}
+              >
+                Forgot Two-Factor Authentication
+              </button> */}
 
             <div className="auth-link" style={{ textAlign: 'center', padding: '0 4px' }}>
               <p style={{ 

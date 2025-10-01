@@ -33,7 +33,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const adminToken = localStorage.getItem("adminToken");
 
   if (!isAdmin || !adminToken) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/al-admin-128900441" replace />;
   }
 
   return <>{children}</>;
@@ -100,9 +100,9 @@ const App = () => (
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
             {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/al-admin-128900441" element={<AdminLogin />} />
             <Route
-              path="/admin/dashboard"
+              path="/al-dashboard-1289"
               element={
                 <AdminRoute>
                   <AdminDashboard />

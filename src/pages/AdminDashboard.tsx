@@ -566,6 +566,7 @@ const AdminDashboard = () => {
   const [gameTypes, setGameTypes] = useState<any[]>([]);
   const [gameTypeName, setGameTypeName] = useState('');
   const [gameTypeImage, setGameTypeImage] = useState(null);
+  const [mobileBannerImage, setMobileBannerImage] = useState(null);
   const [editingGameType, setEditingGameType] = useState(null);
   const [isSubmittingGameType, setIsSubmittingGameType] = useState(false);
   const [loadingGameTypes, setLoadingGameTypes] = useState(false);
@@ -587,6 +588,7 @@ const AdminDashboard = () => {
     title: string;
     description: string;
     buttonText: string;
+    buttonLink: string;
     backgroundImage: string;
     bannerImages: string[];
   };
@@ -596,6 +598,7 @@ const AdminDashboard = () => {
     title: '',
     description: '',
     buttonText: '',
+    buttonLink: '',
     backgroundImage: '',
     bannerImages: []
   });
@@ -604,7 +607,8 @@ const AdminDashboard = () => {
   const [singleBannerForm, setSingleBannerForm] = useState({
     title: '',
     description: '',
-    buttonText: ''
+    buttonText: '',
+    buttonLink: ''
   });
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -617,6 +621,7 @@ const AdminDashboard = () => {
     title: string;
     description: string;
     buttonText: string;
+    buttonLink: string;
     file: File | null;
     preview: string;
   }>>([]);
@@ -639,39 +644,39 @@ const AdminDashboard = () => {
   };
 
   // Remove a single image from a banner
-  const handleRemoveBannerImage = async (bannerId: string, imagePath: string) => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/remove-image`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ imagePath })
-      });
-      if (!res.ok) throw new Error('Failed to remove image');
-      toast({ title: 'Removed', description: 'Banner image deleted.' });
-      await fetchBannerData();
-      await fetchAllBanners();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to remove image', variant: 'destructive' });
-    }
-  };
+  // const handleRemoveBannerImage = async (bannerId: string, imagePath: string) => {
+  //   try {
+  //     const token = localStorage.getItem('adminToken');
+  //     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/remove-image`, {
+  //       method: 'DELETE',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify({ imagePath })
+  //     });
+  //     if (!res.ok) throw new Error('Failed to remove image');
+  //     toast({ title: 'Removed', description: 'Banner image deleted.' });
+  //     await fetchBannerData();
+  //     await fetchAllBanners();
+  //   } catch (e: any) {
+  //     toast({ title: 'Error', description: e.message || 'Failed to remove image', variant: 'destructive' });
+  //   }
+  // };
 
-  const toRelativeUploadsPath = (url: string): string => {
-    if (!url) return url;
-    const uploadsIdx = url.indexOf('/uploads/');
-    if (uploadsIdx !== -1) {
-      return url.substring(uploadsIdx);
-    }
-    // Fallback: strip API base if present
-    const apiBase = import.meta.env.VITE_API_URL as string;
-    if (apiBase && url.startsWith(apiBase)) {
-      return url.replace(apiBase, '');
-    }
-    return url;
-  };
+  // const toRelativeUploadsPath = (url: string): string => {
+  //   if (!url) return url;
+  //   const uploadsIdx = url.indexOf('/uploads/');
+  //   if (uploadsIdx !== -1) {
+  //     return url.substring(uploadsIdx);
+  //   }
+  //   // Fallback: strip API base if present
+  //   const apiBase = import.meta.env.VITE_API_URL as string;
+  //   if (apiBase && url.startsWith(apiBase)) {
+  //     return url.replace(apiBase, '');
+  //   }
+  //   return url;
+  // };
 
   useEffect(() => {
     // Check if admin is logged in
@@ -679,7 +684,7 @@ const AdminDashboard = () => {
     const adminToken = localStorage.getItem("adminToken");
 
     if (!isAdmin || !adminToken) {
-      navigate("/admin/login");
+      navigate("/al-admin-128900441");
       return;
     }
 
@@ -712,7 +717,7 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("isAdmin");
-    navigate("/admin/login");
+    navigate("/al-admin-128900441");
   };
 
   // Handle slot banner image file selection
@@ -1121,6 +1126,7 @@ const AdminDashboard = () => {
           title: data.title,
           description: data.description,
           buttonText: data.buttonText,
+          buttonLink: data.buttonLink,
           backgroundImage: data.backgroundImage,
           bannerImages: data.bannerImages || []
         } as any);
@@ -1170,6 +1176,7 @@ const AdminDashboard = () => {
           title: '',
           description: '',
           buttonText: '',
+          buttonLink: '',
           file: file,
           preview: ''
         };
@@ -1217,6 +1224,7 @@ const AdminDashboard = () => {
       formData.append('title', singleBannerForm.title);
       formData.append('description', singleBannerForm.description);
       formData.append('buttonText', singleBannerForm.buttonText);
+      formData.append('buttonLink', singleBannerForm.buttonLink);
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
         method: 'POST',
@@ -1239,7 +1247,8 @@ const AdminDashboard = () => {
         setSingleBannerForm({
           title: '',
           description: '',
-          buttonText: ''
+          buttonText: '',
+          buttonLink: ''
         });
 
         // Refresh banner data
@@ -1284,6 +1293,7 @@ const AdminDashboard = () => {
         formData.append('title', banner.title);
         formData.append('description', banner.description);
         formData.append('buttonText', banner.buttonText);
+        formData.append('buttonLink', banner.buttonLink);
 
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
         method: 'POST',
@@ -1355,6 +1365,46 @@ const AdminDashboard = () => {
     }
   };
 
+  // Remove individual banner image
+  const handleRemoveBannerImage = async (bannerId: string, imagePath: string) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/remove-image`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ imagePath })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Banner image removed successfully",
+        });
+        fetchBannerData(); // Refresh banner data
+        fetchAllBanners(); // Refresh all banners
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.msg || 'Failed to remove banner image');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove banner image",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Helper function to convert full URL to relative path
+  const toRelativeUploadsPath = (fullUrl: string): string => {
+    // Extract the relative path from the full URL
+    const url = new URL(fullUrl);
+    return url.pathname; // This will be like "/uploads/banners/filename.jpg"
+  };
+
   const handleBannerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1395,6 +1445,7 @@ const AdminDashboard = () => {
           title: bannerData.title,
           description: bannerData.description,
           buttonText: bannerData.buttonText,
+          buttonLink: bannerData.buttonLink,
           backgroundImage: imageUrl
         })
       });
@@ -1427,6 +1478,7 @@ const AdminDashboard = () => {
   const resetGameTypeForm = () => {
     setGameTypeName('');
     setGameTypeImage(null);
+    setMobileBannerImage(null);
     setEditingGameType(null);
     setIsSubmittingGameType(false);
   };
@@ -1489,6 +1541,9 @@ const AdminDashboard = () => {
       formData.append('gameType', gameTypeName); // Changed 'name' to 'gameType' to match the backend
       if (gameTypeImage.originFileObj) {
         formData.append('image', gameTypeImage.originFileObj);
+      }
+      if (mobileBannerImage && mobileBannerImage.originFileObj) {
+        formData.append('mobileBannerImage', mobileBannerImage.originFileObj);
       }
 
       const token = localStorage.getItem('adminToken');
@@ -1577,6 +1632,9 @@ const AdminDashboard = () => {
 
       if (gameTypeImage && gameTypeImage.originFileObj) {
         formData.append('image', gameTypeImage.originFileObj);
+      }
+      if (mobileBannerImage && mobileBannerImage.originFileObj) {
+        formData.append('mobileBannerImage', mobileBannerImage.originFileObj);
       }
 
       const token = localStorage.getItem('adminToken');
@@ -2147,6 +2205,45 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="mobileBannerImage" className="text-white">Mobile Size Banner Image</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('mobileBannerImageInput').click()}
+                      className="text-white border-[#3A3A3A]"
+                    >
+                      <Image className="mr-2 h-4 w-4" /> Upload Mobile Banner
+                    </Button>
+                    <input
+                      id="mobileBannerImageInput"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          setMobileBannerImage({
+                            uid: '-1',
+                            name: file.name,
+                            status: 'done',
+                            url: URL.createObjectURL(file),
+                            originFileObj: file,
+                          });
+                        }
+                      }}
+                    />
+                    {mobileBannerImage && (
+                      <span className="text-sm text-green-500">
+                        Mobile Banner selected: {mobileBannerImage.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end">
                 {editingGameType ? (
                   <>
@@ -2294,6 +2391,18 @@ const AdminDashboard = () => {
                   value={singleBannerForm.buttonText}
                   onChange={(e) => setSingleBannerForm({ ...singleBannerForm, buttonText: e.target.value })}
                   placeholder="Enter button text"
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Button Link */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Button Link</label>
+                <input
+                  type="url"
+                  value={singleBannerForm.buttonLink}
+                  onChange={(e) => setSingleBannerForm({ ...singleBannerForm, buttonLink: e.target.value })}
+                  placeholder="Enter button link (e.g., https://example.com)"
                   className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -2678,6 +2787,7 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-white">Name</th>
                   <th className="text-left p-3 text-white">Email</th>
                   <th className="text-left p-3 text-white">Phone</th>
+                  <th className="text-left p-3 text-white">User ID</th>
                   <th className="text-left p-3 text-white">Free Fire Username</th>
                   <th className="text-left p-3 text-white">Wallet</th>
                   <th className="text-left p-3 text-white">Joined</th>
@@ -2693,7 +2803,8 @@ const AdminDashboard = () => {
                       (user.name || '').toLowerCase().includes(q) ||
                       (user.email || '').toLowerCase().includes(q) ||
                       (user.phone || '').toLowerCase().includes(q) ||
-                      (user.freeFireUsername || '').toLowerCase().includes(q)
+                      (user.freeFireUsername || '').toLowerCase().includes(q) ||
+                      ((user.referCode || user.userId || user.referralCode || user.refCode || user._id || '') + '').toLowerCase().includes(q)
                     );
                   })
                   .map((user: any) => (
@@ -2709,12 +2820,17 @@ const AdminDashboard = () => {
                     <td className="p-3 text-white">{user.email}</td>
                     <td className="p-3 text-white">{user.phone}</td>
                     <td className="p-3">
+                      <span className="bg-[#2A2A2A] px-2 py-1 rounded text-cyan-300 font-mono">
+                        {(user.referCode || user.userId || user.referralCode || user.refCode || user._id) as any}
+                      </span>
+                    </td>
+                    <td className="p-3">
                       <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
                         {user.freeFireUsername}
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-green-400 font-bold">₹{user.wallet}</span>
+                      <span className="text-green-400 font-bold">₹{Math.floor(user.wallet || 0)}</span>
                     </td>
                     <td className="p-3 text-gray-400">
                       {new Date(user.createdAt).toLocaleDateString('en-IN', {

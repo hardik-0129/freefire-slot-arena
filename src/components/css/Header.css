@@ -223,10 +223,10 @@
 .dropdown-menu {
   position: absolute;
   right: 0;
-  left: 0;
+  left: -60px;
   top: 100%;
   margin-top: 8px;
-  width: 220px;
+  width: 270px;
   background-color: white;
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -241,7 +241,7 @@
 
 .dropdown-item {
   width: 100%;
-    padding: 12px 3px;
+    padding: 12px 0px 12px 10px;;
     text-align: left;
     color: #000000;
     background: none;
@@ -305,7 +305,7 @@
   }
   
   .logo-img {
-    height: 55px;
+    height: 50px;
   }
   
   .desktop-nav {

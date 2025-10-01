@@ -62,8 +62,6 @@
     border-radius: 16px;
     display: block;
     transition: transform 0.3s ease;
-    object-fit: cover;
-    aspect-ratio: 16/9;
 }
 
 /* Image skeleton placeholder */

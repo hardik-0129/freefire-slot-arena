@@ -93,7 +93,7 @@ export const Header = () => {
     // Listen for foreground FCM messages
     // useEffect(() => {
     //     let unsubscribe: (() => void) | undefined;
-        
+
     //     const initMessaging = async () => {
     //         const isMessagingSupported = await initializeMessaging();
     //         if (isMessagingSupported && messaging) {
@@ -141,11 +141,11 @@ export const Header = () => {
                     {/* Logo Section */}
                     <div className="header-logo">
                         <a href="/">
-                        <img
-                            src="/logo.svg"
-                            alt="FF Esports"
-                            className="logo-img"
-                        />
+                            <img
+                                src="/logo.svg"
+                                alt="FF Esports"
+                                className="logo-img"
+                            />
                         </a>
                     </div>
 
@@ -174,12 +174,22 @@ export const Header = () => {
                                     </span>
                                     <ChevronDown className={`chevron-icon ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
-                                
+
                                 {/* Dropdown Menu */}
                                 {isDropdownOpen && (
                                     <div className="dropdown-menu">
                                         <div className="dropdown-content">
-                                            <button 
+                                            <button
+                                                onClick={() => {
+                                                    navigate('/profile');
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="dropdown-item"
+                                            >
+                                                <User className="dropdown-icon text-gray-700" />
+                                                My Profile
+                                            </button>
+                                            <button
                                                 onClick={() => {
                                                     navigate('/wallets');
                                                     setIsDropdownOpen(false);
@@ -189,7 +199,7 @@ export const Header = () => {
                                                 <Plus className="dropdown-icon text-orange-500" />
                                                 Add Coin
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigate('/wallets');
                                                     setIsDropdownOpen(false);
@@ -199,7 +209,7 @@ export const Header = () => {
                                                 <ArrowUpDown className="dropdown-icon text-blue-500" />
                                                 Withdrawal
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigate('/ongoing');
                                                     setIsDropdownOpen(false);
@@ -209,7 +219,7 @@ export const Header = () => {
                                                 <History className="dropdown-icon text-green-500" />
                                                 Ongoing Matches
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigate('/completed');
                                                     setIsDropdownOpen(false);
@@ -219,7 +229,7 @@ export const Header = () => {
                                                 <History className="dropdown-icon text-blue-500" />
                                                 Completed Matches
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigate('/cancelled');
                                                     setIsDropdownOpen(false);
@@ -229,7 +239,7 @@ export const Header = () => {
                                                 <History className="dropdown-icon text-red-500" />
                                                 Cancelled Matches
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     navigate('/wallets');
                                                     setIsDropdownOpen(false);
@@ -239,16 +249,7 @@ export const Header = () => {
                                                 <Wallet className="dropdown-icon text-purple-500" />
                                                 Wallet History
                                             </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/profile');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <User className="dropdown-icon text-gray-700" />
-                                                User Profile
-                                            </button>
+
                                             <button
                                                 onClick={handleLogout}
                                                 className="dropdown-item logout-item"
@@ -259,11 +260,11 @@ export const Header = () => {
                                         </div>
                                     </div>
                                 )}
-                                
+
                                 {/* Click outside to close dropdown */}
                                 {isDropdownOpen && (
-                                    <div 
-                                        className="dropdown-overlay" 
+                                    <div
+                                        className="dropdown-overlay"
                                         onClick={() => setIsDropdownOpen(false)}
                                     />
                                 )}
@@ -300,8 +301,8 @@ export const Header = () => {
 
                 {/* Mobile Menu Overlay */}
                 {isMobileMenuOpen && (
-                    <div 
-                        className="mobile-menu-overlay" 
+                    <div
+                        className="mobile-menu-overlay"
                         onClick={closeMobileMenu}
                     />
                 )}

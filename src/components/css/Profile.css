@@ -320,7 +320,7 @@
   flex-direction: row;
   align-items: center;
   margin-bottom: 18px;
-  gap: 10px;
+  gap: 30px;
 }
 
 .profile-avatar {
@@ -357,7 +357,6 @@
   margin: 0 0 2px 0;
   color: #222;
   font-size: 1.05rem;
-  text-align: center;
 }
 
 .profile-info .profile-id {

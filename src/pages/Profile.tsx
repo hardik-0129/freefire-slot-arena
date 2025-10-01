@@ -101,6 +101,19 @@ const Profile = () => {
       });
   }, []);
 
+  // Sync email2FA state with profile state to ensure mutual exclusion
+  useEffect(() => {
+    if (profile) {
+      // If TOTP is enabled, disable email 2FA
+      if (profile.totpEnabled || (profile as any).totpVerified) {
+        setEmail2FA(false);
+      } else {
+        // Otherwise, use the actual twoFactorEnabled value
+        setEmail2FA(Boolean(profile.twoFactorEnabled));
+      }
+    }
+  }, [profile]);
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -273,7 +286,7 @@ const Profile = () => {
             <div className="profile-balance">
               <div className="profile-balance-block">
                 <div className="profile-balance-label">Wallet Balance</div>
-                <div className="profile-balance-value">₹{totalBalance}</div>
+                <div className="profile-balance-value">₹{Math.floor(totalBalance)}</div>
               </div>
               <div className="profile-balance-block">
                 <div className="profile-balance-label">Total Matches</div>
@@ -281,7 +294,7 @@ const Profile = () => {
               </div>
               <div className="profile-balance-block">
                 <div className="profile-balance-label">Total Win Money</div>
-                <div className="profile-balance-value green">₹{totalWinMoney}</div>
+                <div className="profile-balance-value green">₹{Math.floor(totalWinMoney)}</div>
               </div>
             </div>
             <div className="profile-joined">
@@ -320,13 +333,16 @@ const Profile = () => {
               {/* Email OTP Row */}
               <div className="security-left">
                 <div className="profile-grid-label">Two-Factor Authentication (Email OTP)</div>
-                <div className={`security-status ${profile.twoFactorEnabled ? 'enabled' : 'disabled'}`}>{profile.twoFactorEnabled ? 'Enabled' : 'Disabled'}</div>
+                <div className={`security-status ${profile.twoFactorEnabled ? 'enabled' : 'disabled'}`}>
+                  {profile.twoFactorEnabled ? 'Enabled' : (profile.totpEnabled || (profile as any).totpVerified) ? 'Disabled (Authenticator Active)' : 'Disabled'}
+                </div>
               </div>
               <div className="security-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <label className="toggle" style={{ cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={email2FA}
+                    disabled={profile.totpEnabled || (profile as any).totpVerified}
                     onChange={async (e) => {
                       try {
                         setSaving2FA(true);
@@ -360,7 +376,9 @@ const Profile = () => {
               {/* TOTP Row */}
               <div className="security-left">
                 <div className="profile-grid-label">Authenticator (TOTP)</div>
-                <div className={`security-status ${(profile.totpEnabled || (profile as any).totpVerified) ? 'enabled' : 'disabled'}`}>{(profile.totpEnabled || (profile as any).totpVerified) ? 'Enabled' : 'Disabled'}</div>
+                <div className={`security-status ${(profile.totpEnabled || (profile as any).totpVerified) ? 'enabled' : 'disabled'}`}>
+                  {(profile.totpEnabled || (profile as any).totpVerified) ? 'Enabled' : profile.twoFactorEnabled ? 'Disabled (Email OTP Active)' : 'Disabled'}
+                </div>
               </div>
               <div className="security-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 {/* <label className="toggle">
@@ -397,6 +415,7 @@ const Profile = () => {
                   <input
                     type="checkbox"
                     checked={!!(profile.totpEnabled || (profile as any).totpVerified)}
+                    disabled={profile.twoFactorEnabled}
                     onChange={async (e) => {
                       try {
                         setSaving2FA(true);
@@ -407,6 +426,7 @@ const Profile = () => {
                           if (resp.data?.status) {
                             toast.success('Authenticator enabled');
                             setProfile(prev => prev ? { ...prev, totpEnabled: true, totpVerified: true, twoFactorEnabled: false } : prev);
+                            setEmail2FA(false); // Disable email 2FA when TOTP is enabled
                           } else {
                             toast.error(resp.data?.message || 'Enable failed');
                           }
@@ -501,7 +521,7 @@ const Profile = () => {
               </div>
               <div className="referral-row">
                 <span className="referral-label">Total Referral Reward:</span>
-                <span className="referral-value reward">₹{totalReferralReward}</span>
+                <span className="referral-value reward">₹{Math.floor(totalReferralReward)}</span>
               </div>
               <div className="referral-row">
                 <span className="referral-label">Share your code to earn 5% on your friends' winnings!</span>
@@ -519,9 +539,9 @@ const Profile = () => {
                       <div className="referral-history-date">{new Date(txn.createdAt).toLocaleString('en-IN')}</div>
                     </div>
                     <div className="referral-history-right">
-                      <div className="referral-history-amount">+ <span>{txn.amount.toFixed(2)}</span> <img src="/assets/vector/Coin.png" alt="coin" className="referral-history-coin" /></div>
+                      <div className="referral-history-amount">+ <span>{Math.floor(txn.amount)}</span> <img src="/assets/vector/Coin.png" alt="coin" className="referral-history-coin" /></div>
                       <div className="referral-history-balance">
-                        <img src="/assets/vector/Coin.png" alt="coin" className="referral-history-coin-small" />{txn.balanceAfter?.toFixed(2) ?? ''}
+                        <img src="/assets/vector/Coin.png" alt="coin" className="referral-history-coin-small" />{txn.balanceAfter ? Math.floor(txn.balanceAfter) : ''}
                       </div>
                     </div>
                   </div>

@@ -16,6 +16,7 @@ interface BannerData {
     title: string;
     description: string;
     buttonText: string;
+    buttonLink: string;
     backgroundImage: string;
     bannerImages?: string[];
     imageGallery?: Array<{
@@ -23,6 +24,7 @@ interface BannerData {
         title?: string;
         description?: string;
         buttonText?: string;
+        buttonLink?: string;
     }>;
     isActive?: boolean;
 }
@@ -52,6 +54,7 @@ export const HeroBanner = () => {
                         title: active.title || '',
                         description: active.description || '',
                         buttonText: active.buttonText || '',
+                        buttonLink: active.buttonLink || '',
                         backgroundImage: active.backgroundImage || fallbackImage,
                         imageGallery: Array.isArray(active.imageGallery) ? active.imageGallery : [],
                         isActive: active.isActive
@@ -67,6 +70,7 @@ export const HeroBanner = () => {
                         title: '',
                         description: '',
                         buttonText: '',
+                        buttonLink: '',
                         backgroundImage: fallbackImage
                     } as any);
                     setBannerImages([fallbackImage]);
@@ -103,13 +107,15 @@ export const HeroBanner = () => {
             url: g.url,
             title: g.title || '',
             description: g.description || '',
-            buttonText: g.buttonText || ''
+            buttonText: g.buttonText || '',
+            buttonLink: g.buttonLink || ''
           }))
         : bannerImages.map(url => ({
             url,
             title: bannerData?.title || '',
             description: bannerData?.description || '',
-            buttonText: bannerData?.buttonText || ''
+            buttonText: bannerData?.buttonText || '',
+            buttonLink: bannerData?.buttonLink || ''
           }));
 
     return (
@@ -168,12 +174,19 @@ export const HeroBanner = () => {
                                         <p className="text-[14px] sm:text-[15px] md:text-[16px] text-gray-200 mb-4 md:mb-8">{s.description}</p>
                                       )}
                                       {s.buttonText && (
-                                        <Button
-                                          size="lg"
+                                        <button
                                           className="w-full sm:w-[160px] md:w-[191px] lg:w-[220px] h-[40px] md:h-[43px] lg:h-[50px] rounded-[8px] bg-[#000000] text-white text-[12px] md:text-[13px] lg:text-[16px] flex items-center justify-center"
-                                          onClick={() => navigate('/tournament')}>
+                                          onClick={() => {
+                                            if (s.buttonLink && s.buttonLink.trim() !== '') {
+                                              // If buttonLink is provided, open it in a new tab
+                                              window.open(s.buttonLink, '_blank');
+                                            } else {
+                                              // Fallback to tournament page if no buttonLink
+                                              navigate('/tournament');
+                                            }
+                                          }}>
                                           {s.buttonText}
-                                        </Button>
+                                        </button>
                                       )}
                                     </div>
                                   </div>
