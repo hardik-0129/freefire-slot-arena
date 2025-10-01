@@ -1,3 +1,7 @@
+/* Task verification banner responsive layout */
+
+
+
 /* Tournament Section Responsive Styles */
 
 /* Tournament Section Container */
@@ -48,6 +52,10 @@
     cursor: pointer;
     position: relative;
 }
+
+.task-banner {
+    justify-content: space-between;
+  }
 
 /* .card:hover {
     transform: translateY(-8px);
@@ -276,6 +284,12 @@
         margin: 8px auto 0;
     }
 }
+
+@media (max-width: 767px) {
+    .task-banner {
+      flex-direction: column;
+    }
+  }
 
 /* Responsive Design for 425px to 767px */
 @media (min-width: 425px) and (max-width: 767px) {

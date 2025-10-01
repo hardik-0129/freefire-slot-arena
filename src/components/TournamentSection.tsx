@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./css/Tournament.css"
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface GameTypeData {
     _id: string;
@@ -11,6 +11,7 @@ interface GameTypeData {
 
 export const TournamentSection = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [gameTypes, setGameTypes] = useState<GameTypeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
@@ -64,8 +65,9 @@ export const TournamentSection = () => {
         <section className="tournament-section">
             <div className="container">
                 <h2 className="tournament-title">Tournament</h2>
-                {/* Success alert banner */}
-                    <div style={{
+                {/* Success alert banner - show only on Tournament page */}
+                {location.pathname === '/tournament' && (
+                    <div className="task-banner" style={{
                         background: '#dff0d8',
                         border: '1px solid #c8e5bc',
                         color: '#3c763d',
@@ -76,17 +78,19 @@ export const TournamentSection = () => {
                         alignItems: 'center',
                         gap: 8
                     }}>
-                        <span aria-hidden="true" style={{ display: 'inline-flex' }}>
+                        <div aria-hidden="true" style={{ display: 'inline-flex', gap: 7}}>
                             <svg width="16" height="16" viewBox="0 0 16 16">
                                 <rect x="1" y="1" width="14" height="14" rx="2" fill="#2dbd3a"/>
                                 <path d="M4 8.2l2.3 2.3L12 5.5" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
-                        </span>
-                        <span style={{ flex: 1 }}>
+                            <div style={{ flex: 1, fontWeight: 700 }}>
                             Complete your task and verify your NFT ownership with your wallet address.
-                        </span>
+                        </div>
+                        </div>
+                        
                         <a href="/task" style={{ textDecoration: 'underline', color: '#2f6f2f', fontWeight: 700, whiteSpace: 'nowrap' }}>Go to verification ↗</a>
                     </div>
+                )}
                 <div className="card-container">
                     {!loading && gameTypes.map((gameType) => {
                         const imgSrc = getImageUrl(gameType.image);

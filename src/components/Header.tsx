@@ -142,7 +142,7 @@ export const Header = () => {
                     <div className="header-logo">
                         <a href="/">
                             <img
-                                src="/logo.svg"
+                                src="/alphalogo.png"
                                 alt="FF Esports"
                                 className="logo-img"
                             />
@@ -160,9 +160,19 @@ export const Header = () => {
 
                     {/* Right Side Actions */}
                     <div className="header-actions">
+                        {/* Desktop-only Download App */}
+                        <button
+                            className="wallet-button app-button desktop-only"
+                            title="Click to view wallet options"
+                        >
+                            Download App
+                        </button>
                         {isLoggedIn ? (
                             <div className="user-section">
                                 {/* Wallet Balance Button */}
+
+
+
                                 <button
                                     onClick={toggleDropdown}
                                     className="wallet-button"
@@ -174,6 +184,8 @@ export const Header = () => {
                                     </span>
                                     <ChevronDown className={`chevron-icon ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
+
+
 
                                 {/* Dropdown Menu */}
                                 {isDropdownOpen && (
@@ -291,6 +303,10 @@ export const Header = () => {
                 {/* Mobile Navigation Menu */}
                 <div className={`mobile-menu ${isMobileMenuOpen ? 'show' : ''}`}>
                     <nav className="mobile-nav">
+                        {/* Mobile-only Download App button */}
+                        <button className="wallet-button app-button mobile-only" onClick={closeMobileMenu}>
+                            Download App
+                        </button>
                         <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
                         <a href="#" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
                         <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>

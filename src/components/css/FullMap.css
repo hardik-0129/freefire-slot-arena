@@ -349,7 +349,7 @@
   .card-container {
     grid-template-columns: 1fr;
     gap: 15px;
-    padding: 0 15px;
+    /* padding: 0 15px; */
   }
 
   h2[class*="text-[42px]"] {

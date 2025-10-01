@@ -2,6 +2,7 @@
 .hero-banner {
   position: relative;
   width: 100%;
+  height: 650px; /* Default height */
   overflow: hidden;
 }
 
