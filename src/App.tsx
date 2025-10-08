@@ -27,6 +27,9 @@ import { WalletProvider } from './context/WalletContext';
 import Tournament from "./pages/Tournament";
 import Task from "./pages/Task";
 import About from "./pages/About";
+import Upcoming from "./pages/Upcoming";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 // Admin Route Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -85,6 +88,8 @@ const App = () => (
             <Route path="/detail" element={<DetailsPage />} />
             <Route path="/contact" element={<Contect />} />
             <Route path="/about" element={<About />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/edit" element={<EditProfile />} />
             <Route path="/task" element={<ProtectedRoute><Task /></ProtectedRoute>} />
 
@@ -96,6 +101,7 @@ const App = () => (
             <Route path="/select-slot" element={<ProtectedRoute><SelectSlot /></ProtectedRoute>} />
             <Route path="/ongoing" element={<ProtectedRoute><Ongoing /></ProtectedRoute>} />
             <Route path="/completed" element={<ProtectedRoute><Compeleted /></ProtectedRoute>} />
+            <Route path="/upcoming" element={<ProtectedRoute><Upcoming /></ProtectedRoute>} />
             <Route path="/cancelled" element={<ProtectedRoute><Cancelled /></ProtectedRoute>} />
             <Route path="/winner" element={<ProtectedRoute><WinnerDetails /></ProtectedRoute>} />
             <Route path="/wallets" element={<ProtectedRoute><Wallets /></ProtectedRoute>} />

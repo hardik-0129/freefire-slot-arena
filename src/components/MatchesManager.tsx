@@ -97,7 +97,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   onOpenWinnerDetails,
   onOpenIdPass,
 }) => {
-  // Helpers to show dd/MM/yyyy HH:mm in inputs while keeping ISO under the hood
+  // Helpers to show dd/MM/yyyy hh:mm AM/PM in inputs while keeping ISO under the hood
   const formatToDisplay = (iso?: string) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -105,16 +105,32 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
+    
+    // Convert to 12-hour format with AM/PM
+    let hours = d.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const hh = String(hours).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    return `${dd}/${mm}/${yyyy} ${hh}:${min} ${ampm}`;
   };
 
   const parseDisplayToISO = (val: string) => {
-    const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+    // Match format: dd/mm/yyyy hh:mm AM/PM
+    const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i);
     if (!m) return '';
-    const [, dd, mm, yyyy, hh, min] = m;
-    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min));
+    const [, dd, mm, yyyy, hh, min, ampm] = m;
+    
+    // Convert 12-hour to 24-hour format
+    let hours24 = parseInt(hh);
+    if (ampm.toUpperCase() === 'PM' && hours24 !== 12) {
+      hours24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hours24 === 12) {
+      hours24 = 0;
+    }
+    
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), hours24, Number(min));
     if (isNaN(d.getTime())) return '';
     // Return in the ISO-like format we use (YYYY-MM-DDTHH:mm)
     const y = d.getFullYear();
@@ -126,7 +142,6 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   };
 
   const [matchTimeDisplay, setMatchTimeDisplay] = useState<string>("");
-  const [registrationDeadlineDisplay, setRegistrationDeadlineDisplay] = useState<string>("");
   const [cancelSlotId, setCancelSlotId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>("");
   const [savingCancel, setSavingCancel] = useState<boolean>(false);
@@ -136,13 +151,21 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
     setLocalSlots(slots || []);
   }, [slots]);
 
+  // Helper: get current local time as ISO-like string YYYY-MM-DDTHH:mm
+  const getNowLocalIsoMinutes = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${mi}`;
+  };
+
   useEffect(() => {
     setMatchTimeDisplay(formatToDisplay(formData.matchTime));
   }, [formData.matchTime]);
 
-  useEffect(() => {
-    setRegistrationDeadlineDisplay(formatToDisplay(formData.registrationDeadline));
-  }, [formData.registrationDeadline]);
 
   return (
     <>
@@ -198,6 +221,13 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
               setFormData(initialFormData);
               setSlotBannerFile(null);
               setSlotBannerPreview('');
+            } else {
+              // Set current local time defaults when opening
+              const nowIso = getNowLocalIsoMinutes();
+              setFormData({
+                ...initialFormData,
+                matchTime: nowIso
+              });
             }
           }}>
             <DialogTrigger asChild>
@@ -263,16 +293,17 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="matchDescription" className="text-white">Match Description</Label>
-                    <textarea
-                      id="matchDescription"
-                      value={formData.matchDescription}
-                      onChange={(e) => setFormData({ ...formData, matchDescription: e.target.value })}
-                      placeholder="Tournament description and details..."
-                      className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-20"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="rules" className="text-white">Rules</Label>
+                      <textarea
+                        id="rules"
+                        value={formData.rules}
+                        onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
+                        placeholder="Rules..."
+                        className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-20"
+                      />
+                    </div>
                 </div>
 
                 <div className="space-y-4">
@@ -403,18 +434,13 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                       <Label htmlFor="matchTime" className="text-white">Match Time</Label>
                       <Input
                         id="matchTime"
-                        type="text"
-                        placeholder="dd/mm/yyyy hh:mm"
-                        value={matchTimeDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setMatchTimeDisplay(v);
-                          const iso = parseDisplayToISO(v);
-                          if (iso) setFormData({ ...formData, matchTime: iso });
-                        }}
+                        type="datetime-local"
+                        value={formData.matchTime}
+                        onChange={(e) => setFormData({ ...formData, matchTime: e.target.value })}
                         required
                         className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
                       />
+                      <div className="text-xs text-gray-400">{formatToDisplay(formData.matchTime)}</div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="customStartInMinutes" className="text-white">Custom Start (Minutes)</Label>
@@ -437,6 +463,43 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                         onChange={(e) => setFormData({ ...formData, maxPlayers: e.target.value })}
                         placeholder="48"
                         required
+                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Prize Distribution Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstwin" className="text-white">1st Place Prize</Label>
+                      <Input
+                        id="firstwin"
+                        type="number"
+                        value={formData.firstwin}
+                        onChange={(e) => setFormData({ ...formData, firstwin: e.target.value })}
+                        placeholder="40"
+                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secwin" className="text-white">2nd Place Prize</Label>
+                      <Input
+                        id="secwin"
+                        type="number"
+                        value={formData.secwin}
+                        onChange={(e) => setFormData({ ...formData, secwin: e.target.value })}
+                        placeholder="30"
+                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="thirdwin" className="text-white">3rd Place Prize</Label>
+                      <Input
+                        id="thirdwin"
+                        type="number"
+                        value={formData.thirdwin}
+                        onChange={(e) => setFormData({ ...formData, thirdwin: e.target.value })}
+                        placeholder="20"
                         className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
                       />
                     </div>
@@ -469,45 +532,8 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                         className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contactInfo" className="text-white">Contact Info</Label>
-                      <Input
-                        id="contactInfo"
-                        type="text"
-                        value={formData.contactInfo}
-                        onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
-                        placeholder="Contact details"
-                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="registrationDeadline" className="text-white">Registration Deadline</Label>
-                      <Input
-                        id="registrationDeadline"
-                        type="text"
-                        placeholder="dd/mm/yyyy hh:mm"
-                        value={registrationDeadlineDisplay}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setRegistrationDeadlineDisplay(v);
-                          const iso = parseDisplayToISO(v);
-                          if (iso) setFormData({ ...formData, registrationDeadline: iso });
-                        }}
-                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                      />
-                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="rules" className="text-white">Rules</Label>
-                      <textarea
-                        id="rules"
-                        value={formData.rules}
-                        onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
-                        placeholder="Rules..."
-                        className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-20"
-                      />
-                    </div>
+                  
                     <div className="space-y-2">
                       <Label htmlFor="prizeDistribution" className="text-white">Prize Distribution</Label>
                       <Input
@@ -519,45 +545,29 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                         className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="specialRules" className="text-white">Special Rules</Label>
-                      <Input
-                        id="specialRules"
-                        type="text"
-                        value={formData.specialRules}
-                        onChange={(e) => setFormData({ ...formData, specialRules: e.target.value })}
-                        placeholder="Any special restrictions"
-                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="banList" className="text-white">Ban List</Label>
-                      <Input
-                        id="banList"
-                        type="text"
-                        value={formData.banList}
-                        onChange={(e) => setFormData({ ...formData, banList: e.target.value })}
-                        placeholder="e.g., RYDEN"
-                        className="text-white bg-[#2A2A2A] border-[#3A3A3A]"
-                      />
-                    </div>
                   </div>
                 </div>
 
                 {/* Banner Image */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Banner Image</h3>
+                  <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">
+                    Banner Image <span className="text-red-400">*</span>
+                  </h3>
                   <div className="space-y-2">
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleSlotBannerFileChange}
+                      required
                       className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                     />
                     {slotBannerPreview && (
                       <div className="w-full max-w-md">
                         <img src={slotBannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
                       </div>
+                    )}
+                    {!slotBannerFile && (
+                      <p className="text-red-400 text-sm">Banner image is required to create a match</p>
                     )}
                   </div>
                 </div>
@@ -640,11 +650,14 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
               {slot.bannerImage && (
                 <div className="w-full h-32 overflow-hidden">
                   <img
-                    src={slot.bannerImage}
+                    key={`${slot._id}-${new Date(slot.updatedAt || slot.createdAt || Date.now()).getTime()}`}
+                    src={`${slot.bannerImage}${(slot.bannerImage || '').includes('?') ? '&' : '?'}v=${new Date(slot.updatedAt || slot.createdAt || Date.now()).getTime()}`}
                     alt={`${slot.slotType} Banner`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      const img = e.currentTarget as HTMLImageElement;
+                      img.onerror = null;
+                      img.src = '/assets/images/category.png';
                     }}
                   />
                 </div>
@@ -699,40 +712,40 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2"
                     onClick={() => onEditSlot ? onEditSlot(slot) : undefined}
                   >
                     Edit
                   </Button>
                   <Button
-                    className="flex-1 bg-[#52C41A] hover:bg-[#73D13D] text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-[#52C41A] hover:bg-[#73D13D] text-white text-xs py-2"
                     onClick={() => onOpenRules ? onOpenRules(slot) : undefined}
                   >
                     📋 Rules
                   </Button>
                   <Button
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2"
                     onClick={() => onOpenWinnerDetails ? onOpenWinnerDetails(slot) : undefined}
                   >
                     Winners
                   </Button>
                   <Button
-                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-teal-600 hover:bg-teal-700 text-white text-xs py-2"
                     onClick={() => onOpenIdPass ? onOpenIdPass(slot) : undefined}
                   >
                     ID/Pass
                   </Button>
                   <Button
                     variant="destructive"
-                    className="flex-1 bg-[#FF4D4F] hover:bg-[#FF7875] text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-[#FF4D4F] hover:bg-[#FF7875] text-white text-xs py-2"
                     onClick={() => handleDeleteSlot(slot._id)}
                   >
                     Delete
                   </Button>
                   <Button
-                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs py-2"
+                    className="flex-1 min-w-[90px] bg-orange-600 hover:bg-orange-700 text-white text-xs py-2"
                     onClick={() => { setCancelSlotId(slot._id); setCancelReason(''); }}
                   >
                     Cancel

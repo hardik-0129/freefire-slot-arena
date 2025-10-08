@@ -126,6 +126,7 @@ const Wallets = () => {
     const [transactions, setTransactions] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
+    const [pendingHolds, setPendingHolds] = useState(0);
 
 
     useEffect(() => {
@@ -263,18 +264,21 @@ const Wallets = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setWalletBalance(data.balance ?? 0);
+                setWalletBalance((data.balanceWithoutHolds ?? data.balance) ?? 0);
                 setTotalEarnings(data.totalEarnings ?? 0);
                 setTotalPayouts(data.totalPayouts ?? 0);
+                setPendingHolds(data.pendingWithdrawals ?? 0);
             } else {
                 setWalletBalance(0);
                 setTotalEarnings(0);
                 setTotalPayouts(0);
+                setPendingHolds(0);
             }
         } catch (error) {
             setWalletBalance(0);
             setTotalEarnings(0);
             setTotalPayouts(0);
+            setPendingHolds(0);
         }
     };
 
@@ -423,8 +427,9 @@ const Wallets = () => {
             }
             const decoded = jwtDecode<{ userId: string, phone?: string }>(token);
             const userId = decoded.userId;
-            const phone = '';
-            if (!userId || !phone) {
+            
+            console.log(userId);
+            if (!userId) {
                 setMessage('User info missing');
                 setLoading(false);
                 return;
@@ -438,7 +443,7 @@ const Wallets = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    customerMobile: phone,
+                    customerMobile: userId,
                     amount: parseFloat(addAmount),
                     orderId,
                     redirectUrl,
@@ -471,10 +476,10 @@ const Wallets = () => {
             return;
         }
 
-        if (parseFloat(withdrawAmount) > totalEarnings) {
-            setMessage('You can withdraw only from your winnings balance.');
-            return;
-        }
+        // if (parseFloat(withdrawAmount) > totalEarnings) {
+        //     setMessage('You can withdraw only from your winnings balance.');
+        //     return;
+        // }
 
         setLoading(true);
         setMessage('');
@@ -523,6 +528,8 @@ const Wallets = () => {
                     // No need to reset accountHolderName
                     // Refresh transaction history to show the pending withdrawal
                     fetchTransactionHistory();
+                    // Also refresh balances so EARNINGS reflects the immediate hold
+                    fetchWalletBalance();
                 } else {
                     // Legacy production mode - withdrawal request submitted
                     setMessage('Withdrawal request submitted successfully!');
@@ -563,7 +570,7 @@ const Wallets = () => {
                         <span className="card-header">TOTAL BALANCE</span>
                         <div className="card-content flex-between">
                             <div>
-                                <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {walletBalance.toFixed(2)}</div>
+                                <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {Math.max(0, walletBalance).toFixed(2)}</div>
                                 <p className="coin-label"><span style={{ width: '100px' }}>Win money :</span> <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {totalEarnings.toFixed(2)}</p>
                                 <p className="coin-label">Join money : <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {Math.max(0, (walletBalance - totalEarnings)).toFixed(2)}</p>
                             </div>

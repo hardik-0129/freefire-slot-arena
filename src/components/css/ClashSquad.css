@@ -149,7 +149,7 @@
   letter-spacing: 1px;
 }
 
-.position-badge {
+/* .position-badge {
   background: linear-gradient(45deg, #52C41A, #73D13D);
   color: white;
   padding: 8px 15px;
@@ -157,7 +157,7 @@
   font-weight: bold;
   font-size: 12px;
   letter-spacing: 1px;
-}
+} */
 
 .input-name {
   width: 200px;

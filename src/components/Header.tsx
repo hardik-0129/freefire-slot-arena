@@ -1,4 +1,7 @@
-import { User, LogOut, ChevronDown, Plus, ArrowUpDown, History, Wallet, Menu, X } from "lucide-react";
+import { User, LogOut, ChevronDown, Plus, ArrowUpDown, History, Wallet, Menu, X, Download } from "lucide-react";
+import NotificationBell, { type NotificationItem } from './NotificationBell';
+import MatchNotificationModal from './MatchNotificationModal';
+import AnnouncementBar from './AnnouncementBar';
 import { useEffect, useState } from "react";
 import { useWallet } from '../context/WalletContext';
 import { requestForToken, messaging, onMessage, initializeMessaging } from '../lib/firebase';
@@ -21,6 +24,8 @@ export const Header = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
+    const [matchModalOpen, setMatchModalOpen] = useState(false);
+    const [selectedMatch, setSelectedMatch] = useState<NotificationItem | null>(null);
 
     // Remove local walletBalance state, use context instead
     const fetchWalletBalance = async () => {
@@ -146,7 +151,9 @@ export const Header = () => {
 
 
     return (
-        <header className="header-responsive bg-black text-white">
+        <>
+            <AnnouncementBar />
+            <header className="header-responsive bg-black text-white">
             <div className="header-container">
                 <div className="header-content">
                     {/* Logo Section */}
@@ -167,6 +174,7 @@ export const Header = () => {
                         <a href="/task" className="nav-link">Lions NFT</a>
                         <a href="/about" className="nav-link">ABOUT US</a>
                         <a href="/contact" className="nav-link">CONTACT US</a>
+                        <a href="/blog" className="nav-link">BLOG</a>
                     </nav>
 
                     {/* Right Side Actions */}
@@ -174,15 +182,18 @@ export const Header = () => {
                         {/* Desktop-only Download App */}
                         <button
                             className="wallet-button app-button desktop-only"
-                            title="Click to view wallet options"
+                            title="Download App"
                             onClick={handleDownloadApk}
                         >
-                            Download App
+                            <span className="download-text">Download App</span>
+                            <Download className="download-icon w-4 h-4" />
                         </button>
+                       
                         {isLoggedIn ? (
                             <div className="user-section">
                                 {/* Wallet Balance Button */}
-
+                                {/* Notifications Bell */}
+                               
 
 
                                 <button
@@ -242,6 +253,16 @@ export const Header = () => {
                                             >
                                                 <History className="dropdown-icon text-green-500" />
                                                 Ongoing Matches
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    navigate('/upcoming');
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="dropdown-item"
+                                            >
+                                                <History className="dropdown-icon text-yellow-500" />
+                                                Upcoming Matches
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -309,6 +330,7 @@ export const Header = () => {
                         >
                             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
+                        <NotificationBell byBookings onOpenMatch={(n) => { setSelectedMatch(n); setMatchModalOpen(true); }} />
                     </div>
                 </div>
 
@@ -317,7 +339,8 @@ export const Header = () => {
                     <nav className="mobile-nav">
                         {/* Mobile-only Download App button */}
                         <button className="wallet-button app-button mobile-only" onClick={() => { handleDownloadApk(); closeMobileMenu(); }}>
-                            Download App
+                            <span className="download-text">Download App</span>
+                            <Download className="download-icon w-4 h-4" />
                         </button>
                         <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
                         <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>
@@ -335,6 +358,8 @@ export const Header = () => {
                     />
                 )}
             </div>
+            <MatchNotificationModal open={matchModalOpen} onClose={() => setMatchModalOpen(false)} item={selectedMatch} />
         </header>
+        </>
     );
 };

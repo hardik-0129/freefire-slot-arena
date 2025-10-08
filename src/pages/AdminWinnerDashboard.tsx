@@ -29,6 +29,9 @@ interface Match {
   totalWinningPrice: number;
   perKill: number;
   winners: Winner[];
+  firstwin?: number;
+  secwin?: number;
+  thirdwin?: number;
 }
 
 interface PlayerStats {
@@ -427,12 +430,17 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
     });
 
     const calculateWinnings = (kills: number, rank: number) => {
-      const killReward = kills * matchInfo.perKill;
+      const perKillCoin = Number(matchInfo?.perKill);
+      const firstPlaceCoin = Number(matchInfo?.firstwin);
+      const secondPlaceCoin = Number(matchInfo?.secwin);
+      const thirdPlaceCoin = Number(matchInfo?.thirdwin) ;
+
       let positionReward = 0;
-      if (rank === 1) positionReward = matchInfo.totalWinningPrice * 0.5;
-      else if (rank === 2) positionReward = matchInfo.totalWinningPrice * 0.3;
-      else if (rank === 3) positionReward = matchInfo.totalWinningPrice * 0.2;
-      return killReward + positionReward;
+      if (rank === 1) positionReward = firstPlaceCoin;
+      else if (rank === 2) positionReward = secondPlaceCoin;
+      else if (rank === 3) positionReward = thirdPlaceCoin;
+
+      return Math.max(0, Math.floor(kills * perKillCoin + positionReward));
     };
 
     const handleSave = () => {
@@ -693,7 +701,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                             (() => {
                               const filteredWinners = winnersBySlot[match._id];
                               // Winner Row Component with editable fields and update logic
-                              const WinnerRow: React.FC<{ winner: any; onSuccess: () => void }> = ({ winner, onSuccess }) => {
+                              const WinnerRow: React.FC<{ winner: any; onSuccess: () => void; match: Match }> = ({ winner, onSuccess, match }) => {
                                 const [editing, setEditing] = React.useState(false);
                                 const [loading, setLoading] = React.useState(false);
                                 const [deleteLoading, setDeleteLoading] = React.useState(false);
@@ -705,9 +713,34 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                 });
                                 const { toast } = useToast();
 
+                                const calc = React.useCallback((kills: number, rank: number) => {
+                                  const perKill = Number(match?.perKill) || 0;
+                                  const first = Number(match?.firstwin) || 0;
+                                  const second = Number(match?.secwin) || 0;
+                                  const third = Number(match?.thirdwin) || 0;
+                                  let bonus = 0;
+                                  if (rank === 1) bonus = first; else if (rank === 2) bonus = second; else if (rank === 3) bonus = third;
+                                  return Math.max(0, Math.floor(kills * perKill + bonus));
+                                }, [match]);
+
+                                // Ensure initial price is populated if 0
+                                React.useEffect(() => {
+                                  if (!fields.winningPrice || fields.winningPrice === 0) {
+                                    setFields(f => ({ ...f, winningPrice: calc(f.kills, f.rank) }));
+                                  }
+                                }, [calc]);
+
                                 const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                                   const { name, value } = e.target;
-                                  setFields(f => ({ ...f, [name]: name === 'rank' || name === 'kills' || name === 'winningPrice' ? Number(value) : value }));
+                                  const numeric = Number(value);
+                                  setFields(f => {
+                                    const next = { ...f, [name]: name === 'rank' || name === 'kills' || name === 'winningPrice' ? numeric : value } as any;
+                                    // auto recalc when kills or rank change
+                                    if (name === 'rank' || name === 'kills') {
+                                      next.winningPrice = calc(name === 'kills' ? numeric : next.kills, name === 'rank' ? numeric : next.rank);
+                                    }
+                                    return next;
+                                  });
                                 };
 
                                 const handleUpdate = async () => {
@@ -787,7 +820,6 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                         )}
                                       </td>
                                     </tr>
-                                    
                                     {/* Delete Confirmation Dialog */}
                                     {showDeleteConfirm && (
                                       <tr>
@@ -821,7 +853,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                               return filteredWinners.length > 0
                                 ? filteredWinners.map((winner, idx) => (
-                                  <WinnerRow key={winner._id || idx} winner={winner} onSuccess={fetchCompletedMatches} />
+                                  <WinnerRow key={winner._id || idx} winner={winner} onSuccess={fetchCompletedMatches} match={match} />
                                 ))
                                 : (
                                   <tr>
@@ -883,6 +915,10 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                   winnersBySlot={winnersBySlot}
                                   onWinnerChange={fetchCompletedMatches}
                                   slotId={match._id}
+                                  perKill={match.perKill}
+                                  firstwin={match.firstwin}
+                                  secwin={match.secwin}
+                                  thirdwin={match.thirdwin}
                                 />
                               ));
                             })
@@ -990,14 +1026,28 @@ interface BookingTableRowProps {
   winnersBySlot?: { [slotId: string]: Winner[] };
   onWinnerChange?: () => void;
   slotId: string;
+  perKill?: number;
+  firstwin?: number;
+  secwin?: number;
+  thirdwin?: number;
 }
 
-const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerName, onSave, winnersBySlot, onWinnerChange, slotId }) => {
+const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerName, onSave, winnersBySlot, onWinnerChange, slotId, perKill = 0, firstwin = 0, secwin = 0, thirdwin = 0 }) => {
   // Debug: log the phone number for each booking row
   const [kills, setKills] = React.useState(booking.gameStats?.kills || 0);
   const [rank, setRank] = React.useState(booking.gameStats?.position || 0);
   const [winningPrice, setWinningPrice] = React.useState(booking.gameStats?.winnings || 0);
   const [loading, setLoading] = React.useState(false);
+
+  const calc = React.useCallback((k: number, r: number) => {
+    let bonus = 0;
+    if (r === 1) bonus = firstwin; else if (r === 2) bonus = secwin; else if (r === 3) bonus = thirdwin;
+    return Math.max(0, Math.floor(k * (perKill || 0) + bonus));
+  }, [perKill, firstwin, secwin, thirdwin]);
+
+  React.useEffect(() => {
+    setWinningPrice(calc(kills, rank));
+  }, [kills, rank, calc]);
 
   // Get userId from booking
   let userId = '';

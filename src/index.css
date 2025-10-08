@@ -2,12 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Font Definitions */
+/* Fonts */
 @font-face {
   font-family: 'LL Riforma';
-  /* src: url('../public/assets/fonts/LL Riforma Heavy (1).ttf') format('truetype'); */
-  src: url('./assets/fonts/LL Riforma Heavy (1).ttf') format('truetype');
-
+  src: url('/assets/fonts/LL Riforma Heavy (1).ttf') format('truetype');
   font-weight: 850;
   font-style: normal;
   font-display: swap;
@@ -15,16 +13,20 @@
 
 @font-face {
   font-family: 'Fustat';
-  src: url('./assets/fonts/fustat-latin-400-normal.ttf') format('truetype');
+  src: url('/assets/fonts/fustat-latin-400-normal.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
-/* Global Body Text Styles */
-body, p,  div, input, textarea, label,
-.text, .body-text {
-  font-family: 'Fustat', sans-serif;
+/* Global font usage */
+:root {
+  --font-heading: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Fustat', sans-serif;
+}
+
+html, body {
+  font-family: var(--font-body);
   font-weight: 400;
   font-style: normal;
   font-size: 16px;
@@ -32,10 +34,8 @@ body, p,  div, input, textarea, label,
   letter-spacing: 0;
 }
 
-/* Global Heading Styles */
-h1, h2, h3, h4, h5, h6, .h2,   
-.heading {
-  font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+h1, h2, h3, .heading, .title {
+  font-family: var(--font-heading);
   font-weight: 850;
   font-style: normal;
   font-size: 42px;

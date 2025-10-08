@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Footer from '@/components/Footer'
 import { Header } from '@/components/Header'
 import "../components/css/FullMap.css"
+import "../components/css/MatchModal.css"
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -43,6 +44,10 @@ const FullMap = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeFilter, setActiveFilter] = useState<'upcoming' | 'live' | 'completed'>('upcoming');
+    
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [selectedMatch, setSelectedMatch] = useState<Slot | null>(null);
 
     // Get the selected game type data from navigation state
     const selectedGameTypeData: GameTypeData | undefined = location.state?.selectedGameType || location.state?.gameTypeData;
@@ -135,6 +140,17 @@ const FullMap = () => {
         setActiveFilter(filter);
     };
 
+    // Modal functions
+    const openModal = (slot: Slot) => {
+        setSelectedMatch(slot);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setSelectedMatch(null);
+    };
+
     if (loading) {
         return (
             <>
@@ -167,6 +183,18 @@ const FullMap = () => {
         const ampm = hours >= 12 ? 'PM' : 'AM';
         const formattedHours = (hours % 12 || 12).toString().padStart(2, '0');
         return `${formattedHours}:${minutes} ${ampm}`;
+    };
+
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
     };
 
   // Lightweight countdown badge for upcoming matches
@@ -246,7 +274,12 @@ const FullMap = () => {
                             {visibleSlots.map((slot) => {
                                     const currentSlots = slot.maxBookings - slot.remainingBookings;
 
-                                    const handleJoinClick = () => {
+                                    const handleCardClick = () => {
+                                        openModal(slot);
+                                    };
+
+                                    const handleJoinClick = (e: React.MouseEvent) => {
+                                        e.stopPropagation(); // Prevent card click when button is clicked
                                         const status = resolveStatus(slot);
                                         if (status === 'live' || status === 'completed') {
                                             // For live and completed matches, open stream link
@@ -267,7 +300,7 @@ const FullMap = () => {
                                     };
 
                                     return (
-                                        <div key={slot._id} className="match-card">
+                                        <div key={slot._id} className="match-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
                                         <div style={{ position: 'relative' }}>
                                             <Skeleton height={0} style={{ paddingBottom: '56.25%', borderRadius: 12 }} baseColor="#eeeeee" highlightColor="#f5f5f5" />
                                             <img
@@ -380,6 +413,125 @@ const FullMap = () => {
                 </div>
             </section>
             <Footer />
+            
+            {/* Match Details Modal */}
+            {showModal && selectedMatch && (
+                <div className="modal-overlay">
+                    <div className="modal-container">
+                        <div className="modal-header">
+                            <h2 className="modal-title">Match Details</h2>
+                            <button
+                                onClick={closeModal}
+                                className="modal-close"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="modal-content">
+                            {/* Match Info */}
+                            <div className="match-info-section">
+                                <h3 className="match-info-title">
+                                    MATCH #{selectedMatch._id.slice(-4)} - {selectedMatch.slotType?.toUpperCase()}
+                                </h3>
+                                <div className="match-info-grid">
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Tournament</div>
+                                        <div className="match-info-value">{selectedMatch.tournamentName || '#ALPHALIONS'}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Map</div>
+                                        <div className="match-info-value">{selectedMatch.gameMode || 'Random'}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Match Time</div>
+                                        <div className="match-info-value">{formatDateTime(selectedMatch.matchTime)}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Per Kill</div>
+                                        <div className="match-info-value">₹{selectedMatch.perKill}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Winning Prize</div>
+                                        <div className="match-info-value">₹{selectedMatch.totalWinningPrice}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Entry Fee</div>
+                                        <div className="match-info-value">₹{selectedMatch.entryFee}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Max Players</div>
+                                        <div className="match-info-value">{selectedMatch.maxBookings}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Remaining Slots</div>
+                                        <div className="match-info-value">{selectedMatch.remainingBookings}</div>
+                                    </div>
+                                    <div className="match-info-item">
+                                        <div className="match-info-label">Special Rules</div>
+                                        <div className="match-info-value">{selectedMatch.specialRules || 'None'}</div>
+                                    </div>
+                                    {/* {selectedMatch.roomId && (
+                                        <div className="match-info-item">
+                                            <div className="match-info-label">Room ID</div>
+                                            <div className="match-info-value">{selectedMatch.roomId}</div>
+                                        </div>
+                                    )}
+                                    {selectedMatch.matchPassword && (
+                                        <div className="match-info-item">
+                                            <div className="match-info-label">Match Password</div>
+                                            <div className="match-info-value">{selectedMatch.matchPassword}</div>
+                                        </div>
+                                    )} */}
+                                    {selectedMatch.streamLink && (
+                                        <div className="match-info-item">
+                                            <div className="match-info-label">Stream Link</div>
+                                            <div className="match-info-value">
+                                                <a
+                                                    href={selectedMatch.streamLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ color: 'white', textDecoration: 'underline' }}
+                                                >
+                                                    Watch Live Stream
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Match Statistics */}
+                            <div className="summary-section">
+                                <h4 className="summary-title">Match Statistics</h4>
+                                <div className="summary-stats">
+                                    <div className="summary-stat">
+                                        <div className="summary-stat-value">{selectedMatch.maxBookings - selectedMatch.remainingBookings}</div>
+                                        <div className="summary-stat-label">Players Joined</div>
+                                    </div>
+                                    <div className="summary-stat">
+                                        <div className="summary-stat-value">{selectedMatch.remainingBookings}</div>
+                                        <div className="summary-stat-label">Remaining Slots</div>
+                                    </div>
+                                    <div className="summary-stat">
+                                        <div className="summary-stat-value">₹{selectedMatch.entryFee}</div>
+                                        <div className="summary-stat-label">Entry Fee</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                onClick={closeModal}
+                                className="close-button"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     )
 }

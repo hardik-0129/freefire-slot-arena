@@ -36,11 +36,7 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate that profile photo is selected
-    if (!form.profilePhoto) {
-      toast.error('Please select a profile photo');
-      return;
-    }
+    // Profile photo is now optional - no validation needed
     
     setLoading(true);
     try {
@@ -227,14 +223,13 @@ const Register: React.FC = () => {
 
             <div className="">
               <div className="form-group">
-                <label>Profile Photo*</label>
+                <label>Profile Photo (optional)</label>
                 <input
                   className="input-shadow"
                   type="file"
                   name="profilePhoto"
                   accept="image/*"
                   onChange={handleFileChange}
-                  required
                   style={{
                     padding: '12px',
                     border: '2px solid #ddd',

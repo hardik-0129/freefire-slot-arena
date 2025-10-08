@@ -1,7 +1,12 @@
 import AnnouncementSender from '../components/AnnouncementSender';
+import AnnouncementManager from '../components/AnnouncementManager';
 import SendSlotCredentials from "@/components/SendSlotCredentials";
 import NftHoldersManagement from "@/components/NftHoldersManagement";
-import { KeyRound } from "lucide-react";
+import AllTransactionsHistory from "@/components/AllTransactionsHistory";
+import TransactionHistory from "@/components/TransactionHistory";
+import APKManagement from "@/components/APKManagement";
+import BlogManagement from "@/components/BlogManagement";
+import { KeyRound, AlertCircle } from "lucide-react";
 
 import { Mail } from "lucide-react";
 import ContactMessagesTable from "@/components/ContactMessagesTable";
@@ -44,7 +49,10 @@ import {
   Image,
   Edit,
   Trash,
-  Trophy
+  Trophy,
+  History,
+  CreditCard,
+  Smartphone
 } from "lucide-react";
 
 // Live countdown component showing time left until match start (or elapsed after start)
@@ -83,20 +91,15 @@ interface SlotFormData {
   remainingBookings: string;
   // Enhanced match information
   matchTitle: string;
-  matchDescription: string;
   mapName: string;
   gameMode: string;
   tournamentName: string;
   hostName: string;
   maxPlayers: string;
-  registrationDeadline: string;
   rules: string;
   prizeDistribution: string;
-  contactInfo: string;
   streamLink: string;
   discordLink: string;
-  specialRules: string;
-  banList: string;
   bannerImage: string; // Add banner image field
 }
 
@@ -121,18 +124,22 @@ const PlayerStatCard = ({ booking, index, slotInfo, onUpdateStats }: {
   const [isEditing, setIsEditing] = useState(false);
 
   const calculateWinnings = (kills: number, position: number) => {
-    let winnings = kills * slotInfo.perKill;
+    const perKillCoin = Number(slotInfo?.perKill) || 0;
+    const firstPlaceCoin = Number(slotInfo?.firstwin) || 0;
+    const secondPlaceCoin = Number(slotInfo?.secwin) || 0;
+    const thirdPlaceCoin = Number(slotInfo?.thirdwin) || 0;
 
-    // Add position-based winnings
+    let winnings = kills * perKillCoin;
+
     if (position === 1) {
-      winnings += Math.floor(slotInfo.totalWinningPrice * 0.5); // 50% for 1st place
+      winnings += firstPlaceCoin; // Booyah coin
     } else if (position === 2) {
-      winnings += Math.floor(slotInfo.totalWinningPrice * 0.3); // 30% for 2nd place
+      winnings += secondPlaceCoin; // 2nd place coin
     } else if (position === 3) {
-      winnings += Math.floor(slotInfo.totalWinningPrice * 0.2); // 20% for 3rd place
+      winnings += thirdPlaceCoin; // 3rd place coin
     }
 
-    return winnings;
+    return Math.max(0, Math.floor(winnings));
   };
 
   const handleSaveStats = () => {
@@ -214,12 +221,22 @@ const PlayerStatCard = ({ booking, index, slotInfo, onUpdateStats }: {
         <div className="space-y-1">
           <label className="text-gray-400 text-xs">Winnings</label>
           <div className="text-yellow-500 font-semibold">
-            ₹{isEditing ? calculateWinnings(stats.kills, stats.position) : stats.winnings}
+            ₹{calculateWinnings(stats.kills, stats.position)}
           </div>
         </div>
       </div>
     </div>
   );
+};
+
+const getNowLocalIsoMinutes = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${h}:${mi}`;
 };
 
 const initialFormData: SlotFormData = {
@@ -228,7 +245,7 @@ const initialFormData: SlotFormData = {
   thirdwin: "",
   slotType: "Solo",
   entryFee: "",
-  matchTime: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
+  matchTime: getNowLocalIsoMinutes(), // Local time YYYY-MM-DDTHH:mm
   customStartInMinutes: "10",
   perKill: "",
   totalWinningPrice: "",
@@ -236,20 +253,15 @@ const initialFormData: SlotFormData = {
   remainingBookings: "",
   // Enhanced match information defaults
   matchTitle: "",
-  matchDescription: "",
   mapName: "Bermuda",
   gameMode: "Classic",
   tournamentName: "#ALPHALIONS",
   hostName: "ALPHA LIONS",
   maxPlayers: "48",
-  registrationDeadline: new Date().toISOString().slice(0, 16),
   rules: "Standard Free Fire rules apply",
   prizeDistribution: "Winner takes all",
-  contactInfo: "",
   streamLink: "",
   discordLink: "",
-  specialRules: "RYDEN BAN",
-  banList: "RYDEN",
   bannerImage: "" // Add banner image field
 };
 
@@ -272,7 +284,9 @@ const AdminDashboard = () => {
   // ID/Pass modal state
   const [showIdPassModal, setShowIdPassModal] = useState(false);
   const [idPassSlotId, setIdPassSlotId] = useState<string>('');
-  // Date display helpers for dd/MM/yyyy HH:mm in Edit modal
+  
+  
+  // Date display helpers for dd/MM/yyyy hh:mm AM/PM in Edit modal
   const formatToDisplay = (iso?: string) => {
     if (!iso) return '';
     const d = new Date(iso);
@@ -280,15 +294,43 @@ const AdminDashboard = () => {
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
+    
+    // Convert to 12-hour format with AM/PM
+    let hours = d.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const hh = String(hours).padStart(2, '0');
     const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi} ${ampm}`;
+  };
+
+  const toLocalInputValue = (dateLike: string | number | Date | undefined | null) => {
+    if (!dateLike) return '';
+    const d = new Date(dateLike);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${mi}`;
   };
   const parseDisplayToISO = (val: string) => {
-    const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+    // Match format: dd/mm/yyyy hh:mm AM/PM
+    const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)$/i);
     if (!m) return '';
-    const [, dd, mm, yyyy, hh, mi] = m;
-    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(mi));
+    const [, dd, mm, yyyy, hh, min, ampm] = m;
+    
+    // Convert 12-hour to 24-hour format
+    let hours24 = parseInt(hh);
+    if (ampm.toUpperCase() === 'PM' && hours24 !== 12) {
+      hours24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hours24 === 12) {
+      hours24 = 0;
+    }
+    
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), hours24, Number(min));
     if (isNaN(d.getTime())) return '';
     const y = d.getFullYear();
     const m2 = String(d.getMonth() + 1).padStart(2, '0');
@@ -310,6 +352,19 @@ const AdminDashboard = () => {
     wallet: '',
     isAdmin: false
   });
+
+  // Add new user state
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    freeFireUsername: '',
+    wallet: '0',
+    isAdmin: false
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [winMoneyAmount, setWinMoneyAmount] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
 
@@ -432,15 +487,41 @@ const AdminDashboard = () => {
   const handleOpenEditSlot = (slot: any) => {
     setSelectedSlotId(slot._id);
     setEditData({
+      // Basic Information
       matchTitle: slot.matchTitle || '',
+      tournamentName: slot.tournamentName || '',
+      hostName: slot.hostName || '',
+      matchDescription: slot.matchDescription || '',
+      
+      // Game Settings
       slotType: slot.slotType || 'Solo',
+      mapName: slot.mapName || 'Bermuda',
+      gameMode: slot.gameMode || 'Classic',
+      
+      // Match Configuration
       entryFee: slot.entryFee ?? '',
       perKill: slot.perKill ?? '',
       totalWinningPrice: slot.totalWinningPrice ?? '',
-      matchTime: slot.matchTime ? new Date(slot.matchTime).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+      matchTime: slot.matchTime ? toLocalInputValue(slot.matchTime) : getNowLocalIsoMinutes(),
+      customStartInMinutes: slot.customStartInMinutes ?? '',
+      maxPlayers: slot.maxPlayers ?? '',
+      firstwin: slot.firstwin ?? '',
+      secwin: slot.secwin ?? '',
+      thirdwin: slot.thirdwin ?? '',
+      
+      // Additional Information
+      streamLink: slot.streamLink || '',
+      discordLink: slot.discordLink || '',
+      contactInfo: slot.contactInfo || '',
+      registrationDeadline: slot.registrationDeadline ? toLocalInputValue(slot.registrationDeadline) : getNowLocalIsoMinutes(),
+      rules: slot.rules || '',
+      prizeDistribution: slot.prizeDistribution || '',
+      specialRules: slot.specialRules || '',
+      banList: slot.banList || '',
+      
+      // Banner and Status
       bannerImage: slot.bannerImage || '',
-      status: slot.status || 'upcoming',
-      streamLink: slot.streamLink || ''
+      status: slot.status || 'upcoming'
     });
     // Reset edit banner state
     setEditBannerFile(null);
@@ -461,47 +542,71 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('adminToken');
       let response: Response;
-      if (editBannerFile) {
-        const form = new FormData();
-        form.append('matchTitle', editData.matchTitle || '');
-        form.append('slotType', editData.slotType || 'Solo');
-        if (editData.entryFee !== '') form.append('entryFee', String(Number(editData.entryFee)));
-        if (editData.perKill !== '') form.append('perKill', String(Number(editData.perKill)));
-        if (editData.totalWinningPrice !== '') form.append('totalWinningPrice', String(Number(editData.totalWinningPrice)));
-        if (editData.matchTime) form.append('matchTime', editData.matchTime);
-        if (editData.status) form.append('status', editData.status);
-        if (editData.streamLink) form.append('streamLink', editData.streamLink);
-        form.append('bannerImage', editBannerFile);
 
-        response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${selectedSlotId}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: form
+      // If a new file is selected, upload it to get a URL first
+      let uploadedBannerUrl: string | undefined;
+      if (editBannerFile) {
+        const imageForm = new FormData();
+        imageForm.append('banner', editBannerFile);
+        const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: imageForm
         });
-      } else {
-        response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${selectedSlotId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            ...editData,
-            // ensure numbers are numbers if provided as strings
-            entryFee: editData.entryFee === '' ? undefined : Number(editData.entryFee),
-            perKill: editData.perKill === '' ? undefined : Number(editData.perKill),
-            totalWinningPrice: editData.totalWinningPrice === '' ? undefined : Number(editData.totalWinningPrice),
-            streamLink: editData.streamLink || undefined
-          })
-        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.msg || 'Failed to upload banner image');
+        }
+        const uploadJson = await uploadRes.json();
+        uploadedBannerUrl = uploadJson.imagePath;
       }
 
+      // Build JSON payload expected by backend
+      const payload: any = {
+        matchTitle: editData.matchTitle || undefined,
+        tournamentName: editData.tournamentName || undefined,
+        hostName: editData.hostName || undefined,
+        slotType: editData.slotType || undefined,
+        mapName: editData.mapName || undefined,
+        gameMode: editData.gameMode || undefined,
+        entryFee: editData.entryFee === '' ? undefined : Number(editData.entryFee),
+        perKill: editData.perKill === '' ? undefined : Number(editData.perKill),
+        totalWinningPrice: editData.totalWinningPrice === '' ? undefined : Number(editData.totalWinningPrice),
+        matchTime: editData.matchTime || undefined,
+        customStartInMinutes: editData.customStartInMinutes === '' ? undefined : Number(editData.customStartInMinutes),
+        maxPlayers: editData.maxPlayers === '' ? undefined : Number(editData.maxPlayers),
+        firstwin: editData.firstwin === '' ? undefined : Number(editData.firstwin),
+        secwin: editData.secwin === '' ? undefined : Number(editData.secwin),
+        thirdwin: editData.thirdwin === '' ? undefined : Number(editData.thirdwin),
+        streamLink: editData.streamLink || undefined,
+        discordLink: editData.discordLink || undefined,
+        rules: editData.rules || undefined,
+        prizeDistribution: editData.prizeDistribution || undefined,
+        status: editData.status || undefined,
+        bannerImage: uploadedBannerUrl || editData.bannerImage || undefined
+      };
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+      response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${selectedSlotId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
       if (response.ok) {
-        toast({ title: 'Updated', description: 'Match updated successfully.' });
+        const result = await response.json().catch(() => ({} as any));
+        const updatedSlot = (result && (result.slot || result.data || result)) as any;
+        toast({ title: 'Updated', description: result?.msg || 'Match updated successfully.' });
         setShowEditSlot(false);
-        await fetchSlots();
+        if (updatedSlot && updatedSlot._id) {
+          // Optimistically update slot list so UI reflects banner immediately
+          setSlots((prev: any[]) => prev.map((s: any) => s._id === updatedSlot._id ? updatedSlot : s));
+        } else {
+          await fetchSlots();
+        }
 
         // Trigger immediate status update check after updating match time
         setTimeout(() => {
@@ -527,6 +632,8 @@ const AdminDashboard = () => {
     if (!file.type.startsWith('image/')) return;
     setEditBannerFile(file);
     setEditBannerPreview(URL.createObjectURL(file));
+    // Clear URL field when a file is chosen to avoid ambiguity
+    setEditData(prev => ({ ...prev, bannerImage: '' }));
   };
 
   // Banner image state for slot creation
@@ -737,6 +844,17 @@ const AdminDashboard = () => {
 
   const handleCreateSlot = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required banner image
+    if (!slotBannerFile) {
+      toast({
+        title: "Error",
+        description: "Banner image is required to create a match",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -780,20 +898,15 @@ const AdminDashboard = () => {
 
         // Enhanced match information
         matchTitle: formData.matchTitle,
-        matchDescription: formData.matchDescription,
         mapName: formData.mapName,
         gameMode: formData.gameMode,
         tournamentName: formData.tournamentName,
         hostName: formData.hostName,
         maxPlayers: Number(formData.maxPlayers),
-        registrationDeadline: formData.registrationDeadline,
         rules: formData.rules,
         prizeDistribution: formData.prizeDistribution,
-        contactInfo: formData.contactInfo,
         streamLink: formData.streamLink,
         discordLink: formData.discordLink,
-        specialRules: formData.specialRules,
-        banList: formData.banList,
         bannerImage: bannerImageUrl || null // Add banner image URL
       };
 
@@ -908,6 +1021,7 @@ const AdminDashboard = () => {
       console.error('Error fetching slot bookings:', error);
     }
   };
+
 
   useEffect(() => {
     if (!loading) {
@@ -1226,7 +1340,7 @@ const AdminDashboard = () => {
       formData.append('buttonText', singleBannerForm.buttonText);
       formData.append('buttonLink', singleBannerForm.buttonLink);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-hero`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1295,7 +1409,7 @@ const AdminDashboard = () => {
         formData.append('buttonText', banner.buttonText);
         formData.append('buttonLink', banner.buttonLink);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-hero`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1418,7 +1532,7 @@ const AdminDashboard = () => {
         const formData = new FormData();
         formData.append('banner', bannerFile);
 
-        const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-image`, {
+        const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/upload-hero`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -1878,9 +1992,17 @@ const AdminDashboard = () => {
           title: "Success",
           description: "Game mode deleted successfully",
         });
+        // Optimistically remove from local state to reflect immediately
+        setGameModes((prev: any[]) => prev.filter((gm: any) => gm._id !== gameModeId));
+        // Also refresh from server in background to stay in sync
         fetchGameModes();
       } else {
-        throw new Error('Failed to delete game mode');
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.msg || 'Failed to delete game mode');
+        } catch {
+          throw new Error('Failed to delete game mode');
+        }
       }
     } catch (error) {
       console.error('Error deleting game mode:', error);
@@ -2197,9 +2319,21 @@ const AdminDashboard = () => {
                       }}
                     />
                     {gameTypeImage && (
-                      <span className="text-sm text-green-500">
-                        Image selected: {gameTypeImage.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-green-500">
+                          Image selected: {gameTypeImage.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setGameTypeImage(null)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Remove image"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2236,9 +2370,21 @@ const AdminDashboard = () => {
                       }}
                     />
                     {mobileBannerImage && (
-                      <span className="text-sm text-green-500">
-                        Mobile Banner selected: {mobileBannerImage.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-green-500">
+                          Mobile Banner selected: {mobileBannerImage.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setMobileBannerImage(null)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Remove mobile banner"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2643,11 +2789,18 @@ const AdminDashboard = () => {
     </div>
   );
 
+
   const [userSearch, setUserSearch] = useState('');
   const [showUserBookingsModal, setShowUserBookingsModal] = useState(false);
   const [selectedUserForBookings, setSelectedUserForBookings] = useState<any | null>(null);
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
+
+  // User Transactions Modal state
+  const [showUserTransactionsModal, setShowUserTransactionsModal] = useState(false);
+  const [selectedUserForTransactions, setSelectedUserForTransactions] = useState<any | null>(null);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]);
+  const [loadingUserTransactions, setLoadingUserTransactions] = useState(false);
 
 
   const openUserBookings = async (user: any) => {
@@ -2669,6 +2822,32 @@ const AdminDashboard = () => {
       toast({ title: 'Error', description: e.message || 'Failed to load bookings', variant: 'destructive' });
     } finally {
       setLoadingUserBookings(false);
+    }
+  };
+
+  const openUserTransactions = async (user: any) => {
+    try {
+      setSelectedUserForTransactions(user);
+      setShowUserTransactionsModal(true);
+      setLoadingUserTransactions(true);
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/transactions`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId: user._id, page: 1, limit: 100 })
+      });
+      if (!res.ok) throw new Error('Failed to fetch transactions');
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.transactions || data.data || []);
+      setUserTransactions(list);
+    } catch (e: any) {
+      setUserTransactions([]);
+      toast({ title: 'Error', description: e.message || 'Failed to load transactions', variant: 'destructive' });
+    } finally {
+      setLoadingUserTransactions(false);
     }
   };
 
@@ -2758,18 +2937,124 @@ const AdminDashboard = () => {
     }
   };
 
+  // Add new user functions
+  const resetNewUserForm = () => {
+    setNewUserData({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      freeFireUsername: '',
+      wallet: '0',
+      isAdmin: false
+    });
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      setIsCreatingUser(true);
+
+      // Validate required fields
+      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.phone.trim() || !newUserData.password.trim() || !newUserData.freeFireUsername.trim()) {
+        toast({
+          title: "Error",
+          description: "All fields are required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newUserData.name,
+          email: newUserData.email,
+          phone: newUserData.phone,
+          password: newUserData.password,
+          freeFireUsername: newUserData.freeFireUsername,
+          wallet: parseFloat(newUserData.wallet) || 0,
+          isAdmin: newUserData.isAdmin
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "User created successfully",
+        });
+        setShowAddUserModal(false);
+        resetNewUserForm();
+        fetchUsers(); // Refresh users list
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create user');
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create user",
+      });
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${user._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "User deleted successfully",
+        });
+        fetchUsers(); // Refresh users list
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete user');
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete user",
+      });
+    }
+  };
+
   const renderUsers = () => (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
         <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
-          <input
-            type="text"
-            value={userSearch}
-            onChange={(e) => setUserSearch(e.target.value)}
-            placeholder="Search by name, email, phone, username"
-            className="w-full max-w-md bg-[#222] border border-[#333] text-white rounded px-3 py-2"
-          />
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Search by name, email, phone, username"
+              className="w-full max-w-md bg-[#222] border border-[#333] text-white rounded px-3 py-2"
+            />
+            <Button
+              onClick={() => setShowAddUserModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Add New User
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -2843,6 +3128,14 @@ const AdminDashboard = () => {
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openEditUser(user)}>Edit</Button>
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openUserBookings(user)}>View Bookings</Button>
+                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => openUserTransactions(user)}>Transactions</Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-red-600 hover:bg-red-700 text-white" 
+                        onClick={() => handleDeleteUser(user)}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </td>
                   </tr>
@@ -2926,6 +3219,14 @@ const AdminDashboard = () => {
           </Button>
           <Button
             variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'banner' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('banner')}
+          >
+            <Image className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Banner</span>}
+          </Button>
+          <Button
+            variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'matches' ? 'bg-[#2A2A2A]' : ''}`}
             onClick={() => setActiveSection('matches')}
           >
@@ -2933,14 +3234,7 @@ const AdminDashboard = () => {
             {isSidebarOpen && <span className="text-white">Matches</span>}
           </Button>
 
-          <Button
-            variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'banner' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('banner')}
-          >
-            <Image className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Banner</span>}
-          </Button>
+          
 
           <Button
             variant="ghost"
@@ -2949,6 +3243,14 @@ const AdminDashboard = () => {
           >
             <GamepadIcon className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Game Types</span>}
+          </Button>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameModes' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('gameModes')}
+          >
+            <GamepadIcon className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Game Modes</span>}
           </Button>
 
           <Button
@@ -2983,16 +3285,27 @@ const AdminDashboard = () => {
             <DollarSign className="h-4 w-4 mr-3" />
             {isSidebarOpen && <span className="text-white">Revenue</span>}
           </Button>
-         
-         
+          
           <Button
             variant="ghost"
-            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'gameModes' ? 'bg-[#2A2A2A]' : ''}`}
-            onClick={() => setActiveSection('gameModes')}
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'allTransactions' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('allTransactions')}
           >
-            <GamepadIcon className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Game Modes</span>}
+            <History className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">All Transactions</span>}
           </Button>
+          
+          <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'apkManagement' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('apkManagement')}
+          >
+            <Smartphone className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">APK Management</span>}
+          </Button>
+         
+         
+         
           {/* <Button
             variant="ghost"
             className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'winners' ? 'bg-[#2A2A2A]' : ''}`}
@@ -3024,8 +3337,24 @@ const AdminDashboard = () => {
               onClick={() => setActiveSection('announcementSender')}
             >
               <KeyRound className="h-4 w-4 mr-3" />
-              {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+              {isSidebarOpen && <span className="text-white">Announcement Send</span>}
             </Button>
+          <Button
+              variant="ghost"
+              className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'htmlAnnouncements' ? 'bg-[#2A2A2A]' : ''}`}
+              onClick={() => setActiveSection('htmlAnnouncements')}
+            >
+              <AlertCircle className="h-4 w-4 mr-3" />
+              {isSidebarOpen && <span className="text-white">HTML Announcements</span>}
+            </Button>
+          <Button
+            variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'blog' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('blog')}
+          >
+            <AlertCircle className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Blog</span>}
+          </Button>
           <Button
             variant="ghost"
             className="w-full justify-start px-3 py-2 text-red-500 hover:text-red-400 hover:bg-[#2A2A2A]"
@@ -3047,7 +3376,7 @@ const AdminDashboard = () => {
             onClick={() => setActiveSection('announcementSender')}
           >
             <KeyRound className="h-4 w-4 mr-3" />
-            {isSidebarOpen && <span className="text-white">Announcement Bar</span>}
+            {isSidebarOpen && <span className="text-white">Announcement Send</span>}
           </Button>
             {activeSection === 'slotCredentials' && (
               <div>
@@ -3076,6 +3405,9 @@ const AdminDashboard = () => {
             {activeSection === 'banner' && 'Banner Management'}
             {activeSection === 'gameTypes' && 'Game Types Management'}
             {activeSection === 'gameModes' && 'Game Modes Management'}
+            {activeSection === 'allTransactions' && 'All Transactions History'}
+            {activeSection === 'transactionHistory' && 'Transaction History'}
+            {activeSection === 'apkManagement' && 'APK Management'}
             {activeSection === 'winners' && (
               <div className="flex items-center gap-3">
                 <span>Winners Management</span>
@@ -3097,6 +3429,10 @@ const AdminDashboard = () => {
     {activeSection === 'nftHolders' && <NftHoldersManagement />}
     {activeSection === 'contactMessages' && <ContactMessagesTable />}
     {activeSection === 'announcementSender' && <AnnouncementSender />}
+    {activeSection === 'htmlAnnouncements' && <AnnouncementManager />}
+    {activeSection === 'allTransactions' && <AllTransactionsHistory />}
+    {activeSection === 'transactionHistory' && <TransactionHistory />}
+    {activeSection === 'apkManagement' && <APKManagement />}
     {activeSection === 'matches' && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
@@ -3212,6 +3548,7 @@ const AdminDashboard = () => {
               <AdminWinnerDashboard filterSlotId={selectedSlotId || undefined} />
             </div>
           )}
+          {activeSection === 'blog' && <BlogManagement />}
                               </div>
       </main>
 
@@ -3257,81 +3594,209 @@ const AdminDashboard = () => {
 
       {/* Slot Edit Modal */}
       <Dialog open={showEditSlot} onOpenChange={setShowEditSlot}>
-        <DialogContent className="max-w-lg bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Edit Match</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-white">Title</Label>
-              <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTitle || ''} onChange={(e) => setEditData({ ...editData, matchTitle: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-white">Entry Fee</Label>
-                <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.entryFee ?? ''} onChange={(e) => setEditData({ ...editData, entryFee: e.target.value })} />
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white">Match Title</Label>
+                  <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTitle || ''} onChange={(e) => setEditData({ ...editData, matchTitle: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Tournament Name</Label>
+                  <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.tournamentName || ''} onChange={(e) => setEditData({ ...editData, tournamentName: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Host Name</Label>
+                  <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.hostName || ''} onChange={(e) => setEditData({ ...editData, hostName: e.target.value })} />
+                </div>
               </div>
-              <div>
-                <Label className="text-white">Per Kill</Label>
-                <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.perKill ?? ''} onChange={(e) => setEditData({ ...editData, perKill: e.target.value })} />
+            </div>
+
+            {/* Game Settings */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Game Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-white">Game Type</Label>
+                  <select
+                    className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                    value={editData.slotType || ''}
+                    onChange={(e) => setEditData({ ...editData, slotType: e.target.value })}
+                  >
+                    {Array.isArray(gameTypes) && gameTypes.length > 0 ? (
+                      gameTypes.map((g: any) => (
+                        <option key={g._id} value={g.gameType}>{g.gameType}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Solo">Solo</option>
+                        <option value="Duo">Duo</option>
+                        <option value="Squad">Squad</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-white">Map</Label>
+                  <select
+                    className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                    value={editData.mapName || ''}
+                    onChange={(e) => setEditData({ ...editData, mapName: e.target.value })}
+                  >
+                    {Array.isArray(gameMaps) && gameMaps.length > 0 ? (
+                      gameMaps.map((m: any) => (
+                        <option key={m._id || m.gameMap} value={m.gameMap || m.name}>{m.gameMap || m.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Bermuda">Bermuda</option>
+                        <option value="Purgatory">Purgatory</option>
+                        <option value="Kalahari">Kalahari</option>
+                        <option value="Alpine">Alpine</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-white">Game Mode</Label>
+                  <select
+                    className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                    value={editData.gameMode || ''}
+                    onChange={(e) => setEditData({ ...editData, gameMode: e.target.value })}
+                  >
+                    {Array.isArray(gameModes) && gameModes.length > 0 ? (
+                      gameModes.map((gm: any) => (
+                        <option key={gm._id} value={gm.gameMode}>{gm.gameMode}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Solo">Solo</option>
+                        <option value="Duo">Duo</option>
+                        <option value="Squad">Squad</option>
+                      </>
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
-            <div>
-              <Label className="text-white">Winner Prize</Label>
-              <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.totalWinningPrice ?? ''} onChange={(e) => setEditData({ ...editData, totalWinningPrice: e.target.value })} />
+
+            {/* Match Configuration */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Match Configuration</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-white">Entry Fee</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.entryFee ?? ''} onChange={(e) => setEditData({ ...editData, entryFee: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Per Kill</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.perKill ?? ''} onChange={(e) => setEditData({ ...editData, perKill: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Winner Prize</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.totalWinningPrice ?? ''} onChange={(e) => setEditData({ ...editData, totalWinningPrice: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Match Time</Label>
+                  <Input type="datetime-local" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTime || ''} onChange={(e) => setEditData({ ...editData, matchTime: e.target.value })} />
+                  <div className="text-xs text-gray-400 mt-1">
+                    {editData.matchTime ? new Date(editData.matchTime).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '') : ''}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-white">Custom Start (Minutes)</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.customStartInMinutes ?? ''} onChange={(e) => setEditData({ ...editData, customStartInMinutes: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Max Players</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.maxPlayers ?? ''} onChange={(e) => setEditData({ ...editData, maxPlayers: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-white">1st Place Prize</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.firstwin ?? ''} onChange={(e) => setEditData({ ...editData, firstwin: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">2nd Place Prize</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.secwin ?? ''} onChange={(e) => setEditData({ ...editData, secwin: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">3rd Place Prize</Label>
+                  <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.thirdwin ?? ''} onChange={(e) => setEditData({ ...editData, thirdwin: e.target.value })} />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label className="text-white">Match Time</Label>
-              <Input
-                type="text"
-                placeholder="dd/mm/yyyy hh:mm"
-                className="bg-[#1A1A1A] border-[#2A2A2A] text-white"
-                value={editMatchTimeDisplay}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setEditMatchTimeDisplay(v);
-                  const iso = parseDisplayToISO(v);
-                  if (iso) setEditData({ ...editData, matchTime: iso });
-                }}
-              />
+
+            {/* Additional Information */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Additional Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white">Stream Link</Label>
+                  <Input type="url" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.streamLink || ''} onChange={(e) => setEditData({ ...editData, streamLink: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Discord Link</Label>
+                  <Input type="url" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.discordLink || ''} onChange={(e) => setEditData({ ...editData, discordLink: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white">Rules</Label>
+                  <textarea className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-md text-white resize-none h-20" value={editData.rules || ''} onChange={(e) => setEditData({ ...editData, rules: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-white">Prize Distribution</Label>
+                  <Input type="text" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.prizeDistribution || ''} onChange={(e) => setEditData({ ...editData, prizeDistribution: e.target.value })} />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label className="text-white">Stream Link</Label>
-              <Input
-                type="url"
-                placeholder="https://youtube.com/watch?v=..."
-                className="bg-[#1A1A1A] border-[#2A2A2A] text-white"
-                value={editData.streamLink || ''}
-                onChange={(e) => setEditData({ ...editData, streamLink: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label className="text-white">Banner Image</Label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleEditBannerFileChange}
-                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-              />
-              {/* Preview selected file or current banner */}
-              <div className="mt-2">
-                {editBannerPreview ? (
-                  <img src={editBannerPreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
-                ) : (
-                  editData.bannerImage && (
-                    <img src={editData.bannerImage} alt="Current Banner" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
-                  )
+
+            {/* Banner Image */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Banner Image</h3>
+              <div>
+                <Label className="text-white">Banner Image URL</Label>
+                <Input
+                  type="text"
+                  placeholder="https://.../your-banner.jpg"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white mb-3"
+                  value={editData.bannerImage || ''}
+                  onChange={(e) => setEditData({ ...editData, bannerImage: e.target.value })}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditBannerFileChange}
+                  className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+                <div className="mt-2">
+                  {editBannerPreview ? (
+                    <img src={editBannerPreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
+                  ) : (
+                    editData.bannerImage && (
+                      <img src={editData.bannerImage} alt="Current Banner" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
+                    )
+                  )}
+                </div>
+                {!editBannerFile && (
+                  <p className="text-xs text-gray-400 mt-1">Tip: You can paste a banner image URL above. File upload requires a server upload endpoint.</p>
                 )}
               </div>
-              {!editBannerFile && (
-                <p className="text-xs text-gray-400 mt-1">No new file selected. Existing banner will be kept.</p>
-              )}
             </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditSlot(false)} className="border-[#2A2A2A] text-white">Cancel</Button>
+              <Button onClick={handleUpdateSlot} className="bg-blue-600 hover:bg-blue-700">Save</Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditSlot(false)} className="border-[#2A2A2A] text-white">Cancel</Button>
-            <Button onClick={handleUpdateSlot} className="bg-blue-600 hover:bg-blue-700">Save</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -3471,6 +3936,49 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
+      {/* User Transactions Modal */}
+      <Dialog open={showUserTransactionsModal} onOpenChange={setShowUserTransactionsModal}>
+        <DialogContent className="max-w-5xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForTransactions ? `${selectedUserForTransactions.name}'s Transactions` : 'User Transactions'}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]">
+            {loadingUserTransactions ? (
+              <div className="p-8 flex justify-center">
+                <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : userTransactions.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">No transactions found for this user.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-[#141414] sticky top-0 z-10">
+                  <tr className="border-b border-[#2A2A2A]">
+                    <th className="text-left px-4 py-3 text-white">Date</th>
+                    <th className="text-left px-4 py-3 text-white">Type</th>
+                    <th className="text-left px-4 py-3 text-white">Description</th>
+                    <th className="text-left px-4 py-3 text-white">Status</th>
+                    <th className="text-right px-4 py-3 text-white">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2A]">
+                  {userTransactions.map((t: any) => (
+                    <tr key={t._id || t.transactionId} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
+                      <td className="px-4 py-3 text-white whitespace-nowrap">{t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : '-'}</td>
+                      <td className="px-4 py-3 text-white">{t.type || '-'}</td>
+                      <td className="px-4 py-3 text-white">{t.description || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">{t.status || '-'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-white">₹{t.amount ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit User Modal */}
       <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
         <DialogContent className="max-w-2xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
@@ -3593,6 +4101,128 @@ const AdminDashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add New User Modal */}
+      <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Add New User</DialogTitle>
+            <p className="text-gray-400 text-sm">
+              Create a new user account with all necessary details.
+            </p>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserName" className="text-white">Full Name *</Label>
+                <Input
+                  id="newUserName"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  placeholder="Enter full name"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserEmail" className="text-white">Email *</Label>
+                <Input
+                  id="newUserEmail"
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="Enter email address"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserPhone" className="text-white">Phone *</Label>
+                <Input
+                  id="newUserPhone"
+                  value={newUserData.phone}
+                  onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserFFUsername" className="text-white">Free Fire Username *</Label>
+                <Input
+                  id="newUserFFUsername"
+                  value={newUserData.freeFireUsername}
+                  onChange={(e) => setNewUserData({ ...newUserData, freeFireUsername: e.target.value })}
+                  placeholder="Enter Free Fire username"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserPassword" className="text-white">Password *</Label>
+                <Input
+                  id="newUserPassword"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  placeholder="Enter password"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserWallet" className="text-white">Initial Wallet Balance</Label>
+                <Input
+                  id="newUserWallet"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newUserData.wallet}
+                  onChange={(e) => setNewUserData({ ...newUserData, wallet: e.target.value })}
+                  placeholder="Enter initial wallet balance"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="newUserIsAdmin"
+                checked={newUserData.isAdmin}
+                onChange={(e) => setNewUserData({ ...newUserData, isAdmin: e.target.checked })}
+                className="w-4 h-4 text-green-600 bg-[#1A1A1A] border-[#2A2A2A] rounded focus:ring-green-500 focus:ring-2"
+              />
+              <Label htmlFor="newUserIsAdmin" className="text-white cursor-pointer">Admin Access</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddUserModal(false);
+                resetNewUserForm();
+              }}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateUser}
+              disabled={isCreatingUser}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isCreatingUser ? 'Creating...' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
     </div>
   );

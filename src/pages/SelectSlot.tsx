@@ -452,14 +452,14 @@ const SelectSlot = () => {
 
       // Always calculate totalAmount as entryFee * number of selected positions (unless free match)
       const selectedPositionsCount = Object.values(selectedPositions).reduce((total, positions) => total + positions.length, 0);
-      const bookingTotalAmount = normalizedGameMode === 'free matches' ? 0 : entryFee * selectedPositionsCount;
+      const bookingTotalAmount = isFreeMatch ? 0 : entryFee * selectedPositionsCount;
       const bookingData = {
         slotId: slotData._id,
         selectedPositions: groupedSelectedPositions,
         playerNames: groupedPlayerNames,
-        totalAmount: bookingTotalAmount, // Always entryFee * count (or 0 for free matches)
+        totalAmount: bookingTotalAmount, // entryFee * count (or 0 for free)
         slotType: normalizedGameMode.charAt(0).toUpperCase() + normalizedGameMode.slice(1),
-        entryFee: normalizedGameMode === 'free matches' ? 0 : (slotData?.entryFee || 5), // Explicitly set 0 for free matches
+        entryFee: isFreeMatch ? 0 : (slotData?.entryFee ?? 0), // Explicitly 0 for free
         gameMode: normalizedGameMode,
         userId: userId,// Add userId to the booking data
         playerIndex: playerIndex // Add player index for future use
@@ -483,9 +483,9 @@ const SelectSlot = () => {
         // Refresh wallet balance and booked positions
         fetchWalletBalance();
         fetchBookedPositions();
-        // Redirect to ongoing page after successful booking
+        // Redirect to upcoming page after successful booking
         setTimeout(() => {
-          navigate(`/ongoing`);
+          navigate(`/upcoming`);
         }, 1500); // Small delay to show success message
       } else {
         const error = await response.json();
@@ -503,8 +503,11 @@ const SelectSlot = () => {
   // --- REFACTORED: Use only gameMode for all logic below ---
   const gameMode = slotData?.gameMode?.toLowerCase() || 'squad';
 
-  // Helper: Normalize gameMode (map 'deo' to 'duo')
+  // Helper: Normalize gameMode
   const normalizedGameMode = gameMode;
+
+  // Treat match as FREE when entryFee is 0 (or less) OR explicitly marked as free matches
+  const isFreeMatch = (slotData?.entryFee ?? 0) <= 0 || normalizedGameMode === 'free matches';
 
   // Helper: Get positions for gameMode
   const getPositionsForGameMode = (mode: string) => {
@@ -538,11 +541,11 @@ const SelectSlot = () => {
   const totalTeams = getTotalTeamsForGameMode(normalizedGameMode);
 
   // Calculate total cost based on actually selected positions
-  // For Free Matches, entry fee should be 0
-  const entryFee = normalizedGameMode === 'free matches' ? 0 : (slotData?.entryFee || 5);
+  // Entry fee with safe default: if free, 0; otherwise use provided value (default 0)
+  const entryFee = isFreeMatch ? 0 : (slotData?.entryFee ?? 0);
   const selectedPositionsCount = Object.values(selectedPositions).reduce((total, positions) => total + positions.length, 0);
   const totalCost = entryFee * selectedPositionsCount;
-  const hasSufficientBalance = normalizedGameMode === 'free matches' ? true : (walletBalance >= totalCost);
+  const hasSufficientBalance = isFreeMatch ? true : (walletBalance >= totalCost);
 
   // Generate player slots based on game mode
   const generatePlayerSlots = (mode: string) => {
@@ -720,11 +723,13 @@ const SelectSlot = () => {
               </span>
             </p>
             <p>Match Entry Free Per Person: <img src="/assets/vector/Coin.png" />
-              <span className='Current-Balance'>{normalizedGameMode === 'free matches' ? 'FREE' : entryFee.toFixed(2)}</span>
+              <span className='Current-Balance'>{isFreeMatch ? 'FREE' : entryFee.toFixed(2)}</span>
             </p>
             <p>Selected Positions: <span className='Current-Balance'>{selectedPositionsCount}</span></p>
             <p>Total Payable Amount: <img src="/assets/vector/Coin.png" />
-              <span className='Current-Balance'>{normalizedGameMode === 'free matches' ? 'FREE' : totalCost.toFixed(2)}</span>
+              <span className='Current-Balance'>
+                {isFreeMatch ? 'FREE' : (selectedPositionsCount > 0 ? totalCost : entryFee).toFixed(2)}
+              </span>
             </p>
 
             {!hasSufficientBalance && !isLoading && totalCost > 0 && (
@@ -744,9 +749,9 @@ const SelectSlot = () => {
               title={!hasSufficientBalance ? 'Insufficient balance' : selectedPositionsCount === 0 ? 'Please select positions first' : ''}
             >
               <img src="/assets/vector/Coin.png" alt="Coin" />
-              {normalizedGameMode === 'free matches'
+              {isFreeMatch
                 ? (isJoining ? 'JOINING...' : isLoading ? 'LOADING...' : 'JOIN FREE')
-                : `${totalCost.toFixed(0)} ${isJoining ? 'JOINING...' : isLoading ? 'LOADING...' : 'JOIN'}`
+                : `${(selectedPositionsCount > 0 ? totalCost : entryFee).toFixed(0)} ${isJoining ? 'JOINING...' : isLoading ? 'LOADING...' : 'JOIN'}`
               }
             </button>
           </div>

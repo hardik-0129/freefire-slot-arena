@@ -96,7 +96,7 @@ const Ongoing = () => {
       }
 
       // Use the correct API endpoint for user ongoing matches
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/slots/user/${userId}?status=upcoming`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/slots/user/${userId}?status=live`);
       if (response.ok) {
         const data = await response.json();
         setBookings(Array.isArray(data.bookings) ? data.bookings : []);

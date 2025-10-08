@@ -5,11 +5,13 @@ import WhyChooseUs from "@/components/WhyChooseUs";
 import FAQ from "@/components/FAQ";
 import Footer from "@/components/Footer";
 import { Header } from "@/components/Header";
+import AnnouncementBar from "@/components/AnnouncementBar";
 
 const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+       {/* <AnnouncementBar /> */}
       <Header />
       <main className="mx-auto">
         <HeroBanner />

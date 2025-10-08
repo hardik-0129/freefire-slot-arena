@@ -34,15 +34,11 @@ interface SlotData {
     customStartInMinutes: number;
     createdAt: string;
     updatedAt: string;
-    banList?: string;
-    contactInfo?: string;
     discordLink?: string;
     gameMode?: string;
     mapName?: string;
-    matchDescription?: string;
     prizeDistribution?: string;
     rules?: string;
-    specialRules?: string;
     status?: string;
     streamLink?: string;
     tournamentName?: string;
@@ -209,7 +205,6 @@ const AboutMatch: React.FC<AboutMatchProps> = ({ slotData }) => {
                         <ul>
                             <li>Use of abusive words against the host may lead to penalty or disqualification</li>
                             <li>ALPHA LIONS reserves the right to modify rules and prizes at any time.</li>
-                            {slotData.contactInfo && <li><strong>Contact:</strong> {slotData.contactInfo}</li>}
                         </ul>
                     </div>
 
