@@ -106,13 +106,13 @@ h1 {
   position: relative;
 }
 
-.rules-section li::before {
+/* .rules-section li::before {
   content: "•";
   color: #333;
   font-weight: bold;
   position: absolute;
   left: -15px;
-}
+} */
 
 .sub-section {
   margin: 15px 0;
@@ -297,9 +297,9 @@ h1 {
     line-height: 1.4;
   }
 
-  .rules-section li::before {
+  /* .rules-section li::before {
     left: -12px;
-  }
+  } */
 
   .sub-section {
     margin: 12px 0;
