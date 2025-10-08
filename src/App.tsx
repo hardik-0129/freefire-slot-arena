@@ -30,6 +30,9 @@ import About from "./pages/About";
 import Upcoming from "./pages/Upcoming";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import TournamentRules from "./pages/TournamentRules";
 
 // Admin Route Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -90,6 +93,9 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/rules" element={<TournamentRules />} />
             <Route path="/edit" element={<EditProfile />} />
             <Route path="/task" element={<ProtectedRoute><Task /></ProtectedRoute>} />
 

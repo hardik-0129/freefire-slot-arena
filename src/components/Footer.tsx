@@ -7,13 +7,13 @@ const Footer = () => {
             <div className="footer-container">
                 <div className="footer-left">
                     <ul>
-                        <li><a href="#">FAQ</a></li>
+                        <li><a href="/faq">FAQ</a></li>
                         <li><a href="/tournament">TOURNAMENT</a></li>
-                        <li><a href="#">RULES AND REGULATION</a></li>
-                        <li><a href="#">CONTACT US</a></li>
-                        <li><a href="#">PRIVACY POLICY</a></li>
-                        <li><a href="#">TERMS & CONDITIONS</a></li>
-                        <li><a href="#">ABOUT US</a></li>
+                        <li><a href="/rules">RULES AND REGULATION</a></li>
+                        <li><a href="/contact">CONTACT US</a></li>
+                        <li><a href="/privacy-policy">PRIVACY POLICY</a></li>
+                        <li><a href="/terms">TERMS & CONDITIONS</a></li>
+                        <li><a href="/about">ABOUT US</a></li>
                     </ul>
                     <span className="copyright">© 2025 ALPHA LIONS ALL RIGHTS RESERVED.</span>
                 </div>
