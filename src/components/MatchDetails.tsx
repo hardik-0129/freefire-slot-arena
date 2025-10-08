@@ -31,12 +31,12 @@ const MatchDetails = ({ slotData }: MatchDetailsProps) => {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-GB');
+        return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata' });
     };
 
     const formatTime = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
     };
 
     const currentSlots = currentSlotData.maxBookings - currentSlotData.remainingBookings;
@@ -61,9 +61,9 @@ const MatchDetails = ({ slotData }: MatchDetailsProps) => {
                 <span className="badge orange">TYPE: {currentSlotData.slotType.toUpperCase()}</span>
                 <span className="badge orange">ENTRY FEE : <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" /> {currentSlotData.entryFee}</span>
                 <span className="badge black">MATCH TYPE: {currentSlotData.entryFee > 0 ? 'PAID' : 'FREE'}</span>
-                <span className="badge orange">MAP: BERMUDA</span>
+                <span className="badge orange">MAP: {(currentSlotData as any).mapName ? (currentSlotData as any).mapName.toUpperCase() : 'BERMUDA'}</span>
                 <span className="badge black">
-                    ORGANISED ON: {formatDate(currentSlotData.matchTime)} <span style={{ color: '#FFA500' }}>{formatTime(currentSlotData.matchTime)}</span>
+                    ORGANISED ON: {formatDate(currentSlotData.matchTime)} <span style={{ color: '#FFA500' }}>{formatTime(currentSlotData.matchTime)} IST</span>
                 </span>
             </div>
 

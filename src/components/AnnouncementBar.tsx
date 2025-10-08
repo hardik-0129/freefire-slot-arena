@@ -65,7 +65,7 @@ export default function AnnouncementBar() {
         <div className="announcement-container">
           <div className="announcement-content">
             <div className="announcement-body">
-              <p>No announcements found. Check console for API response.</p>
+              <p>No announcements</p>
             </div>
           </div>
         </div>

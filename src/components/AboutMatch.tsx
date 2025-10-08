@@ -52,8 +52,10 @@ interface AboutMatchProps {
 
 const AboutMatch: React.FC<AboutMatchProps> = ({ slotData }) => {
     const rules = slotData.tournamentRules;
-    // If slotData.rules is a string (HTML), render it directly
-    const rulesHtml = typeof slotData.rules === 'string' && slotData.rules.trim().startsWith('<') ? slotData.rules : null;
+    // If slotData.rules exists, show it. Treat as HTML if it seems to contain tags.
+    const hasRulesString = typeof slotData.rules === 'string' && slotData.rules.trim().length > 0;
+    const looksLikeHtml = hasRulesString && /<[^>]+>/.test(slotData.rules!.trim());
+    const rulesHtml = looksLikeHtml ? slotData.rules : null;
     const tournamentName = slotData.tournamentName || "#ALPHALIONS";
     const gameMode = slotData.gameMode || "Classic";
     const slotType = slotData.slotType || "Squad";
@@ -231,6 +233,8 @@ const AboutMatch: React.FC<AboutMatchProps> = ({ slotData }) => {
 
                     {rulesHtml ? (
                         <div className="rules-section" dangerouslySetInnerHTML={{ __html: rulesHtml }} />
+                    ) : hasRulesString ? (
+                        <div className="rules-section"><div>{slotData.rules}</div></div>
                     ) : (
                         <>
                             <div className="rules-section">

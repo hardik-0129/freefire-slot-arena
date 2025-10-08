@@ -687,7 +687,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   <div className="text-gray-300">
                     {slot.matchTime ? (
                       <>
-                        <span>{new Date(slot.matchTime).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{new Date(slot.matchTime).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}</span>
                         <div className="text-xs text-gray-400"><Countdown matchTime={slot.matchTime} /></div>
                       </>
                     ) : (

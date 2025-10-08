@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "../components/css/DetailsPage.css";
 // import "../components/css/FullMap.css";
 import MatchDetails from "@/components/MatchDetails";
@@ -58,7 +59,26 @@ interface Slot {
 const DetailsPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const slotData: Slot | null = location.state?.slotData || null;
+    const initialSlotData: Slot | null = location.state?.slotData || null;
+    const [slotData, setSlotData] = useState<Slot | null>(initialSlotData);
+
+    // Refresh slot from server by _id to ensure latest rules/content
+    useEffect(() => {
+        const controller = new AbortController();
+        const fetchLatest = async () => {
+            try {
+                if (!initialSlotData?._id) return;
+                const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${initialSlotData._id}`, { signal: controller.signal });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const latest = data.slot || data.data || data;
+                if (latest && latest._id) setSlotData(latest);
+            } catch (_) { }
+        };
+        fetchLatest();
+        return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialSlotData?._id]);
 
     const handleJoinClick = () => {
         navigate('/select-slot', {
