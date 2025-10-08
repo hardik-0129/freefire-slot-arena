@@ -60,7 +60,7 @@ const MatchDetails = ({ slotData }: MatchDetailsProps) => {
             <div className="match-top mb-4">
                 <span className="badge orange">TYPE: {currentSlotData.slotType.toUpperCase()}</span>
                 <span className="badge orange">ENTRY FEE : <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" /> {currentSlotData.entryFee}</span>
-                <span className="badge black">MATCH TYPE: PAID</span>
+                <span className="badge black">MATCH TYPE: {currentSlotData.entryFee > 0 ? 'PAID' : 'FREE'}</span>
                 <span className="badge orange">MAP: BERMUDA</span>
                 <span className="badge black">
                     ORGANISED ON: {formatDate(currentSlotData.matchTime)} <span style={{ color: '#FFA500' }}>{formatTime(currentSlotData.matchTime)}</span>
