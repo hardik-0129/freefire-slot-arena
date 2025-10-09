@@ -146,6 +146,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   const [cancelReason, setCancelReason] = useState<string>("");
   const [savingCancel, setSavingCancel] = useState<boolean>(false);
   const [localSlots, setLocalSlots] = useState<any[]>(slots || []);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalSlots(slots || []);
@@ -718,6 +719,50 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                     onClick={() => onEditSlot ? onEditSlot(slot) : undefined}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    className="flex-1 min-w-[110px] bg-blue-600 hover:bg-blue-700 text-white text-xs py-2"
+                    disabled={duplicatingId === slot._id}
+                    onClick={async () => {
+                      try {
+                        setDuplicatingId(slot._id);
+                        const token = localStorage.getItem('adminToken');
+                        const payload = {
+                          slotType: slot.slotType,
+                          entryFee: Number(slot.entryFee) || 0,
+                          matchTime: slot.matchTime, // keep same time (ISO)
+                          customStartInMinutes: Number(slot.customStartInMinutes) || 10,
+                          perKill: Number(slot.perKill) || 0,
+                          totalWinningPrice: Number(slot.totalWinningPrice) || 0,
+                          maxBookings: Number(slot.maxPlayers) || 50,
+                          remainingBookings: Number(slot.maxPlayers) || 50,
+                          matchTitle: slot.matchTitle || '',
+                          mapName: slot.mapName || 'Bermuda',
+                          gameMode: slot.gameMode || 'Solo',
+                          tournamentName: slot.tournamentName || '#ALPHALIONS',
+                          maxPlayers: Number(slot.maxPlayers) || 50,
+                          rules: slot.rules || '',
+                          prizeDistribution: slot.prizeDistribution || '',
+                          streamLink: slot.streamLink || '',
+                          discordLink: slot.discordLink || '',
+                          bannerImage: slot.bannerImage || '',
+                          firstwin: Number(slot.firstwin) || 0,
+                          secwin: Number(slot.secwin) || 0,
+                          thirdwin: Number(slot.thirdwin) || 0
+                        };
+                        const resp = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/slots`, payload, { headers: { Authorization: `Bearer ${token}` } });
+                        const created = resp.data?.slot || resp.data;
+                        if (created && created._id) {
+                          setLocalSlots(prev => [created, ...prev]);
+                        }
+                      } catch (e) {
+                        console.error('Duplicate slot error', e);
+                      } finally {
+                        setDuplicatingId(null);
+                      }
+                    }}
+                  >
+                    {duplicatingId === slot._id ? 'Duplicating...' : 'Duplicate'}
                   </Button>
                   <Button
                     className="flex-1 min-w-[90px] bg-[#52C41A] hover:bg-[#73D13D] text-white text-xs py-2"

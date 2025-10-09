@@ -49,19 +49,18 @@ const FullMap = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState<Slot | null>(null);
 
-    // Get the selected game type data from navigation state
+    // Get the selected game type data from navigation state or query string
     const selectedGameTypeData: GameTypeData | undefined = location.state?.selectedGameType || location.state?.gameTypeData;
-    const selectedGameType = location.state?.gameType || selectedGameTypeData?.gameType;
+    const selectedGameTypeState = location.state?.gameType || selectedGameTypeData?.gameType;
+    const querySelectedGameType = new URLSearchParams(location.search).get('gameType') || undefined;
+    const selectedType = querySelectedGameType || selectedGameTypeState;
 
-    // Check current route to determine game type (fallback for direct navigation)
-    const isClashSquad = location.pathname === '/clash-squad' || selectedGameType === 'Clash Squad';
-    const isLoneWolf = location.pathname === '/lone-wolf' || selectedGameType === 'Lone Wolf';
-    const isSurvival = location.pathname === '/survival' || selectedGameType === 'Survival';
-    const isFreeMatches = location.pathname === '/free-matches' || selectedGameType === 'Free Matches';
+    // Route info (kept for navigation state only; no static filtering)
+    const isFullMapPage = location.pathname === '/fullmap';
 
     useEffect(() => {
         fetchSlots();
-    }, [selectedGameType]);
+    }, [selectedType]);
 
     const fetchSlots = async () => {
         const apiUrl = `${import.meta.env.VITE_API_URL}/api/admin/slots`;
@@ -105,26 +104,9 @@ const FullMap = () => {
 
     // Helper to check if a slot matches the current page's game type
     const matchesSelectedType = (slot: Slot) => {
-        if (selectedGameType) {
-            return slot.slotType?.toLowerCase().includes(selectedGameType.toLowerCase());
-        } else if (isClashSquad) {
-            return slot.slotType === 'Clash Squad' || slot.gameMode === 'Clash Squad';
-        } else if (isLoneWolf) {
-            return slot.slotType === 'Lone Wolf' || slot.gameMode === 'Lone Wolf';
-        } else if (isSurvival) {
-            return slot.slotType === 'Survival' || slot.gameMode === 'Survival';
-        } else if (isFreeMatches) {
-            return slot.slotType === 'Free Matches' || slot.gameMode === 'Free Matches';
-        }
-        
-        // For Full Map page, filter by Squad matches only
-        // Check if it's a Squad match by looking at slotType or gameMode
-        const isSquadMatch = slot.slotType?.toLowerCase().includes('squad') || 
-                           slot.gameMode?.toLowerCase().includes('squad') ||
-                           slot.slotType?.toLowerCase().includes('clash squad') ||
-                           slot.gameMode?.toLowerCase().includes('clash squad');
-        
-        return isSquadMatch;
+        // Purely API-driven: if a selected type exists, require exact slotType match.
+        // If no selected type, show all slots (no static assumptions).
+        return selectedType ? slot.slotType === selectedType : true;
     };
 
     // Filter slots by status and game type
@@ -235,7 +217,7 @@ const FullMap = () => {
                 <div className="container">
                     
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-bold text-center mb-8 sm:mb-12 px-4">
-                        {`${selectedGameType } Tournaments`}
+                        {selectedType ? `${selectedType} Tournaments` : 'Tournaments'}
                     </h2>
 
                     {/* Filter Buttons */}

@@ -575,6 +575,8 @@ const AdminDashboard = () => {
         matchTime: editData.matchTime || undefined,
         customStartInMinutes: editData.customStartInMinutes === '' ? undefined : Number(editData.customStartInMinutes),
         maxPlayers: editData.maxPlayers === '' ? undefined : Number(editData.maxPlayers),
+        maxBookings: editData.maxPlayers === '' ? undefined : Number(editData.maxPlayers),
+        remainingBookings: editData.maxPlayers === '' ? undefined : Number(editData.maxPlayers),
         firstwin: editData.firstwin === '' ? undefined : Number(editData.firstwin),
         secwin: editData.secwin === '' ? undefined : Number(editData.secwin),
         thirdwin: editData.thirdwin === '' ? undefined : Number(editData.thirdwin),
