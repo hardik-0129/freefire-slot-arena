@@ -56,9 +56,6 @@
 }
 
 .modal-close {
-  position: absolute;
-  top: 20px;
-  right: 25px;
   background: none;
   border: none;
   font-size: 30px;

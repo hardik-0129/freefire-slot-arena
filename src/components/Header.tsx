@@ -138,14 +138,26 @@ export const Header = () => {
         setIsMobileMenuOpen(false);
     };
 
-    const handleDownloadApk = () => {
+    const handleDownloadApk = async () => {
         try {
-            const apkUrl = 'https://api1.alphalions.io/uploads/apk/alpha_lions_v001.apk';
-            // Prefer opening in the same tab to allow direct download on most browsers
-            window.location.href = apkUrl;
+            const base = import.meta?.env?.VITE_API_URL || '';
+            const res = await fetch(`${base}/api/apk/latest/public`, { method: 'GET' });
+            if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const url = (data && (data.downloadUrl || data.url)) ?
+                    ((data.downloadUrl?.startsWith('http') || data.url?.startsWith('http')) ? (data.downloadUrl || data.url) : `${base}${data.downloadUrl || data.url}`)
+                    : undefined;
+                if (url) {
+                    window.location.href = url;
+                    return;
+                }
+            }
+            // Fallback to static path if API fails
+            window.location.href = `${base}/uploads/apk/alpha_lions_v001.apk`;
         } catch (e) {
-            // Fallback
-            window.open('https://api1.alphalions.io/uploads/apk/alpha_lions_v001.apk', '_blank');
+            // Final fallback: open current known file
+            const base = import.meta?.env?.VITE_API_URL || '';
+            window.open(`${base}/uploads/apk/alpha_lions_v001.apk`, '_blank');
         }
     };
 
