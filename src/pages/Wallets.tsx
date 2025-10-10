@@ -264,10 +264,9 @@ const Wallets = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setWalletBalance((data.balanceWithoutHolds ?? data.balance) ?? 0);
-                setTotalEarnings(data.totalEarnings ?? 0);
-                setTotalPayouts(data.totalPayouts ?? 0);
-                setPendingHolds(data.pendingWithdrawals ?? 0);
+                setWalletBalance((data.balance) ?? 0);
+                setTotalEarnings(data.winAmount);
+                setTotalPayouts(data.totalPayouts);
             } else {
                 setWalletBalance(0);
                 setTotalEarnings(0);

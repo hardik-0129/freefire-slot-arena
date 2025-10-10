@@ -110,13 +110,15 @@ const FullMap = () => {
     };
 
     // Filter slots by status and game type
-    const visibleSlots = slots.filter(slot => {
-        // Hide all cancelled matches from any tab
-        if (resolveStatus(slot) === 'cancelled') return false;
-        const statusMatches = resolveStatus(slot) === activeFilter;
-        if (!statusMatches) return false;
-        return matchesSelectedType(slot);
-    });
+    const visibleSlots = slots
+        .filter(slot => {
+            // Hide all cancelled matches from any tab
+            if (resolveStatus(slot) === 'cancelled') return false;
+            const statusMatches = resolveStatus(slot) === activeFilter;
+            if (!statusMatches) return false;
+            return matchesSelectedType(slot);
+        })
+        .sort((a, b) => new Date(a.matchTime).getTime() - new Date(b.matchTime).getTime());
 
     const handleFilterChange = (filter: 'upcoming' | 'live' | 'completed') => {
         setActiveFilter(filter);
