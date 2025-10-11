@@ -42,6 +42,7 @@ interface PlayerStats {
 
 
 interface Booking {
+  selectedPositions: any;
   _id: string;
   user: {
     _id: string;
@@ -877,8 +878,9 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                       <table className="min-w-full bg-[#232323] rounded-lg">
                         <thead>
                           <tr className="text-white">
-                            <th className="px-3 py-2 text-white text-center w-20">Team</th>
+                            <th className="px-3 py-2 text-white text-center w-20">No. </th>
                             <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
+                            <th className="px-3 py-2 text-white text-left w-24">Position</th>
                             <th className="px-3 py-2 text-white text-left w-32">Mobile Number</th>
                             <th className="px-3 py-2 text-white text-center w-20">Kills</th>
                             <th className="px-3 py-2 text-white text-center w-20">Rank</th>
@@ -892,18 +894,22 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                               const playerNames = booking.playerNames ? Object.values(booking.playerNames).filter(Boolean) : [];
                               if (playerNames.length === 0) {
                                 // fallback to booking.user.name
-                                return [
-                                  <BookingTableRow
-                                    key={booking._id + '-single'}
-                                    booking={booking}
-                                    idx={bookingIdx + 1}
-                                    playerName={booking.user?.name || ''}
-                                    onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
-                                    winnersBySlot={winnersBySlot}
-                                    onWinnerChange={fetchCompletedMatches}
-                                    slotId={match._id}
-                                  />
-                                ];
+                              return [
+                                <BookingTableRow
+                                  key={booking._id + '-single'}
+                                  booking={booking}
+                                  idx={bookingIdx + 1}
+                                  playerName={booking.user?.name || ''}
+                                  onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
+                                  winnersBySlot={winnersBySlot}
+                                  onWinnerChange={fetchCompletedMatches}
+                                  slotId={match._id}
+                                  perKill={match.perKill}
+                                  firstwin={match.firstwin}
+                                  secwin={match.secwin}
+                                  thirdwin={match.thirdwin}
+                                />
+                              ];
                               }
                               return playerNames.map((playerName, i) => (
                                 <BookingTableRow
@@ -1065,6 +1071,50 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
     );
   }, [winnersBySlot, slotId, playerName]);
 
+  // Determine booked position for this player from selectedPositions (e.g., { teamA: ["1","2"] })
+  const bookedPosition = React.useMemo(() => {
+    try {
+      const positionsObj: any = (booking as any).selectedPositions || {};
+      const teamKey = Object.keys(positionsObj)[0];
+      if (!teamKey) return '';
+      const list: any[] = Array.isArray(positionsObj[teamKey]) ? positionsObj[teamKey] : [];
+      const names = booking.playerNames ? Object.values(booking.playerNames) : [];
+      let nameIndex = names.findIndex(n => (n || '').toLowerCase().trim() === playerName.toLowerCase().trim());
+      if (nameIndex < 0) nameIndex = 0;
+      const pos = list[nameIndex] || list[0] || '';
+      // Format team key, e.g., teamA -> Team-A
+      const prettyTeam = (() => {
+        const m = teamKey.match(/^team(.*)$/i);
+        if (m && m[1]) return `Team-${m[1].toUpperCase()}`;
+        // fallback: split camelCase
+        return teamKey
+          .replace(/([a-z])([A-Z])/g, '$1-$2')
+          .replace(/^./, c => c.toUpperCase());
+      })();
+      return pos ? `${prettyTeam} ${pos}` : '';
+    } catch {
+      return '';
+    }
+  }, [booking, playerName]);
+
+  // Resolve team position for this player from booking.selectedPositions, if available
+  const resolvedPosition = React.useMemo(() => {
+    try {
+      const positions = booking.selectedPositions || {} as any;
+      // Attempt to find the team (teamA, teamB, etc.) that contains this player position by index
+      // If playerNames mapping exists, use index to map to same order
+      const namesEntries = Object.entries(booking.playerNames || {});
+      let idxInNames = namesEntries.findIndex(([, name]) => (name || '').toLowerCase().trim() === playerName.toLowerCase().trim());
+      if (idxInNames === -1) idxInNames = 0;
+      const teamKey = Object.keys(positions)[0];
+      const list = teamKey ? (positions as any)[teamKey] : [];
+      const pos = Array.isArray(list) ? (list[idxInNames] || list[0]) : undefined;
+      return pos ? `${teamKey?.toUpperCase()}-${pos}` : '';
+    } catch {
+      return '';
+    }
+  }, [booking, playerName]);
+
   const handleSave = async () => {
     if (!slotId) {
       alert('slotId is missing for this booking. Cannot update winner.');
@@ -1125,7 +1175,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
   // ...existing code...
   return (
     <tr className={`border-b border-[#333] ${isPlayerAlreadyWinner ? 'bg-red-900/20 opacity-60' : ''}`}>
-      <td className="px-3 py-2 text-center text-white">Team {idx}</td>
+      <td className="px-3 py-2 text-center text-white">{idx}</td>
       <td className="px-3 py-2 text-white">
         <div className="flex items-center gap-2">
           <span className="truncate">{playerName}</span>
@@ -1136,6 +1186,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
           )}
         </div>
       </td>
+      <td className="px-3 py-2 text-white">{bookedPosition}</td>
       <td className="px-3 py-2 text-white">{booking.user?.phone || "N/A"}</td>
       <td className="px-3 py-2 text-center">
         <input

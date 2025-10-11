@@ -633,6 +633,12 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   return true;
               }
             })
+            .sort((a: any, b: any) => {
+              // Sort by match time - earliest first
+              const timeA = new Date(a.matchTime || 0).getTime();
+              const timeB = new Date(b.matchTime || 0).getTime();
+              return timeA - timeB;
+            })
             .map((slot: any) => (
             <div key={slot._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">

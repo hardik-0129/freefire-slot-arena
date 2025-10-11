@@ -105,9 +105,11 @@ const SelectSlot = () => {
         if (response.ok) {
           const data = await response.json();
 
-          // Try different possible response formats
+          // Use totalBalance (wallet + winAmount) for booking validation
           let balance = 0;
-          if (data.wallet !== undefined) {
+          if (data.totalBalance !== undefined) {
+            balance = data.totalBalance;
+          } else if (data.wallet !== undefined) {
             balance = data.wallet;
           } else if (data.balance !== undefined) {
             balance = data.balance;

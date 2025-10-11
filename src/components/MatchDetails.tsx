@@ -59,7 +59,15 @@ const MatchDetails = ({ slotData }: MatchDetailsProps) => {
             </h2>
             <div className="match-top mb-4">
                 <span className="badge orange">TYPE: {currentSlotData.slotType.toUpperCase()}</span>
-                <span className="badge orange">ENTRY FEE : <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" /> {currentSlotData.entryFee}</span>
+                <span className="badge orange">
+                    ENTRY FEE : {Number(currentSlotData.entryFee) <= 0 ? (
+                        'FREE'
+                    ) : (
+                        <>
+                            <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" /> {currentSlotData.entryFee}
+                        </>
+                    )}
+                </span>
                 <span className="badge black">MATCH TYPE: {currentSlotData.entryFee > 0 ? 'PAID' : 'FREE'}</span>
                 <span className="badge orange">MAP: {(currentSlotData as any).mapName ? (currentSlotData as any).mapName.toUpperCase() : 'BERMUDA'}</span>
                 <span className="badge black">

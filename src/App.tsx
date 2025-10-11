@@ -33,6 +33,7 @@ import BlogPost from "./pages/BlogPost";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import TournamentRules from "./pages/TournamentRules";
+import AlphaLionApp from "./pages/AlphaLionApp";
 
 // Admin Route Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -112,6 +113,7 @@ const App = () => (
             <Route path="/winner" element={<ProtectedRoute><WinnerDetails /></ProtectedRoute>} />
             <Route path="/wallets" element={<ProtectedRoute><Wallets /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/alpha-lions-app" element={<ProtectedRoute><AlphaLionApp /></ProtectedRoute>} />
 
             {/* Admin Routes */}
             <Route path="/al-admin-128900441" element={<AdminLogin />} />

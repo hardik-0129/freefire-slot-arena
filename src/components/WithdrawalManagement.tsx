@@ -268,17 +268,10 @@ const WithdrawalManagement: React.FC = () => {
               <div key={withdrawal._id} className="bg-[#2A2A2A] rounded-lg p-4 border border-[#3A3A3A]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    {withdrawal.userId.referredBy ? (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">Amount (95%):</span>
-                        <span className="text-green-400 font-bold">₹{(withdrawal.amount * 0.95).toFixed(2)}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">Amount:</span>
-                        <span className="text-green-400 font-bold">₹{withdrawal.amount.toFixed(2)}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">Amount:</span>
+                      <span className="text-green-400 font-bold">₹{withdrawal.amount.toFixed(2)}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white">User:</span>
                       <span className="text-gray-300">{withdrawal.userId.name}</span>

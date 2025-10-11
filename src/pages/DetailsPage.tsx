@@ -117,8 +117,10 @@ const DetailsPage = () => {
                             <AboutMatch slotData={slotData} />
 
                             <button className="join-btn" onClick={handleJoinClick}>
-                                <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" />
-                                <span style={{ fontWeight: "850" }}>{slotData.entryFee} JOIN</span>
+                                {Number(slotData.entryFee) > 0 && (
+                                    <img className="coin-icon" src="/assets/vector/Coin.png" alt="Coin" />
+                                )}
+                                <span style={{ fontWeight: "850" }}>{Number(slotData.entryFee) <= 0 ? 'FREE' : slotData.entryFee} JOIN</span>
                                 <img
                                     src="/assets/vector/Vector-Arrow.png"
                                     alt="Arrow"

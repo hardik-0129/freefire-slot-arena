@@ -1,0 +1,242 @@
+.features-section {
+    background: #2c2c2c;
+    color: #fff;
+    text-align: center;
+    padding: 60px 20px;
+  }
+  
+  .features-header h2 {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .features-header p {
+    font-size: 16px;
+    color: #ccc;
+  }
+  
+  .features-tabs {
+    margin: 30px 0;
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    font-size: 16px;
+    border-bottom: 2px solid #444;
+    padding-bottom: 10px;
+  }
+  
+  .features-tabs span {
+    cursor: pointer;
+    padding: 5px 10px;
+    color: #ccc;
+    transition: 0.3s;
+  }
+  
+  .features-tabs span:hover {
+    color: #ff4d4d;
+  }
+  
+  .features-tabs .active {
+    color: #ff4d4d;
+    border-bottom: 2px solid #ff4d4d;
+  }
+  
+  .features-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: left;
+  }
+  
+  .features-content h3 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #ff4d4d;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .features-content > p {
+    font-size: 18px;
+    margin: 0 auto 40px;
+    color: #ccc;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 800px;
+  }
+  
+  .feature-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+  }
+  
+  .detail-item {
+    background: #333;
+    padding: 25px;
+    border-radius: 10px;
+    border-left: 4px solid #ff4d4d;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-height: 200px;
+    justify-content: flex-start;
+  }
+  
+  .detail-item:hover {
+    transform: translateY(-3px);
+    background: #3a3a3a;
+  }
+  
+  .detail-icon {
+    width: 70px;
+    height: 70px;
+    background: #ff4d4d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(255, 77, 77, 0.3);
+    flex-shrink: 0;
+  }
+  
+  .detail-item h4 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .detail-item p {
+    font-size: 15px;
+    color: #ccc;
+    line-height: 1.7;
+    margin: 0;
+    text-align: center;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+  }
+  
+  .features-boxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    max-width: 1000px;
+    margin: 0 auto;
+    justify-items: center;
+  }
+  
+  .feature-item {
+    background: #333;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 300px;
+    text-align: left;
+    color: #fff;
+    transition: transform 0.3s ease;
+  }
+  
+  .feature-item:hover {
+    transform: translateY(-8px);
+  }
+  
+  .feature-item .icon {
+    background: #ff4d4d;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #fff;
+  }
+  
+  .feature-item h4 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  
+  .feature-item p {
+    font-size: 14px;
+    color: #ccc;
+    line-height: 1.6;
+  }
+  
+  @media (max-width: 768px) {
+    .features-tabs {
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .features-tabs span {
+      padding: 10px 20px;
+      border-radius: 5px;
+      background: #333;
+    }
+    
+    .feature-details {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+    
+    .features-boxes {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .feature-item {
+      max-width: 100%;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .features-section {
+      padding: 40px 10px;
+    }
+    
+    .features-header h2 {
+      font-size: 24px;
+    }
+    
+    .features-content h3 {
+      font-size: 20px;
+    }
+    
+    .detail-item {
+      padding: 20px;
+      min-height: 180px;
+    }
+    
+    .detail-icon {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+    
+    .detail-item h4 {
+      font-size: 18px;
+    }
+    
+    .detail-item p {
+      font-size: 14px;
+    }
+    
+    .features-content h3 {
+      font-size: 24px;
+    }
+    
+    .features-content > p {
+      font-size: 16px;
+    }
+  }
+  

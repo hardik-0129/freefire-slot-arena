@@ -257,6 +257,7 @@ const FullMap = () => {
                         <div className="card-container">
                             {visibleSlots.map((slot) => {
                                     const currentSlots = slot.maxBookings - slot.remainingBookings;
+                                    const isFree = Number(slot.entryFee) <= 0;
 
                                     const handleCardClick = () => {
                                         openModal(slot);
@@ -354,8 +355,8 @@ const FullMap = () => {
                                             >
                                                 {resolveStatus(slot) === 'upcoming' ? (
                                                     <>
-                                                <img src="/assets/vector/Coin.png" alt="Coin" />
-                                                <span style={{ fontWeight: "850", textAlign: "center" }}> {slot.entryFee} JOIN</span>
+                                                {!isFree && <img src="/assets/vector/Coin.png" alt="Coin" />}
+                                                <span style={{ fontWeight: "850", textAlign: "center" }}> {isFree ? 'FREE' : slot.entryFee} JOIN</span>
                                                 <img
                                                     src="/assets/vector/Vector-Arrow.png"
                                                     alt="Arrow"
@@ -498,7 +499,7 @@ const FullMap = () => {
                                         <div className="summary-stat-label">Remaining Slots</div>
                                     </div>
                                     <div className="summary-stat">
-                                        <div className="summary-stat-value">₹{selectedMatch.entryFee}</div>
+                                        <div className="summary-stat-value">{Number(selectedMatch.entryFee) <= 0 ? 'FREE' : `₹${selectedMatch.entryFee}`}</div>
                                         <div className="summary-stat-label">Entry Fee</div>
                                     </div>
                                 </div>

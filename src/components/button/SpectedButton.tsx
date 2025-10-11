@@ -1,4 +1,5 @@
 import "../../components/css/button.css"
+import { useNavigate } from 'react-router-dom'
 
 export const SpectedButton = () => {
   return (
@@ -11,12 +12,25 @@ export const SpectedButton = () => {
   )
 }
 
-export const ResultButton = () => {
+type ResultButtonProps = {
+  slotId?: string
+  slotData?: any
+}
+
+export const ResultButton: React.FC<ResultButtonProps> = ({ slotId, slotData }) => {
+  const navigate = useNavigate();
   return (
-    <button className="sb-join-btn result-btn">
+    <button
+      className="sb-join-btn result-btn"
+      onClick={() => {
+        if (slotId || slotData?._id) {
+          navigate('/winner', { state: { slotData, slotId: slotId || slotData?._id } });
+        }
+      }}
+    >
       <span className="button-content">
         <img src="/assets/vector/S-Vector.png" alt="" className="button-icon" /> 
-        Result
+        View Results
       </span>
     </button>
   )

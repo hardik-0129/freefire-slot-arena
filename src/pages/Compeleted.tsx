@@ -151,7 +151,15 @@ const Compeleted = () => {
                         </div>
                     ) : (
                         <div className="card-container">    
-                            {completedMatches.map((match) => (
+                            {completedMatches
+                              .slice()
+                              .sort((a, b) => {
+                                const ta = new Date(((a as any).slot?.matchTime) || a.matchTime || a.updatedAt || a.createdAt || 0).getTime();
+                                const tb = new Date(((b as any).slot?.matchTime) || b.matchTime || b.updatedAt || b.createdAt || 0).getTime();
+                                // Earliest completed first (so 03:37 PM before 05:00 PM). Flip to `tb - ta` for latest first.
+                                return ta - tb;
+                              })
+                              .map((match) => (
                                 <div key={match._id} className="match-card">
                                     <div style={{ position: 'relative' }}>
                                         <Skeleton height={0} style={{ paddingBottom: '56.25%', borderRadius: 12 }} baseColor="#eeeeee" highlightColor="#f5f5f5" />

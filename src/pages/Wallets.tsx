@@ -264,7 +264,7 @@ const Wallets = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setWalletBalance((data.balance) ?? 0);
+                setWalletBalance((data.totalBalance));
                 setTotalEarnings(data.winAmount);
                 setTotalPayouts(data.totalPayouts);
             } else {
@@ -308,7 +308,7 @@ const Wallets = () => {
                 const total = (data.transactions || [])
                     .filter((tx) => (tx.type === 'WITHDRAW' || tx.type === 'DEBIT') && (tx.status === 'SUCCESS' || tx.status === 'ADMIN_APPROVED'))
                     .reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
-                setTotalPayouts(total);
+                setTotalPayouts(total || 0);
                 // No need to calculate/set totalWinnings, use totalEarnings from balance API
             }
         } catch (error) {
@@ -496,7 +496,7 @@ const Wallets = () => {
             // Ensure socket connection and join room before withdrawal
             let socket: Socket | null = null;
             if (userId) {
-                socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+                socket = io(import.meta.env.VITE_API_URL);
                 socket.emit('join', userId);
             }
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/tranzupi/withdraw`, {
@@ -598,7 +598,7 @@ const Wallets = () => {
                     <div className="wallet-card small">
                         <span className="card-header">TOTAL PAYOUTS</span>
                         <div className="card-content center">
-                            <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {totalPayouts.toFixed(2)}</div>
+                            <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {(totalPayouts || 0).toFixed(2)}</div>
                         </div>
                     </div>
                 </div>

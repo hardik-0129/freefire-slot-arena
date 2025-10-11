@@ -278,7 +278,24 @@ const Upcoming = () => {
                                 <p className="text-gray-500 mt-2">Book a match to see it here!</p>
                             </div>
                         ) : (
-                            uniqueMatches.map((booking) => {
+                            uniqueMatches
+                              .slice()
+                              .sort((a, b) => {
+                                const nowMs = Date.now();
+                                const ta = new Date(a.slot?.matchTime || 0).getTime();
+                                const tb = new Date(b.slot?.matchTime || 0).getTime();
+                                // Put future matches first, ordered by soonest start
+                                const da = ta - nowMs;
+                                const db = tb - nowMs;
+                                const aIsFuture = da >= 0;
+                                const bIsFuture = db >= 0;
+                                if (aIsFuture && bIsFuture) return da - db; // both future: closest first
+                                if (aIsFuture && !bIsFuture) return -1;     // future before past
+                                if (!aIsFuture && bIsFuture) return 1;      // future before past
+                                // both past: latest past first
+                                return tb - ta;
+                              })
+                              .map((booking) => {
                                 const slotId = booking.slot?._id;
                                 const totalPositionsBooked = slotStats[slotId]?.totalPositionsBooked || 0;
                                 const matchTime = booking.slot?.matchTime || '';

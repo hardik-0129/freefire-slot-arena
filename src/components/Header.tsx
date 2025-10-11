@@ -27,7 +27,6 @@ export const Header = () => {
     const [matchModalOpen, setMatchModalOpen] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState<NotificationItem | null>(null);
 
-    // Remove local walletBalance state, use context instead
     const fetchWalletBalance = async () => {
         try {
             setIsLoadingBalance(true);
@@ -53,17 +52,9 @@ export const Header = () => {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    let balance = 0;
-                    if (data.wallet !== undefined) {
-                        balance = data.wallet;
-                    } else if (data.balance !== undefined) {
-                        balance = data.balance;
-                    } else if (data.amount !== undefined) {
-                        balance = data.amount;
-                    } else if (typeof data === 'number') {
-                        balance = data;
-                    }
-                    setWalletBalance(balance);
+                   
+                    
+                    setWalletBalance(data.totalBalance);
                 } else {
                     setWalletBalance(0);
                 }
@@ -94,27 +85,6 @@ export const Header = () => {
             });
         }
     }, [setWalletBalance]);
-
-    // Listen for foreground FCM messages
-    // useEffect(() => {
-    //     let unsubscribe: (() => void) | undefined;
-
-    //     const initMessaging = async () => {
-    //         const isMessagingSupported = await initializeMessaging();
-    //         if (isMessagingSupported && messaging) {
-    //             unsubscribe = onMessage(messaging, (payload) => {
-    //                 // You can show a toast or notification here
-    //                 // console.log('Received foreground message:', payload);
-    //             });
-    //         }
-    //     };
-
-    //     initMessaging().catch(console.error);
-
-    //     return () => {
-    //         if (typeof unsubscribe === 'function') unsubscribe();
-    //     };
-    // }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -166,212 +136,212 @@ export const Header = () => {
         <>
             <AnnouncementBar />
             <header className="header-responsive bg-black text-white">
-            <div className="header-container">
-                <div className="header-content">
-                    {/* Logo Section */}
-                    <div className="header-logo">
-                        <a href="/">
-                            <img
-                                src="/alphalogo.png"
-                                alt="FF Esports"
-                                className="logo-img"
-                            />
-                        </a>
-                    </div>
+                <div className="header-container">
+                    <div className="header-content">
+                        {/* Logo Section */}
+                        <div className="header-logo">
+                            <a href="/">
+                                <img
+                                    src="/alphalogo.png"
+                                    alt="FF Esports"
+                                    className="logo-img"
+                                />
+                            </a>
+                        </div>
 
-                    {/* Desktop Navigation */}
-                    <nav className="desktop-nav">
-                        <a href="/" className="nav-link">EVENTS</a>
-                        <a href="/tournament" className="nav-link">TOURNAMENT</a>
-                        <a href="/task" className="nav-link">Lions NFT</a>
-                        <a href="/about" className="nav-link">ABOUT US</a>
-                        <a href="/contact" className="nav-link">CONTACT US</a>
-                        <a href="/blog" className="nav-link">BLOG</a>
-                    </nav>
+                        {/* Desktop Navigation */}
+                        <nav className="desktop-nav">
+                            <a href="/" className="nav-link">EVENTS</a>
+                            <a href="/tournament" className="nav-link">TOURNAMENT</a>
+                            <a href="/task" className="nav-link">Lions NFT</a>
+                            <a href="/about" className="nav-link">ABOUT US</a>
+                            <a href="/contact" className="nav-link">CONTACT US</a>
+                            <a href="/blog" className="nav-link">BLOG</a>
+                        </nav>
 
-                    {/* Right Side Actions */}
-                    <div className="header-actions">
-                        {/* Desktop-only Download App */}
-                        <button
-                            className="wallet-button app-button desktop-only"
-                            title="Download App"
-                            onClick={handleDownloadApk}
-                        >
-                            <span className="download-text">Download App</span>
-                            <Download className="download-icon w-4 h-4" />
-                        </button>
-                       
-                        {isLoggedIn ? (
-                            <div className="user-section">
-                                {/* Wallet Balance Button */}
-                                {/* Notifications Bell */}
-                               
-
-
-                                <button
-                                    onClick={toggleDropdown}
-                                    className="wallet-button"
-                                    title="Click to view wallet options"
-                                >
-                                    <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" />
-                                    <span className="wallet-balance">
-                                        {isLoadingBalance ? "Loading..." : walletBalance.toFixed(2)}
-                                    </span>
-                                    <ChevronDown className={`chevron-icon ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-
-
-                                {/* Dropdown Menu */}
-                                {isDropdownOpen && (
-                                    <div className="dropdown-menu">
-                                        <div className="dropdown-content">
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/profile');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <User className="dropdown-icon text-gray-700" />
-                                                My Profile
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/wallets');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <Plus className="dropdown-icon text-orange-500" />
-                                                Add Coin
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/wallets');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <ArrowUpDown className="dropdown-icon text-blue-500" />
-                                                Withdrawal
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/ongoing');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <History className="dropdown-icon text-green-500" />
-                                                Ongoing Matches
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/upcoming');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <History className="dropdown-icon text-yellow-500" />
-                                                Upcoming Matches
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/completed');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <History className="dropdown-icon text-blue-500" />
-                                                Completed Matches
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/cancelled');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <History className="dropdown-icon text-red-500" />
-                                                Cancelled Matches
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/wallets');
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="dropdown-item"
-                                            >
-                                                <Wallet className="dropdown-icon text-purple-500" />
-                                                Wallet History
-                                            </button>
-
-                                            <button
-                                                onClick={handleLogout}
-                                                className="dropdown-item logout-item"
-                                            >
-                                                <LogOut className="dropdown-icon" />
-                                                LOG OUT
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Click outside to close dropdown */}
-                                {isDropdownOpen && (
-                                    <div
-                                        className="dropdown-overlay"
-                                        onClick={() => setIsDropdownOpen(false)}
-                                    />
-                                )}
-                            </div>
-                        ) : (
+                        {/* Right Side Actions */}
+                        <div className="header-actions">
+                            {/* Desktop-only Download App */}
                             <button
-                                onClick={() => navigate('/login')}
-                                className="login-button"
+                                className="wallet-button app-button desktop-only"
+                                title="Download App"
+                                onClick={handleDownloadApk}
                             >
-                                LOGIN
+                                <span className="download-text">Download App</span>
+                                <Download className="download-icon w-4 h-4" />
                             </button>
-                        )}
 
-                        {/* Mobile Menu Toggle */}
-                        <button
-                            onClick={toggleMobileMenu}
-                            className="mobile-menu-toggle"
-                        >
-                            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                        </button>
-                        <NotificationBell byBookings onOpenMatch={(n) => { setSelectedMatch(n); setMatchModalOpen(true); }} />
+                            {isLoggedIn ? (
+                                <div className="user-section">
+                                    {/* Wallet Balance Button */}
+                                    {/* Notifications Bell */}
+
+
+
+                                    <button
+                                        onClick={toggleDropdown}
+                                        className="wallet-button"
+                                        title="Click to view wallet options"
+                                    >
+                                        <img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" />
+                                        <span className="wallet-balance">
+                                            {isLoadingBalance ? "Loading..." : walletBalance.toFixed(2)}
+                                        </span>
+                                        <ChevronDown className={`chevron-icon ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+
+
+                                    {/* Dropdown Menu */}
+                                    {isDropdownOpen && (
+                                        <div className="dropdown-menu">
+                                            <div className="dropdown-content">
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/profile');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <User className="dropdown-icon text-gray-700" />
+                                                    My Profile
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/wallets');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <Plus className="dropdown-icon text-orange-500" />
+                                                    Add Coin
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/wallets');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <ArrowUpDown className="dropdown-icon text-blue-500" />
+                                                    Withdrawal
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/ongoing');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <History className="dropdown-icon text-green-500" />
+                                                    Ongoing Matches
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/upcoming');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <History className="dropdown-icon text-yellow-500" />
+                                                    Upcoming Matches
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/completed');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <History className="dropdown-icon text-blue-500" />
+                                                    Completed Matches
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/cancelled');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <History className="dropdown-icon text-red-500" />
+                                                    Cancelled Matches
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        navigate('/wallets');
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="dropdown-item"
+                                                >
+                                                    <Wallet className="dropdown-icon text-purple-500" />
+                                                    Wallet History
+                                                </button>
+
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="dropdown-item logout-item"
+                                                >
+                                                    <LogOut className="dropdown-icon" />
+                                                    LOG OUT
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Click outside to close dropdown */}
+                                    {isDropdownOpen && (
+                                        <div
+                                            className="dropdown-overlay"
+                                            onClick={() => setIsDropdownOpen(false)}
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="login-button"
+                                >
+                                    LOGIN
+                                </button>
+                            )}
+
+                            {/* Mobile Menu Toggle */}
+                            <button
+                                onClick={toggleMobileMenu}
+                                className="mobile-menu-toggle"
+                            >
+                                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                            </button>
+                            <NotificationBell byBookings onOpenMatch={(n) => { setSelectedMatch(n); setMatchModalOpen(true); }} />
+                        </div>
                     </div>
-                </div>
 
-                {/* Mobile Navigation Menu */}
-                <div className={`mobile-menu ${isMobileMenuOpen ? 'show' : ''}`}>
-                    <nav className="mobile-nav">
-                        {/* Mobile-only Download App button */}
-                        <button className="wallet-button app-button mobile-only" onClick={() => { handleDownloadApk(); closeMobileMenu(); }}>
-                            <span className="download-text">Download App</span>
-                            <Download className="download-icon w-4 h-4" />
-                        </button>
-                        <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
-                        <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>
-                        <a href="/task" className="mobile-nav-link" onClick={closeMobileMenu}>Lions NFT</a>
-                        <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
-                        <a href="/contact" className="mobile-nav-link" onClick={closeMobileMenu}>CONTACT US</a>
-                    </nav>
-                </div>
+                    {/* Mobile Navigation Menu */}
+                    <div className={`mobile-menu ${isMobileMenuOpen ? 'show' : ''}`}>
+                        <nav className="mobile-nav">
+                            {/* Mobile-only Download App button */}
+                            <button className="wallet-button app-button mobile-only" onClick={() => { handleDownloadApk(); closeMobileMenu(); }}>
+                                <span className="download-text">Download App</span>
+                                <Download className="download-icon w-4 h-4" />
+                            </button>
+                            <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>EVENTS</a>
+                            <a href="/tournament" className="mobile-nav-link" onClick={closeMobileMenu}>TOURNAMENT</a>
+                            <a href="/task" className="mobile-nav-link" onClick={closeMobileMenu}>Lions NFT</a>
+                            <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>ABOUT US</a>
+                            <a href="/contact" className="mobile-nav-link" onClick={closeMobileMenu}>CONTACT US</a>
+                        </nav>
+                    </div>
 
-                {/* Mobile Menu Overlay */}
-                {isMobileMenuOpen && (
-                    <div
-                        className="mobile-menu-overlay"
-                        onClick={closeMobileMenu}
-                    />
-                )}
-            </div>
-            <MatchNotificationModal open={matchModalOpen} onClose={() => setMatchModalOpen(false)} item={selectedMatch} />
-        </header>
+                    {/* Mobile Menu Overlay */}
+                    {isMobileMenuOpen && (
+                        <div
+                            className="mobile-menu-overlay"
+                            onClick={closeMobileMenu}
+                        />
+                    )}
+                </div>
+                <MatchNotificationModal open={matchModalOpen} onClose={() => setMatchModalOpen(false)} item={selectedMatch} />
+            </header>
         </>
     );
 };

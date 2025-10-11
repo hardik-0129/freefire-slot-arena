@@ -350,6 +350,7 @@ const AdminDashboard = () => {
     phone: '',
     freeFireUsername: '',
     wallet: '',
+    winAmount: '',
     isAdmin: false
   });
 
@@ -367,6 +368,7 @@ const AdminDashboard = () => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [winMoneyAmount, setWinMoneyAmount] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+  const [walletCreditAmount, setWalletCreditAmount] = useState('');
 
   // Auto status update function
   const updateMatchStatuses = async () => {
@@ -2862,17 +2864,26 @@ const AdminDashboard = () => {
       phone: user.phone || '',
       freeFireUsername: user.freeFireUsername || '',
       wallet: user.wallet?.toString() || '0',
+      winAmount: user.winAmount?.toString() || '0',
       isAdmin: user.isAdmin || false
     });
     setShowEditUserModal(true);
   };
 
-  const handleUpdateUser = async () => {
+  const handleUpdateUser = async (opts?: { keepOpen?: boolean }) => {
     if (!editingUser) return;
 
     try {
       setIsUpdatingUser(true);
       const token = localStorage.getItem('adminToken');
+      // Only update profile details, NOT wallet or winAmount
+      const payload = {
+        name: editUserData.name,
+        email: editUserData.email,
+        phone: editUserData.phone,
+        freeFireUsername: editUserData.freeFireUsername,
+        isAdmin: editUserData.isAdmin
+      };
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/admin/update/${editingUser._id}`, {
         method: 'PUT',
@@ -2880,7 +2891,7 @@ const AdminDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(editUserData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -2888,7 +2899,9 @@ const AdminDashboard = () => {
           title: "Success",
           description: "User updated successfully",
         });
-        setShowEditUserModal(false);
+        if (!opts?.keepOpen) {
+          setShowEditUserModal(false);
+        }
         fetchUsers(); // Refresh users list
       } else {
         const errorData = await response.json();
@@ -2912,7 +2925,7 @@ const AdminDashboard = () => {
       setIsUpdatingUser(true);
       const token = localStorage.getItem('adminToken');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/update-user-win-money`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2920,17 +2933,63 @@ const AdminDashboard = () => {
         },
         body: JSON.stringify({
           userId: editingUser._id,
-          amount: parseFloat(winMoneyAmount)
+          amount: parseFloat(winMoneyAmount),
+          description: `Admin credit: Win Money`
         })
       });
 
       if (response.ok) {
         toast({ title: 'Success', description: `Added ₹${winMoneyAmount} to win money` });
         setWinMoneyAmount('');
-        fetchUsers();
+        fetchUsers(); // Refresh user list
+        // Update local state to reflect new winAmount
+        setEditUserData(prev => ({
+          ...prev,
+          winAmount: String((parseFloat(prev.winAmount) || 0) + parseFloat(winMoneyAmount))
+        }));
       } else {
         const err = await response.json();
         throw new Error(err?.error || 'Failed to add win money');
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e?.message || 'Request failed' });
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  };
+
+  const handleAddToWallet = async () => {
+    if (!editingUser || !walletCreditAmount) return;
+
+    try {
+      setIsUpdatingUser(true);
+      const token = localStorage.getItem('adminToken');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-join-money`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: editingUser._id,
+          amount: parseFloat(walletCreditAmount),
+          description: `Admin credit: Join Money`
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: 'Success', description: `Added ₹${walletCreditAmount} to wallet` });
+        setWalletCreditAmount('');
+        fetchUsers(); // Refresh user list
+        // Update local state to reflect new wallet balance
+        setEditUserData(prev => ({
+          ...prev,
+          wallet: String((parseFloat(prev.wallet) || 0) + parseFloat(walletCreditAmount))
+        }));
+      } else {
+        const err = await response.json();
+        throw new Error(err?.error || 'Failed to add to wallet');
       }
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e?.message || 'Request failed' });
@@ -3076,7 +3135,7 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-white">Phone</th>
                   <th className="text-left p-3 text-white">User ID</th>
                   <th className="text-left p-3 text-white">Free Fire Username</th>
-                  <th className="text-left p-3 text-white">Wallet</th>
+                  <th className="text-left p-3 text-white">Total Balance</th>
                   <th className="text-left p-3 text-white">Joined</th>
                   <th className="text-right p-3 text-white">Actions</th>
                 </tr>
@@ -3117,7 +3176,7 @@ const AdminDashboard = () => {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-green-400 font-bold">₹{Math.floor(user.wallet || 0)}</span>
+                      <span className="text-green-400 font-bold">₹{Math.floor((parseFloat(user.wallet) || 0) + (parseFloat(user.winAmount) || 0))}</span>
                     </td>
                     <td className="p-3 text-gray-400">
                       {new Date(user.createdAt).toLocaleDateString('en-IN', {
@@ -4033,26 +4092,30 @@ const AdminDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="editUserWallet" className="text-white">Wallet Balance</Label>
+                <Label htmlFor="editUserWallet" className="text-white">Wallet Balance (Join Money)</Label>
                 <Input
                   id="editUserWallet"
                   type="number"
                   min="0"
                   step="0.01"
                   value={editUserData.wallet}
-                  onChange={(e) => setEditUserData({ ...editUserData, wallet: e.target.value })}
-                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  readOnly
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">Read-only. Use the actions below to credit amounts.</p>
               </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <input
-                  type="checkbox"
-                  id="editUserIsAdmin"
-                  checked={editUserData.isAdmin}
-                  onChange={(e) => setEditUserData({ ...editUserData, isAdmin: e.target.checked })}
-                  className="w-4 h-4 text-green-600 bg-[#1A1A1A] border-[#2A2A2A] rounded focus:ring-green-500 focus:ring-2"
+              <div>
+                <Label htmlFor="editUserWinAmount" className="text-white">Win Amount (Earnings)</Label>
+                <Input
+                  id="editUserWinAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editUserData.winAmount}
+                  readOnly
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 cursor-not-allowed"
                 />
-                <Label htmlFor="editUserIsAdmin" className="text-white cursor-pointer">Admin Access</Label>
+                <p className="text-xs text-gray-500 mt-1">Read-only. Use the actions below to credit amounts.</p>
               </div>
             </div>
 
@@ -4072,7 +4135,31 @@ const AdminDashboard = () => {
                 />
                 <Button
                   type="button"
-                  onClick={handleAddWinMoney}
+                  onClick={async () => {
+                    const amt = Number(winMoneyAmount);
+                    if (!amt || amt <= 0 || !editingUser) return;
+                    try {
+                      setIsUpdatingUser(true);
+                      const adminToken = localStorage.getItem('adminToken');
+                      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
+                        },
+                        body: JSON.stringify({ userId: editingUser._id, amount: amt })
+                      });
+                      if (res.ok) {
+                        // Reflect new wallet locally (backend adds to wallet and winAmount)
+                        const nextWallet = (Number(editUserData.wallet) || 0) + amt;
+                        setEditUserData(prev => ({ ...prev, wallet: String(nextWallet) }));
+                        setWinMoneyAmount('');
+                      }
+                    } catch (_) {
+                    } finally {
+                      setIsUpdatingUser(false);
+                    }
+                  }}
                   disabled={isUpdatingUser || !winMoneyAmount}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -4080,6 +4167,32 @@ const AdminDashboard = () => {
                 </Button>
               </div>
               <p className="text-xs text-gray-400">Creates a WIN transaction like NFT distribution, so it shows in earnings.</p>
+            </div>
+
+            {/* Admin wallet credit (adds to wallet balance) */}
+            <div className="space-y-2 mt-2">
+              <Label htmlFor="walletCreditAmount" className="text-white">Add to Wallet (admin credit)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="walletCreditAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={walletCreditAmount}
+                  onChange={(e) => setWalletCreditAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddToWallet}
+                  disabled={isUpdatingUser || !walletCreditAmount}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Add to Wallet
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400">Credits the wallet balance directly (admin action).</p>
             </div>
           </div>
           
@@ -4094,7 +4207,7 @@ const AdminDashboard = () => {
             </Button>
             <Button
               type="button"
-              onClick={handleUpdateUser}
+              onClick={() => handleUpdateUser({ keepOpen: false })}
               disabled={isUpdatingUser}
               className="bg-green-600 hover:bg-green-700"
             >
