@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import {  Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import Footer from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -146,12 +146,44 @@ const SelectSlot = () => {
       if (response.ok) {
         const bookings = await response.json();
         const booked: { [key: string]: string[] } = {};
-        // Map numbers to letters for positions
-        const posMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
 
         bookings.data.forEach((booking: any) => {
-          if (booking.selectedPositions) {
+          console.log(`[SelectSlot] Processing booking:`, booking);
+
+          // For DUO/SQUAD mode, prioritize playerIndex over selectedPositions
+          if (booking.playerIndex && (gameMode === 'duo' || gameMode === 'full map duo' || gameMode === 'squad')) {
+            console.log(`[SelectSlot] Using playerIndex for ${gameMode} mode:`, booking.playerIndex);
+            booking.playerIndex.forEach((pIdx: number) => {
+              let teamNumber, posLetter;
+              
+              if (gameMode === 'duo' || gameMode === 'full map duo') {
+                // DUO mode: 2 positions per team
+                teamNumber = Math.ceil(pIdx / 2);
+                posLetter = (pIdx % 2 === 1) ? 'A' : 'B';
+              } else if (gameMode === 'squad') {
+                // SQUAD mode: 4 positions per team
+                teamNumber = Math.ceil(pIdx / 4);
+                const posInTeam = ((pIdx - 1) % 4) + 1; // 1,2,3,4
+                const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                posLetter = posMap[posInTeam];
+              }
+              
+              const uiTeamKey = `Team ${teamNumber}`;
+
+              console.log(`[SelectSlot] PlayerIndex ${pIdx} -> uiTeamKey: ${uiTeamKey}, posLetter: ${posLetter}`);
+
+              if (!booked[uiTeamKey]) booked[uiTeamKey] = [];
+              if (!booked[uiTeamKey].includes(posLetter)) {
+                booked[uiTeamKey].push(posLetter);
+                console.log(`[SelectSlot] Added ${posLetter} to ${uiTeamKey}, booked[${uiTeamKey}]:`, booked[uiTeamKey]);
+              } else {
+                console.log(`[SelectSlot] Position ${posLetter} already booked for ${uiTeamKey} via playerIndex. Skipping duplicate.`);
+              }
+            });
+          } else if (booking.selectedPositions) {
             Object.entries(booking.selectedPositions).forEach(([teamKey, arr]: [string, any]) => {
+              console.log(`[SelectSlot] Processing teamKey: ${teamKey}, positions:`, arr);
+
               // SOLO MODE: teamA:[n] => Team n, position A
               if (gameMode === 'solo' && teamKey === 'teamA') {
                 arr.forEach((pos: any) => {
@@ -162,38 +194,64 @@ const SelectSlot = () => {
                 });
                 return;
               }
-              // DUO/SQUAD: teamA:[n], teamB:[n], ...
-              let teamNum = null;
-              let uiTeamKey = teamKey;
-              // Try to extract team number from key
-              const numMatch = teamKey.match(/team(\d+)/i);
-              if (numMatch) {
-                teamNum = parseInt(numMatch[1], 10);
-                uiTeamKey = `Team ${teamNum}`;
-              } else {
-                // Try to extract from 'teamA', 'teamB', etc.
-                const letterMatch = teamKey.match(/team([a-z])/i);
-                if (letterMatch) {
-                  teamNum = letterMatch[1].toLowerCase().charCodeAt(0) - 96;
-                  uiTeamKey = `Team ${teamNum}`;
-                }
-              }
-              // Fallback: if already 'Team 1', 'Team 2', etc.
-              if (/^Team \d+$/i.test(teamKey)) {
-                uiTeamKey = teamKey;
-              }
 
-              // For each position, map to letter (A/B/C/D) for UI
+              // For SQUAD mode, map positions based on overall slot numbers
               arr.forEach((pos: any) => {
-                const posStr = String(pos);
-                let posLetter = posMap[posStr] || posStr;
-                if (!booked[uiTeamKey]) booked[uiTeamKey] = [];
-                if (!booked[uiTeamKey].includes(posLetter)) booked[uiTeamKey].push(posLetter);
+                const positionNum = parseInt(pos);
+                console.log(`[SelectSlot] Processing position: ${positionNum}`);
+
+                // Determine which team this position belongs to
+                let uiTeamKey = '';
+                let columnLetter = '';
+
+                if (positionNum >= 1 && positionNum <= 4) {
+                  // Team 1: positions 1,2,3,4
+                  uiTeamKey = 'Team 1';
+                  const normalizedPos = positionNum; // 1,2,3,4
+                  const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                  columnLetter = posMap[normalizedPos];
+                } else if (positionNum >= 5 && positionNum <= 8) {
+                  // Team 2: positions 5,6,7,8
+                  uiTeamKey = 'Team 2';
+                  const normalizedPos = positionNum - 4; // 5->1, 6->2, 7->3, 8->4
+                  const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                  columnLetter = posMap[normalizedPos];
+                } else if (positionNum >= 9 && positionNum <= 12) {
+                  // Team 3: positions 9,10,11,12
+                  uiTeamKey = 'Team 3';
+                  const normalizedPos = positionNum - 8; // 9->1, 10->2, 11->3, 12->4
+                  const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                  columnLetter = posMap[normalizedPos];
+                } else if (positionNum >= 13 && positionNum <= 16) {
+                  // Team 4: positions 13,14,15,16
+                  uiTeamKey = 'Team 4';
+                  const normalizedPos = positionNum - 12; // 13->1, 14->2, 15->3, 16->4
+                  const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                  columnLetter = posMap[normalizedPos];
+                } else {
+                  // Handle higher positions (Team 5, 6, etc.)
+                  const teamNumber = Math.ceil(positionNum / 4);
+                  uiTeamKey = `Team ${teamNumber}`;
+                  const normalizedPos = ((positionNum - 1) % 4) + 1; // 1,2,3,4
+                  const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                  columnLetter = posMap[normalizedPos];
+                }
+
+                console.log(`[SelectSlot] Position ${positionNum} -> Team: ${uiTeamKey}, Column: ${columnLetter}`);
+
+                if (uiTeamKey && columnLetter) {
+                  if (!booked[uiTeamKey]) booked[uiTeamKey] = [];
+                  if (!booked[uiTeamKey].includes(columnLetter)) {
+                    booked[uiTeamKey].push(columnLetter);
+                    console.log(`[SelectSlot] Added ${columnLetter} to ${uiTeamKey}, booked[${uiTeamKey}]:`, booked[uiTeamKey]);
+                  }
+                }
               });
             });
           }
         });
 
+        console.log(`[SelectSlot] Final booked positions:`, booked);
         setBookedPositions(booked);
       } else {
         console.error('Failed to fetch booked positions:', response.status);
@@ -278,13 +336,13 @@ const SelectSlot = () => {
     if (trimmedValue !== '') {
       const existingNames = Object.values(playerNames).map(name => name.trim().toLowerCase());
       const isDuplicate = existingNames.includes(trimmedValue.toLowerCase());
-      
+
       if (isDuplicate) {
         toast.error('This Free Fire game name is already used! Please enter a different name.');
         return; // Don't update the state if it's a duplicate
       }
     }
-    
+
     setPlayerNames(prev => ({
       ...prev,
       [key]: value
@@ -319,12 +377,12 @@ const SelectSlot = () => {
     const missingNames = [];
     const duplicateNames = [];
     const enteredNames = [];
-    
+
     Object.entries(selectedPositions).forEach(([team, positions]) => {
       positions.forEach(position => {
         const key = `${team}-${position}`;
         const playerName = playerNames[key];
-        
+
         if (!playerName || playerName.trim() === '') {
           missingNames.push(`${team} Position${position}`);
         } else {
@@ -391,8 +449,8 @@ const SelectSlot = () => {
             }
           } else if (normalizedGameMode === 'squad') {
             // For squad, index: (teamNumber-1)*4 + (A=1, B=2, C=3, D=4)
-            if (!isNaN(teamNumber) && ['A','B','C','D'].includes(pos)) {
-              const posMap = {A:1,B:2,C:3,D:4};
+            if (!isNaN(teamNumber) && ['A', 'B', 'C', 'D'].includes(pos)) {
+              const posMap = { A: 1, B: 2, C: 3, D: 4 };
               playerIndex.push((teamNumber - 1) * 4 + posMap[pos]);
             }
           }
@@ -432,8 +490,8 @@ const SelectSlot = () => {
               teamKey = position === 'A' ? 'teamA' : 'teamB';
             }
           } else if (normalizedGameMode === 'squad') {
-            if (!isNaN(teamNumber) && ['A','B','C','D'].includes(position)) {
-              const posMap = {A:1,B:2,C:3,D:4};
+            if (!isNaN(teamNumber) && ['A', 'B', 'C', 'D'].includes(position)) {
+              const posMap = { A: 1, B: 2, C: 3, D: 4 };
               playerIdx = (teamNumber - 1) * 4 + posMap[position];
               if (position === 'A') teamKey = 'teamA';
               else if (position === 'B') teamKey = 'teamB';
@@ -675,47 +733,47 @@ const SelectSlot = () => {
             <h3 className="form-heading">FILL YOUR DETAILS</h3>
 
             <table className="details-table">
-  <thead>
-    <tr>
-      <th>No.</th>
-      <th>TEAM</th>
-      <th>POSITION</th>
-      <th>FF SAME GAME NAME</th>
-    </tr>
-  </thead>
-  <tbody>
-    {Object.entries(selectedPositions)
-      .flatMap(([teamName, positions]) =>
-        positions.map((position) => ({ teamName, position }))
-      )
-      .map(({ teamName, position }, index) => {
-        const key = `${teamName}-${position}`;
-        return (
-          <tr key={key}>
-            <td>{index + 1}</td>
-            <td><span className="team-badge">TEAM : {teamName.replace('Team', '')}</span></td>
-            <td><span className="position-badge">POSITION :{position}</span></td>
-            <td>
-              <input
-                type="text"
-                value={playerNames[key] || ''}
-                onChange={(e) => handlePlayerNameChange(key, e.target.value)}
-                placeholder="Enter FF Game Name"
-                className="input-name"
-              />
-            </td>
-          </tr>
-        );
-      })}
-    {Object.keys(selectedPositions).length === 0 && (
-      <tr>
-        <td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-          Please select positions from the tables above to enter player details
-        </td>
-      </tr>
-    )}
-  </tbody>
-</table>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>TEAM</th>
+                  <th>POSITION</th>
+                  <th>FF SAME GAME NAME</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(selectedPositions)
+                  .flatMap(([teamName, positions]) =>
+                    positions.map((position) => ({ teamName, position }))
+                  )
+                  .map(({ teamName, position }, index) => {
+                    const key = `${teamName}-${position}`;
+                    return (
+                      <tr key={key}>
+                        <td>{index + 1}</td>
+                        <td><span className="team-badge">TEAM : {teamName.replace('Team', '')}</span></td>
+                        <td><span className="position-badge">POSITION :{position}</span></td>
+                        <td>
+                          <input
+                            type="text"
+                            value={playerNames[key] || ''}
+                            onChange={(e) => handlePlayerNameChange(key, e.target.value)}
+                            placeholder="Enter FF Game Name"
+                            className="input-name"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {Object.keys(selectedPositions).length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                      Please select positions from the tables above to enter player details
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
           <div className="payment-details">
@@ -771,15 +829,15 @@ const SelectSlot = () => {
           customStartInMinutes: slotData?.customStartInMinutes ?? 0,
           createdAt: slotData?.createdAt || '',
           updatedAt: slotData?.updatedAt || '',
-          banList: slotData?.banList,
-          contactInfo: slotData?.contactInfo,
+          // banList: slotData?.banList,
+          // contactInfo: slotData?.contactInfo,
           discordLink: slotData?.discordLink,
           gameMode: slotData?.gameMode,
           mapName: slotData?.mapName,
-          matchDescription: slotData?.matchDescription,
+          // matchDescription: slotData?.matchDescription,  
           prizeDistribution: slotData?.prizeDistribution,
           rules: slotData?.rules,
-          specialRules: slotData?.specialRules,
+          // specialRules: slotData?.specialRules,
           status: slotData?.status,
           streamLink: slotData?.streamLink,
           tournamentName: slotData?.tournamentName,
