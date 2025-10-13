@@ -20,7 +20,7 @@ interface Slot {
     createdAt: string;
     updatedAt: string;
     status: string;
-    matchIndex?: number; // Added property
+    matchIndex?: number;
     // Enhanced match information
     banList?: string;
     contactInfo?: string;
@@ -35,6 +35,11 @@ interface Slot {
     tournamentName?: string;
     hostName?: string;
     matchTitle?: string;
+    bannerImage?: string;
+    firstwin?: number;
+    secwin?: number;
+    thirdwin?: number;
+    cancelReason?: string;
 }
 
 const Compeleted = () => {
@@ -87,11 +92,40 @@ const Compeleted = () => {
     }, []);
 
     const handleViewResults = (slot: Slot) => {
-        navigate('/winner', { state: { slotData: slot } });
+        // Extract the actual slot data from the nested structure
+        const actualSlot = (slot as any).slot || slot;
+        
+        const slotData = {
+            _id: actualSlot._id || slot._id,
+            slotType: actualSlot.slotType || slot.slotType,
+            entryFee: actualSlot.entryFee || slot.entryFee,
+            matchTime: actualSlot.matchTime || slot.matchTime,
+            perKill: actualSlot.perKill || slot.perKill,
+            totalWinningPrice: actualSlot.totalWinningPrice || slot.totalWinningPrice,
+            maxBookings: actualSlot.maxBookings || slot.maxBookings,
+            remainingBookings: actualSlot.remainingBookings || slot.remainingBookings,
+            matchIndex: actualSlot.matchIndex || slot.matchIndex,
+            bannerImage: actualSlot.bannerImage || slot.bannerImage,
+            streamLink: actualSlot.streamLink || slot.streamLink,
+            mapName: actualSlot.mapName || slot.mapName,
+            tournamentName: actualSlot.tournamentName || slot.tournamentName,
+            matchTitle: actualSlot.matchTitle || slot.matchTitle,
+            firstwin: actualSlot.firstwin || slot.firstwin,
+            secwin: actualSlot.secwin || slot.secwin,
+            thirdwin: actualSlot.thirdwin || slot.thirdwin,
+            gameMode: actualSlot.gameMode || slot.gameMode,
+            discordLink: actualSlot.discordLink || slot.discordLink,
+            cancelReason: actualSlot.cancelReason || slot.cancelReason,
+            customStartInMinutes: actualSlot.customStartInMinutes || slot.customStartInMinutes,
+            createdAt: actualSlot.createdAt || slot.createdAt
+        };
+        navigate('/winner', { state: { slotData } });
     };
 
     const formatDate = (dateString: string) => {
+        if (!dateString) return 'INVALID DATE';
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'INVALID DATE';
         return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
@@ -187,11 +221,13 @@ const Compeleted = () => {
                                         </div>
                                         <div>
                                             <span className="match-id">#
-                                                {typeof match.matchIndex === 'number' && match.matchIndex >= 0
-                                                    ? match.matchIndex
-                                                    : (typeof (match as any).slot === 'object' && typeof (match as any).slot?.matchIndex === 'number' && (match as any).slot.matchIndex >= 0)
-                                                        ? (match as any).slot.matchIndex
-                                                        : match._id?.slice(-6).toUpperCase()}
+                                                {(() => {
+                                                    const actualSlot = (match as any).slot || match;
+                                                    const matchIndex = actualSlot.matchIndex || match.matchIndex;
+                                                    return (typeof matchIndex === 'number' && matchIndex >= 0)
+                                                        ? matchIndex
+                                                        : match._id?.slice(-6).toUpperCase();
+                                                })()}
                                             </span>
                                         </div>
                                     </div>
@@ -203,21 +239,31 @@ const Compeleted = () => {
                                     </h3>
                                     <div className="match-details-box">
                                         <div className="date-time">
-                                            {formatDate(match.matchTime || (typeof (match as any).slot === 'object' && (match as any).slot.matchTime))}
+                                            {(() => {
+                                                const actualSlot = (match as any).slot || match;
+                                                const matchTime = actualSlot.matchTime || match.matchTime;
+                                                return formatDate(matchTime);
+                                            })()}
                                         </div>
                                         <div className="prize-pill-container">
                                             <div className="prize-pill">
                                                 <div className="pill-label">PER KILL</div>
                                                 <div className="pill-value">
                                                     <img src="/assets/vector/Coin.png" alt="Coin" />
-                                                    {match.perKill}
+                                                    {(() => {
+                                                        const actualSlot = (match as any).slot;
+                                                        return actualSlot.perKill;
+                                                    })()}
                                                 </div>
                                             </div>
                                             <div className="prize-pill">
                                                 <div className="pill-label">WINNING PRIZE</div>
                                                 <div className="pill-value">
                                                     <img src="/assets/vector/Coin.png" alt="Coin" />
-                                                    {match.totalWinningPrice}
+                                                    {(() => {
+                                                        const actualSlot = (match as any).slot;
+                                                        return actualSlot.totalWinningPrice;
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>

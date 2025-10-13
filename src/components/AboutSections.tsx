@@ -6,7 +6,7 @@ export const AboutSection = () => {
             <div className="mx-auto text-center space-y-4">
                 {/* Heading */}
                 <h2 className="text-[42px] font-bold text-[#000000]">
-                    About Us
+                    ABOUT THIS MATCH
                 </h2>
 
                 {/* Welcome Text */}

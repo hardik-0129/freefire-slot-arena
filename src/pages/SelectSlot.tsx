@@ -152,7 +152,7 @@ const SelectSlot = () => {
 
           // For DUO/SQUAD mode, prioritize playerIndex over selectedPositions
           if (booking.playerIndex && (gameMode === 'duo' || gameMode === 'full map duo' || gameMode === 'squad')) {
-            console.log(`[SelectSlot] Using playerIndex for ${gameMode} mode:`, booking.playerIndex);
+            // console.log(`[SelectSlot] Using playerIndex for ${gameMode} mode:`, booking.playerIndex);
             booking.playerIndex.forEach((pIdx: number) => {
               let teamNumber, posLetter;
               
@@ -170,7 +170,7 @@ const SelectSlot = () => {
               
               const uiTeamKey = `Team ${teamNumber}`;
 
-              console.log(`[SelectSlot] PlayerIndex ${pIdx} -> uiTeamKey: ${uiTeamKey}, posLetter: ${posLetter}`);
+              // console.log(`[SelectSlot] PlayerIndex ${pIdx} -> uiTeamKey: ${uiTeamKey}, posLetter: ${posLetter}`);
 
               if (!booked[uiTeamKey]) booked[uiTeamKey] = [];
               if (!booked[uiTeamKey].includes(posLetter)) {
@@ -182,7 +182,7 @@ const SelectSlot = () => {
             });
           } else if (booking.selectedPositions) {
             Object.entries(booking.selectedPositions).forEach(([teamKey, arr]: [string, any]) => {
-              console.log(`[SelectSlot] Processing teamKey: ${teamKey}, positions:`, arr);
+              // console.log(`[SelectSlot] Processing teamKey: ${teamKey}, positions:`, arr);
 
               // SOLO MODE: teamA:[n] => Team n, position A
               if (gameMode === 'solo' && teamKey === 'teamA') {
@@ -237,13 +237,13 @@ const SelectSlot = () => {
                   columnLetter = posMap[normalizedPos];
                 }
 
-                console.log(`[SelectSlot] Position ${positionNum} -> Team: ${uiTeamKey}, Column: ${columnLetter}`);
+                // console.log(`[SelectSlot] Position ${positionNum} -> Team: ${uiTeamKey}, Column: ${columnLetter}`);
 
                 if (uiTeamKey && columnLetter) {
                   if (!booked[uiTeamKey]) booked[uiTeamKey] = [];
                   if (!booked[uiTeamKey].includes(columnLetter)) {
                     booked[uiTeamKey].push(columnLetter);
-                    console.log(`[SelectSlot] Added ${columnLetter} to ${uiTeamKey}, booked[${uiTeamKey}]:`, booked[uiTeamKey]);
+                    // console.log(`[SelectSlot] Added ${columnLetter} to ${uiTeamKey}, booked[${uiTeamKey}]:`, booked[uiTeamKey]);
                   }
                 }
               });
@@ -290,6 +290,24 @@ const SelectSlot = () => {
           team: teamName,
           position,
         });
+      }
+    }
+
+    // Enforce a hard cap ONLY for free matches
+    if (isFreeMatch) {
+      const maxSelectablePositions = getPositionsForGameMode(normalizedGameMode).length; // solo:1, duo:2, squad:4
+      const currentlySelectedCount = Object.values(selectedPositions).reduce((total, positions) => total + positions.length, 0);
+      const alreadySelectedInThisCell = selectedPositions[teamName]?.includes(position) || false;
+      if (isSelected && !alreadySelectedInThisCell && currentlySelectedCount >= maxSelectablePositions) {
+        // Don't allow selecting beyond the cap in free matches
+        if (normalizedGameMode === 'solo') {
+          toast.error('You can select only 1 position in Solo (Free)');
+        } else if (normalizedGameMode === 'duo' || normalizedGameMode === 'full map duo') {
+          toast.error('You can select only 2 positions in Duo (Free)');
+        } else if (normalizedGameMode === 'squad') {
+          toast.error('You can select only 4 positions in Squad (Free)');
+        }
+        return; // Block adding more
       }
     }
 
@@ -549,11 +567,12 @@ const SelectSlot = () => {
         }, 1500); // Small delay to show success message
       } else {
         const error = await response.json();
-        toast.error(`Failed to join match: ${error.message || 'Unknown error'}`);
+        console.log('Error response:', error);
+        toast.error(`${error.msg}`);
       }
     } catch (error) {
       console.error('Error joining match:', error);
-      toast.error('An error occurred while joining the match');
+      toast.error(` ${error.message}`);
     } finally {
       setIsJoining(false);
     }
@@ -648,6 +667,8 @@ const SelectSlot = () => {
                 const isSelected = selectedPositions[team.name]?.includes(position) || false;
                 const isBooked = bookedPositions[team.name]?.includes(position) || false;
                 const isLocked = lockedPositions[team.name]?.includes(position) || false;
+                const maxSelectablePositions = positions.length; // solo:1, duo:2, squad:4
+                const disableForQuota = isFreeMatch && (selectedPositionsCount >= maxSelectablePositions) && !isSelected; // limit only in free matches
 
                 return (
                   <td key={playerIndex}>
@@ -655,7 +676,7 @@ const SelectSlot = () => {
                       type="checkbox"
                       checked={isSelected || isBooked}
                       onChange={(e) => handlePositionSelect(team.name, position, e.target.checked)}
-                      disabled={isBooked || isLocked}
+                      disabled={isBooked || isLocked || disableForQuota}
                       className={isBooked ? 'orange' : isLocked ? 'locked' : ''}
                       title={isBooked ? 'This position is already booked' : isLocked ? 'This position is being selected by another user' : ''}
                     />

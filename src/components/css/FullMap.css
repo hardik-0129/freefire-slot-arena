@@ -25,12 +25,12 @@
 
 .match-card {
   background: #ffffff;
-  border-radius: 20px;
+  border-radius: 10px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 20px;
+  padding-bottom: 15px;
 }
 
 .match-image {
@@ -133,7 +133,7 @@
   padding: 5px 20px;
   font-size: 14px;
   font-weight: bold;
-  margin: 16px 0;
+  margin: 5px 0;
   width: 100%;
 }
 
@@ -155,7 +155,7 @@
   font-size: 16px;
   cursor: pointer;
   width: calc(100% - 40px);
-  margin: 10px auto 0;
+  margin: 5px auto 0;
   display: block;
   transition: background-color 0.3s ease;
 }
@@ -184,10 +184,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 10px;
-  border: 1.5px solid #000;
-  border-radius: 12px;
-  margin: 10px 15px 0;
+  padding: 5px 8px;
+  border-radius: 8px;
+  margin: 3px 15px 0;
+  border: 1px solid #000;
   background-color: #fff;
   flex-wrap: wrap;
   gap: 0px;
@@ -224,7 +224,6 @@
 
 .prize-pill .pill-label {
   font-size: 10px;
-  font-weight: bold;
   margin-bottom: 2px;
 }
 

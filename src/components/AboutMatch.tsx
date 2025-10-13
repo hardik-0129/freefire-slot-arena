@@ -114,7 +114,7 @@ const AboutMatch: React.FC<AboutMatchProps> = ({ slotData }) => {
         <>
             <div className="about">
                 <div className="gray-box">
-                    <div className="section-title">ABOUT THIS MATCH</div>
+                    <h2 className="section-title">ABOUT THIS MATCH</h2>
 
                     {/* <div className="rules-section">
                         <div className="emoji-title">🔥 {slotType === 'Clash Squad' ? 'CLASH SQUAD 2 VS 2 #MOSHIF'

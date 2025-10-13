@@ -14,8 +14,10 @@
 import Card from '@/components/Card'
 import Footer from '@/components/Footer'
 import { Header } from '@/components/Header'
+import BookingModal from '@/components/BookingModal'
 import React, { useEffect, useState } from 'react'
 import { jwtDecode } from 'jwt-decode';
+import { Booking } from '../types/booking';
 import '../components/css/MatchModal.css'
 
 // Helper function to format date in DD/MM/YYYY format
@@ -42,28 +44,6 @@ const formatDateTime = (dateString: string) => {
     return `${day}/${month}/${year} ${formattedHours}:${minutes}:${seconds} ${ampm}`;
 };
 
-interface Booking {
-    _id: string;
-    selectedPositions: { [key: string]: string[] };
-    playerNames: { [key: string]: string };
-    totalAmount: number;
-    entryFee: number;
-    status: string;
-    createdAt: string;
-    slot: {
-        _id: string;
-        slotType: string;
-        matchTime: string;
-        totalWinningPrice: number;
-        perKill: number;
-        matchTitle?: string;
-        tournamentName?: string;
-        mapName?: string;
-        specialRules?: string;
-        maxPlayers?: number;
-        streamLink?: string;
-    } | null;
-}
 
 const Upcoming = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -354,7 +334,7 @@ const Upcoming = () => {
                             {/* Match Info */}
                             <div className="match-info-section">
                                 <h3 className="match-info-title">
-                                    MATCH #{selectedMatch.slot._id.slice(-4)} - {selectedMatch.slot.slotType?.toUpperCase()}
+                                    MATCH #{selectedMatch.slot.matchIndex} - {selectedMatch.slot.slotType?.toUpperCase()}
                                 </h3>
                                 <div className="match-info-grid">
                                     <div className="match-info-item">
@@ -458,14 +438,60 @@ const Upcoming = () => {
                                             <div className="positions-section">
                                                 <p className="positions-title">Selected Positions</p>
                                                 <div>
-                                                    {Object.entries(booking.selectedPositions).map(([team, positions]) => (
-                                                        <div key={team} className="team-positions">
-                                                            <span className="team-name">{team.toUpperCase()}:</span>
-                                                            {positions.map((pos, idx) => (
-                                                                <span key={idx} className="position-badge">{pos}</span>
-                                                            ))}
-                                                        </div>
-                                                    ))}
+                                                    {booking.playerIndex && booking.playerIndex.length > 0 ? (
+                                                        // Use playerIndex to show proper team and position format
+                                                        booking.playerIndex.map((pIdx, idx) => {
+                                                            let teamNumber, positionLetter;
+                                                            
+                                                            // Debug logging
+                                                            console.log(`[Upcoming] Processing playerIndex ${pIdx}, slotType: ${booking.slotType}, gameMode: ${booking.slot?.gameMode}`);
+                                                            
+                                                            // Use gameMode from slot object (more reliable than slotType)
+                                                            const gameMode = booking.slot?.gameMode;
+                                                            console.log(`[Upcoming] Using gameMode: ${gameMode}`);
+                                                            
+                                                            // Determine team and position based on game mode
+                                                            if (gameMode === 'Solo' || gameMode === 'solo') {
+                                                                // Solo: 1 = Team 1, 2 = Team 2, 3 = Team 3, etc.
+                                                                teamNumber = pIdx;
+                                                                positionLetter = 'A';
+                                                            } else if (gameMode === 'Duo' || gameMode === 'duo') {
+                                                                // Duo: 1,2 = Team 1, 3,4 = Team 2, 5,6 = Team 3, etc.
+                                                                teamNumber = Math.ceil(pIdx / 2);
+                                                                positionLetter = (pIdx % 2 === 1) ? 'A' : 'B';
+                                                            } else if (gameMode === 'Squad' || gameMode === 'squad') {
+                                                                // Squad: 1,2,3,4 = Team 1, 5,6,7,8 = Team 2, 9,10,11,12 = Team 3, etc.
+                                                                teamNumber = Math.ceil(pIdx / 4);
+                                                                const posInTeam = ((pIdx - 1) % 4) + 1;
+                                                                const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                                                                positionLetter = posMap[posInTeam];
+                                                            } else {
+                                                                // Fallback for other modes - treat as squad
+                                                                teamNumber = Math.ceil(pIdx / 4);
+                                                                const posInTeam = ((pIdx - 1) % 4) + 1;
+                                                                const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                                                                positionLetter = posMap[posInTeam];
+                                                            }
+                                                            
+                                                            console.log(`[Upcoming] Result: pIdx=${pIdx} -> Team-${teamNumber} ${positionLetter}`);
+                                                            
+                                                            return (
+                                                                <div key={idx} className="position-item">
+                                                                    <span className="position-badge">Team-{teamNumber} {positionLetter}</span>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        // Fallback to original display if playerIndex not available
+                                                        Object.entries(booking.selectedPositions).map(([team, positions]) => (
+                                                            <div key={team} className="team-positions">
+                                                                <span className="team-name">{team.toUpperCase()}:</span>
+                                                                {positions.map((pos, idx) => (
+                                                                    <span key={idx} className="position-badge">{pos}</span>
+                                                                ))}
+                                                            </div>
+                                                        ))
+                                                    )}
                                                 </div>
                                             </div>
 

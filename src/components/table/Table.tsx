@@ -60,6 +60,12 @@ const Table: React.FC<TableProps> = ({ slotId, showWinners = false, topOnly = fa
     if (showWinners && winners && winners.length > 0) {
         const sorted = [...winners].sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
         displayData = topOnly ? sorted.slice(0, 3) : sorted;
+        
+        // Assign proper sequential rankings starting from 1
+        displayData = displayData.map((winner, index) => ({
+            ...winner,
+            rank: index + 1
+        }));
     }
     // Debug output removed
     return (
@@ -67,10 +73,10 @@ const Table: React.FC<TableProps> = ({ slotId, showWinners = false, topOnly = fa
             <div className="winner-table-container">
                 <div className="table-title">WINNER</div>
                 {loading && (
-                    <div className="text-center py-4 text-gray-400">Loading winners...</div>
+                    <div className="text-center text-gray-400">Loading winners...</div>
                 )}
                 {error && (
-                    <div className="text-center py-4 text-red-400">{error}</div>
+                    <div className="text-center text-red-400">{error}</div>
                 )}
                 {!loading && !error && (
                     <>
@@ -91,13 +97,13 @@ const Table: React.FC<TableProps> = ({ slotId, showWinners = false, topOnly = fa
                                             <td>{winner.rank ?? '-'}</td>
                                             <td>{winner.playerName}</td>
                                             <td>{winner.kills ?? '-'}</td>
-                                            <td>₹ {winner.winningPrice !== undefined ? Number(winner.winningPrice).toFixed(2) : '-'}</td>
+                                            <td>₹ {winner.winningPrice !== undefined && winner.winningPrice !== null ? Number(winner.winningPrice).toFixed(2) : '0.00'}</td>
                                         </tr>
                                     ))
                                 ) : (
                                     showWinners ? (
                                         <tr>
-                                            <td colSpan={4} className="text-center py-4 text-gray-400">
+                                            <td colSpan={4} className="text-center text-gray-400">
                                                 No winners announced yet
                                             </td>
                                         </tr>

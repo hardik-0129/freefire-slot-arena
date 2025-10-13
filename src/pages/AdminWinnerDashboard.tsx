@@ -858,13 +858,13 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                 ))
                                 : (
                                   <tr>
-                                    <td colSpan={6} className="text-center text-gray-400 py-4">No winners added yet.</td>
+                                    <td colSpan={6} className="text-center text-gray-400">No winners added yet.</td>
                                   </tr>
                                 );
                             })()
                           ) : (
                             <tr>
-                              <td colSpan={6} className="text-center text-gray-400 py-4">No winners added yet.</td>
+                              <td colSpan={6} className="text-center text-gray-400">No winners added yet.</td>
                             </tr>
                           )}
                         </tbody>
@@ -930,7 +930,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                             })
                           ) : (
                             <tr>
-                              <td colSpan={6} className="text-center text-gray-400 py-4">No players booked for this match.</td>
+                              <td colSpan={6} className="text-center text-gray-400">No players booked for this match.</td>
                             </tr>
                           )}
                         </tbody>

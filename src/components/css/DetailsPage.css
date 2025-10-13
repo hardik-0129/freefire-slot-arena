@@ -59,10 +59,10 @@ h1 {
   border: 2px solid orange;
 }
 
-.rules-section {
+/* .rules-section {
   margin-bottom: 25px;
   padding-bottom: 15px;
-}
+} */
 
 .rules-section:last-child {
   border-bottom: none;
@@ -174,10 +174,10 @@ h1 {
     flex-direction: column;
   }
 
-  .gray-box {
+  /* .gray-box {
     padding: 20px 15px;
     margin-top: 15px;
-  }
+  } */
 
   .section-title {
     font-size: 18px;
@@ -227,11 +227,11 @@ h1 {
     font-weight: 700;
   }
 
-  .gray-box {
+  /* .gray-box {
     padding: 15px 12px;
     margin: 15px 0px;
     border-radius: 8px;
-  }
+  } */
 
   .match-title {
     font-size: 18px;
