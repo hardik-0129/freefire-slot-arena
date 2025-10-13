@@ -7,8 +7,9 @@ import "../components/css/FullMap.css"
 import "../components/css/MatchModal.css"
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { jwtDecode } from 'jwt-decode'
 
-    interface Slot {
+interface Slot {
     _id: string;
     slotType: string;
     entryFee: number;
@@ -23,7 +24,7 @@ import 'react-loading-skeleton/dist/skeleton.css'
     gameMode?: string;
     bannerImage?: string;
     matchIndex?: number;
-        status?: 'upcoming' | 'live' | 'completed' | 'cancelled' | 'canceled' | string;
+    status?: 'upcoming' | 'live' | 'completed' | 'cancelled' | 'canceled' | string;
     matchTitle?: string;
     specialRules?: string;
     tournamentName?: string;
@@ -44,10 +45,17 @@ const FullMap = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeFilter, setActiveFilter] = useState<'upcoming' | 'live' | 'completed'>('upcoming');
-    
+
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState<Slot | null>(null);
+    const [bookingDetails, setBookingDetails] = useState<null | {
+        selectedPositions: Record<string, string[]>;
+        playerIndex: number[];
+        playerNames: Record<string, string>;
+    }>(null);
+
+    console.log('bookingDetails', bookingDetails);
 
     // Get the selected game type data from navigation state or query string
     const selectedGameTypeData: GameTypeData | undefined = location.state?.selectedGameType || location.state?.gameTypeData;
@@ -78,7 +86,7 @@ const FullMap = () => {
             }
 
             // Store all slots; filtering is handled in visibleSlots to allow Completed to show all
-                setSlots(slotsData);
+            setSlots(slotsData);
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch slots data';
             setError(`Failed to fetch slots data: ${errorMessage}`);
@@ -125,9 +133,43 @@ const FullMap = () => {
     };
 
     // Modal functions
+    const loadBookingDetails = async (slotId: string) => {
+        try {
+            let userId = '';
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const decoded = jwtDecode<{ userId?: string }>(token);
+                    userId = decoded.userId || '';
+                } catch { }
+            }
+            console.log('userId', userId);
+            if (!userId) { setBookingDetails(null); return; }
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/bookings/user-booking`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ userId, slotId })
+            });
+            if (!res.ok) { setBookingDetails(null); return; }
+            const data = await res.json();
+            const b = data?.bookings || {};
+            setBookingDetails({
+                selectedPositions: b.selectedPositions || {},
+                playerIndex: Array.isArray(b.playerIndex) ? b.playerIndex : [],
+                playerNames: b.playerNames || {}
+            });
+        } catch {
+            setBookingDetails(null);
+        }
+    };
+
     const openModal = (slot: Slot) => {
         setSelectedMatch(slot);
         setShowModal(true);
+        loadBookingDetails(slot._id);
     };
 
     const closeModal = () => {
@@ -181,43 +223,43 @@ const FullMap = () => {
         });
     };
 
-  // Lightweight countdown badge for upcoming matches
-  const CountdownBadge: React.FC<{ target: string }> = ({ target }) => {
-    const [now, setNow] = useState<number>(Date.now());
-    useEffect(() => {
-      const id = setInterval(() => setNow(Date.now()), 1000);
-      return () => clearInterval(id);
-    }, []);
-    const targetMs = new Date(target).getTime();
-    let diff = targetMs - now; // ms
-    if (diff <= 0) return null;
-    const totalSeconds = Math.floor(diff / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const text = days > 0
-      ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-      : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-    return (
-      <span
-        style={{
-          fontSize: 12,
-        }}
-        title={new Date(target).toLocaleString('en-IN')}
-      >
-        {text}
-      </span>
-    );
-  };
+    // Lightweight countdown badge for upcoming matches
+    const CountdownBadge: React.FC<{ target: string }> = ({ target }) => {
+        const [now, setNow] = useState<number>(Date.now());
+        useEffect(() => {
+            const id = setInterval(() => setNow(Date.now()), 1000);
+            return () => clearInterval(id);
+        }, []);
+        const targetMs = new Date(target).getTime();
+        let diff = targetMs - now; // ms
+        if (diff <= 0) return null;
+        const totalSeconds = Math.floor(diff / 1000);
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const text = days > 0
+            ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+            : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        return (
+            <span
+                style={{
+                    fontSize: 12,
+                }}
+                title={new Date(target).toLocaleString('en-IN')}
+            >
+                {text}
+            </span>
+        );
+    };
 
     return (
         <>
             <Header />
             <section className="py-16 match-section">
                 <div className="container">
-                    
+
                     <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-bold text-center mb-8 sm:mb-12 px-4">
                         {selectedType ? `${selectedType} Tournaments` : 'Tournaments'}
                     </h2>
@@ -226,25 +268,22 @@ const FullMap = () => {
                     <div className="flex flex-col sm:flex-row justify-center mb-8 gap-2 sm:gap-4 px-4">
                         <button
                             onClick={() => handleFilterChange('upcoming')}
-                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
-                                activeFilter === 'upcoming' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${activeFilter === 'upcoming' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
                         >
                             Upcoming Matches
                         </button>
                         <button
                             onClick={() => handleFilterChange('live')}
-                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
-                                activeFilter === 'live' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${activeFilter === 'live' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
                         >
                             Live Matches
                         </button>
                         <button
                             onClick={() => handleFilterChange('completed')}
-                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${
-                                activeFilter === 'completed' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-all duration-200 text-sm sm:text-base ${activeFilter === 'completed' ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
                         >
                             Completed Matches
                         </button>
@@ -256,36 +295,38 @@ const FullMap = () => {
                     ) : (
                         <div className="card-container">
                             {visibleSlots.map((slot) => {
-                                    const currentSlots = slot.maxBookings - slot.remainingBookings;
-                                    const isFree = Number(slot.entryFee) <= 0;
+                                const currentSlots = slot.maxBookings - slot.remainingBookings;
+                                const isFree = Number(slot.entryFee) <= 0;
 
-                                    const handleCardClick = () => {
-                                        openModal(slot);
-                                    };
+                                const handleCardClick = () => {
+                                    openModal(slot);
+                                    loadBookingDetails(slot._id);
+                                    // loadBookingDetails()
+                                };
 
-                                    const handleJoinClick = (e: React.MouseEvent) => {
-                                        e.stopPropagation(); // Prevent card click when button is clicked
-                                        const status = resolveStatus(slot);
-                                        if (status === 'live' || status === 'completed') {
-                                            // For live and completed matches, open stream link
-                                            if (slot.streamLink) {
-                                                window.open(slot.streamLink, '_blank');
-                                            } else {
-                                                alert('Stream link not available for this match');
-                                            }
+                                const handleJoinClick = (e: React.MouseEvent) => {
+                                    e.stopPropagation(); // Prevent card click when button is clicked
+                                    const status = resolveStatus(slot);
+                                    if (status === 'live' || status === 'completed') {
+                                        // For live and completed matches, open stream link
+                                        if (slot.streamLink) {
+                                            window.open(slot.streamLink, '_blank');
                                         } else {
-                                            // For upcoming matches, navigate to detail page
+                                            alert('Stream link not available for this match');
+                                        }
+                                    } else {
+                                        // For upcoming matches, navigate to detail page
                                         navigate(`/detail`, {
                                             state: {
                                                 slotData: slot,
                                                 slotId: slot._id
                                             }
                                         });
-                                        }
-                                    };
+                                    }
+                                };
 
-                                    return (
-                                        <div key={slot._id} className="match-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
+                                return (
+                                    <div key={slot._id} className="match-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
                                         <div style={{ position: 'relative' }}>
                                             <Skeleton height={0} style={{ paddingBottom: '56.25%', borderRadius: 12 }} baseColor="#eeeeee" highlightColor="#f5f5f5" />
                                             <img
@@ -297,108 +338,108 @@ const FullMap = () => {
                                                 onError={e => { (e.target as HTMLImageElement).src = "/assets/images/category.png"; }}
                                             />
                                         </div>
-                                            <div className="match-top">
-                                                <div>
-                                                    <span className="badge orange">
+                                        <div className="match-top">
+                                            <div>
+                                                <span className="badge orange">
                                                     {(slot.gameMode || 'SOLO').toUpperCase()}
-                                                    </span>
-                                                
+                                                </span>
+
                                                 <span className={`badge black`}>
                                                     {resolveStatus(slot).toUpperCase()}
-                                                    </span>
-                                                    {resolveStatus(slot) === 'upcoming' && (
-                                                        <span className="badge black"><CountdownBadge target={slot.matchTime} /></span>
-                                                    )}
-                                                    <span className="match-id">MATCH #{slot.matchIndex}</span>
-                                                </div>
-                                            </div>
-                                            <h3 className="match-title">
-                                            {`${slot.matchTitle || `FF ${slot.gameMode?.toUpperCase() || 'SOLO'} TOURNAMENT`} (${slot.specialRules || 'RULES'}) ${slot.tournamentName || ''}`}
-                                            </h3>
-                                            <div className="match-details-box">
-                                                <div className="date-time">
-                                                    {formatDate(slot.matchTime)} <span className="time">{formatTime(slot.matchTime)}</span>
-                                                </div>
-                                                <div className="prize-pill-container">
-                                                    <div className="prize-pill">
-                                                        <div className="pill-label">PER KILL</div>
-                                                        <div className="pill-value">
-                                                            <img src="/assets/vector/Coin.png" alt="Coin" />
-                                                            {slot.perKill}
-                                                        </div>
-                                                    </div>
-                                                    <div className="prize-pill">
-                                                        <div className="pill-label">WINNING PRIZE</div>
-                                                        <div className="pill-value">
-                                                            <img src="/assets/vector/Coin.png" alt="Coin" />
-                                                            {slot.totalWinningPrice}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="slots-row">
-                                                <p className="text-sm font-medium">{currentSlots}/{slot.maxBookings}</p>
-                                                <div className="flex items-center gap-2 w-full">
-                                                    <div className="w-full bg-black rounded-full h-2 overflow-hidden">                
-                                                        <div
-                                                            className="bg-[#ff8400] h-full rounded-full"
-                                                            style={{ width: `${(currentSlots / slot.maxBookings) * 100}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button
-                                                className={`join-btn${currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming' ? ' opacity-50 cursor-not-allowed' : ''}`}
-                                                onClick={handleJoinClick}
-                                                disabled={currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming'}
-                                                title={currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming' ? 'Slot is full' : ''}
-                                            >
-                                                {resolveStatus(slot) === 'upcoming' ? (
-                                                    <>
-                                                {!isFree && <img src="/assets/vector/Coin.png" alt="Coin" />}
-                                                <span style={{ fontWeight: "850", textAlign: "center" }}> {isFree ? 'FREE' : slot.entryFee} JOIN</span>
-                                                <img
-                                                    src="/assets/vector/Vector-Arrow.png"
-                                                    alt="Arrow"
-                                                    style={{
-                                                        width: '6.175px',
-                                                        height: '10px',
-                                                        transform: 'rotate(0deg)',
-                                                        opacity: 1,
-                                                        position: 'relative',
-                                                        top: '-2px',
-                                                        left: '7.16px'
-                                                    }}
-                                                />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span style={{ fontWeight: "850", textAlign: "center" }}>SPECTATE</span>
-                                                        <img
-                                                            src="/assets/vector/Vector-Arrow.png"
-                                                            alt="Arrow"
-                                                            style={{
-                                                                width: '6.175px',
-                                                                height: '10px',
-                                                                transform: 'rotate(0deg)',
-                                                                opacity: 1,
-                                                                position: 'relative',
-                                                                top: '-2px',
-                                                                left: '7.16px'
-                                                            }}
-                                                        />
-                                                    </>
+                                                </span>
+                                                {resolveStatus(slot) === 'upcoming' && (
+                                                    <span className="badge black"><CountdownBadge target={slot.matchTime} /></span>
                                                 )}
-                                            </button>
+                                                <span className="match-id">MATCH #{slot.matchIndex}</span>
+                                            </div>
                                         </div>
-                                    );
+                                        <h3 className="match-title">
+                                            {`${slot.matchTitle || `FF ${slot.gameMode?.toUpperCase() || 'SOLO'} TOURNAMENT`} (${slot.specialRules || 'RULES'}) ${slot.tournamentName || ''}`}
+                                        </h3>
+                                        <div className="match-details-box">
+                                            <div className="date-time">
+                                                {formatDate(slot.matchTime)} <span className="time">{formatTime(slot.matchTime)}</span>
+                                            </div>
+                                            <div className="prize-pill-container">
+                                                <div className="prize-pill">
+                                                    <div className="pill-label">PER KILL</div>
+                                                    <div className="pill-value">
+                                                        <img src="/assets/vector/Coin.png" alt="Coin" />
+                                                        {slot.perKill}
+                                                    </div>
+                                                </div>
+                                                <div className="prize-pill">
+                                                    <div className="pill-label">WINNING PRIZE</div>
+                                                    <div className="pill-value">
+                                                        <img src="/assets/vector/Coin.png" alt="Coin" />
+                                                        {slot.totalWinningPrice}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="slots-row">
+                                            <p className="text-sm font-medium">{currentSlots}/{slot.maxBookings}</p>
+                                            <div className="flex items-center gap-2 w-full">
+                                                <div className="w-full bg-black rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="bg-[#ff8400] h-full rounded-full"
+                                                        style={{ width: `${(currentSlots / slot.maxBookings) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            className={`join-btn${currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming' ? ' opacity-50 cursor-not-allowed' : ''}`}
+                                            onClick={handleJoinClick}
+                                            disabled={currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming'}
+                                            title={currentSlots >= slot.maxBookings && resolveStatus(slot) === 'upcoming' ? 'Slot is full' : ''}
+                                        >
+                                            {resolveStatus(slot) === 'upcoming' ? (
+                                                <>
+                                                    {!isFree && <img src="/assets/vector/Coin.png" alt="Coin" />}
+                                                    <span style={{ fontWeight: "850", textAlign: "center" }}> {isFree ? 'FREE' : slot.entryFee} JOIN</span>
+                                                    <img
+                                                        src="/assets/vector/Vector-Arrow.png"
+                                                        alt="Arrow"
+                                                        style={{
+                                                            width: '6.175px',
+                                                            height: '10px',
+                                                            transform: 'rotate(0deg)',
+                                                            opacity: 1,
+                                                            position: 'relative',
+                                                            top: '-2px',
+                                                            left: '7.16px'
+                                                        }}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span style={{ fontWeight: "850", textAlign: "center" }}>SPECTATE</span>
+                                                    <img
+                                                        src="/assets/vector/Vector-Arrow.png"
+                                                        alt="Arrow"
+                                                        style={{
+                                                            width: '6.175px',
+                                                            height: '10px',
+                                                            transform: 'rotate(0deg)',
+                                                            opacity: 1,
+                                                            position: 'relative',
+                                                            top: '-2px',
+                                                            left: '7.16px'
+                                                        }}
+                                                    />
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                );
                             })}
                         </div>
                     )}
                 </div>
             </section>
             <Footer />
-            
+
             {/* Match Details Modal */}
             {showModal && selectedMatch && (
                 <div className="modal-overlay">
@@ -504,6 +545,37 @@ const FullMap = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* User Booking Details (if any) */}
+                            {bookingDetails && (
+                                <div className="summary-section">
+                                    <h4 className="summary-title">Your Booking</h4>
+                                    <div className="summary-stats" style={{ gap: 12, alignItems: 'flex-start' }}>
+                                        <div className="summary-stat" style={{ alignItems: 'flex-start' }}>
+                                            <div className="summary-stat-label">Selected Positions</div>
+                                            <div className="summary-stat-value" style={{ fontSize: 14, textAlign: 'left' }}>
+                                                {Object.keys(bookingDetails.selectedPositions).length === 0 ? '-'
+                                                    : Object.entries(bookingDetails.selectedPositions).map(([team, positions]) => (
+                                                        <div key={team}>{team}: {positions.join(', ')}</div>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                        <div className="summary-stat" style={{ alignItems: 'flex-start' }}>
+                                            <div className="summary-stat-label">Player Index</div>
+                                            <div className="summary-stat-value" style={{ fontSize: 14 }}>{bookingDetails.playerIndex?.join(', ') || '-'}</div>
+                                        </div>
+                                        <div className="summary-stat" style={{ alignItems: 'flex-start' }}>
+                                            <div className="summary-stat-label">Player Names</div>
+                                            <div className="summary-stat-value" style={{ fontSize: 14, textAlign: 'left' }}>
+                                                {Object.keys(bookingDetails.playerNames).length === 0 ? '-'
+                                                    : Object.entries(bookingDetails.playerNames).map(([k, v]) => (
+                                                        <div key={k}>{k}: {v}</div>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="modal-footer">

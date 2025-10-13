@@ -370,6 +370,12 @@ const AdminDashboard = () => {
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [walletCreditAmount, setWalletCreditAmount] = useState('');
 
+  // Sitemap replace (admin)
+  const [sitemapXml, setSitemapXml] = useState('');
+  const [isReplacingSitemap, setIsReplacingSitemap] = useState(false);
+
+  
+
   // Auto status update function
   const updateMatchStatuses = async () => {
     try {
@@ -3418,6 +3424,15 @@ const AdminDashboard = () => {
           </Button>
           <Button
             variant="ghost"
+            className={`w-full justify-start px-3 py-2 text-white hover:text-white hover:bg-[#2A2A2A] ${activeSection === 'sitemap' ? 'bg-[#2A2A2A]' : ''}`}
+            onClick={() => setActiveSection('sitemap')}
+          >
+            <AlertCircle className="h-4 w-4 mr-3" />
+            {isSidebarOpen && <span className="text-white">Sitemap</span>}
+          </Button>
+          
+          <Button
+            variant="ghost"
             className="w-full justify-start px-3 py-2 text-red-500 hover:text-red-400 hover:bg-[#2A2A2A]"
             onClick={handleLogout}
           >
@@ -3469,6 +3484,8 @@ const AdminDashboard = () => {
             {activeSection === 'allTransactions' && 'All Transactions History'}
             {activeSection === 'transactionHistory' && 'Transaction History'}
             {activeSection === 'apkManagement' && 'APK Management'}
+            {activeSection === 'sitemap' && 'Sitemap'}
+    
             {activeSection === 'winners' && (
               <div className="flex items-center gap-3">
                 <span>Winners Management</span>
@@ -3494,6 +3511,56 @@ const AdminDashboard = () => {
     {activeSection === 'allTransactions' && <AllTransactionsHistory />}
     {activeSection === 'transactionHistory' && <TransactionHistory />}
     {activeSection === 'apkManagement' && <APKManagement />}
+            {activeSection === 'sitemap' && (
+              <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                <CardHeader>
+                  <CardTitle className="text-white">Replace sitemap.xml</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Label className="text-white">Paste XML</Label>
+                    <textarea
+                      value={sitemapXml}
+                      onChange={(e) => setSitemapXml(e.target.value)}
+                      placeholder={`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">...</urlset>`}
+                      className="w-full min-h-[240px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#2A2A2A] focus:border-[#52C41A] rounded-lg outline-none"
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={async () => {
+                          if (!sitemapXml.trim()) return;
+                          try {
+                            setIsReplacingSitemap(true);
+                            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/replace-sitemap`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                              },
+                              body: JSON.stringify({ xml: sitemapXml })
+                            });
+                            if (!res.ok) throw new Error('Failed');
+                            setSitemapXml('');
+                            toast({ title: 'Sitemap updated', description: 'sitemap.xml replaced successfully.' });
+                          } catch (e: any) {
+                            toast({ title: 'Error', description: e?.message || 'Failed to replace sitemap', variant: 'destructive' });
+                          } finally {
+                            setIsReplacingSitemap(false);
+                          }
+                        }}
+                        disabled={isReplacingSitemap}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {isReplacingSitemap ? 'Updating...' : 'Replace Sitemap'}
+                      </Button>
+                      <Button variant="outline" onClick={() => setSitemapXml('')} className="border-[#2A2A2A] text-white">Clear</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+    
     {activeSection === 'matches' && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
