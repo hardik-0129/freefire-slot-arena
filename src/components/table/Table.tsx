@@ -71,7 +71,7 @@ const Table: React.FC<TableProps> = ({ slotId, showWinners = false, topOnly = fa
     return (
         <>
             <div className="winner-table-container">
-                <div className="table-title">WINNER</div>
+                <div className="table-title">{topOnly ? "Top 3" : "Winner"}</div>
                 {loading && (
                     <div className="text-center text-gray-400">Loading winners...</div>
                 )}

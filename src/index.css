@@ -30,7 +30,7 @@ html, body {
   font-weight: 400;
   font-style: normal;
   font-size: 16px;
-  /* line-height: 100%; */
+  line-height: normal;
   letter-spacing: 0;
 }
 
@@ -54,7 +54,7 @@ span, button, a {
   font-style: normal;
   font-size: 24px;
   text-transform: uppercase;
-      line-height: normal;
+  line-height: normal;
 }
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.

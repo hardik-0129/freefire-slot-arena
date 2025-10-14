@@ -324,9 +324,11 @@ const AllTransactionsHistory = () => {
                 {transactions.map((transaction) => (
                   <tr key={transaction._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
                     <td className="p-3">
-                      <span className="bg-[#2A2A2A] px-2 py-1 rounded text-cyan-300 font-mono text-sm">
-                        {transaction.transactionId || transaction._id}
-                      </span>
+                      <div className="max-w-[240px] overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-[#3A3A3A] scrollbar-track-transparent">
+                        <span className="bg-[#2A2A2A] px-2 py-1 rounded text-cyan-300 font-mono text-sm inline-block">
+                          {transaction.transactionId || transaction._id}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">

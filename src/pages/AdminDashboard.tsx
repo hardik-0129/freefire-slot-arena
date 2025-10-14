@@ -271,6 +271,10 @@ const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [slots, setSlots] = useState([]);
   const [users, setUsers] = useState([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersLimit, setUsersLimit] = useState(20);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
   const [slotBookings, setSlotBookings] = useState({});
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [showTournamentRules, setShowTournamentRules] = useState(false);
@@ -284,6 +288,11 @@ const AdminDashboard = () => {
   // ID/Pass modal state
   const [showIdPassModal, setShowIdPassModal] = useState(false);
   const [idPassSlotId, setIdPassSlotId] = useState<string>('');
+
+  // Admin metrics
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [pendingWithdrawalsCount, setPendingWithdrawalsCount] = useState<number>(0);
+  const [totalPaidAmount, setTotalPaidAmount] = useState<number>(0);
   
   
   // Date display helpers for dd/MM/yyyy hh:mm AM/PM in Edit modal
@@ -340,6 +349,68 @@ const AdminDashboard = () => {
     return `${y}-${m2}-${d2}T${h2}:${mi2}`;
   };
   const [editMatchTimeDisplay, setEditMatchTimeDisplay] = useState<string>('');
+
+  // Fetch admin metrics once on load
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+
+        // Try to fetch withdrawals by status to compute counts and totals
+        const base = `${import.meta.env.VITE_API_URL}/api/wallet/admin`;
+        const [pendingRes, approvedRes] = await Promise.all([
+          fetch(`${base}/pending-withdrawals`, { headers }),
+          fetch(`${base}/approved-withdrawals`, { headers })
+        ]);
+
+        if (pendingRes.ok) {
+          const pendingData = await pendingRes.json();
+          const list = pendingData.withdrawals || pendingData.data || [];
+          setPendingWithdrawalsCount(Array.isArray(list) ? list.length : 0);
+        } else {
+          setPendingWithdrawalsCount(0);
+        }
+
+        if (approvedRes.ok) {
+          const approvedData = await approvedRes.json();
+          const list = approvedData.withdrawals || approvedData.data || [];
+          const sum = Array.isArray(list) ? list.reduce((acc: number, w: any) => acc + (Number(w.amount) || 0), 0) : 0;
+          setTotalPaidAmount(sum);
+        } else {
+          setTotalPaidAmount(0);
+        }
+
+        // Revenue heuristic: sum of entry fees for completed slots (if available)
+        try {
+          const slotsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots`, { headers });
+          if (slotsRes.ok) {
+            const sdata = await slotsRes.json();
+            const slotsArr = sdata?.slots ?? sdata ?? [];
+            const revenue = Array.isArray(slotsArr)
+              ? slotsArr.filter((s: any) => String(s.status || '').toLowerCase() === 'completed')
+                  .reduce((acc: number, s: any) => {
+                    const joined = Number(s.maxBookings || 0) - Number(s.remainingBookings || 0);
+                    const fee = Number(s.entryFee || 0);
+                    return acc + (joined > 0 && fee > 0 ? joined * fee : 0);
+                  }, 0)
+              : 0;
+            setTotalRevenue(revenue);
+          } else {
+            setTotalRevenue(0);
+          }
+        } catch {
+          setTotalRevenue(0);
+        }
+      } catch {
+        setPendingWithdrawalsCount(0);
+        setTotalPaidAmount(0);
+        setTotalRevenue(0);
+      }
+    };
+    fetchMetrics();
+  }, []);
 
   // User editing state
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -1001,14 +1072,21 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users?page=${usersPage}&limit=${usersLimit}` , {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users);
+        setUsers(data.users || []);
+        if (data.pagination) {
+          setUsersTotal(data.pagination.total || 0);
+          setUsersTotalPages(data.pagination.totalPages || 1);
+        } else if (typeof data.totalUsers === 'number') {
+          setUsersTotal(data.totalUsers);
+          setUsersTotalPages(Math.max(1, Math.ceil((data.totalUsers || 0) / usersLimit)));
+        }
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -1041,7 +1119,7 @@ const AdminDashboard = () => {
       fetchGameModes();
       fetchGameMaps();
     }
-  }, [loading]);
+  }, [loading, usersPage, usersLimit]);
 
   const handleDeleteSlot = async (slotId: string) => {
     try {
@@ -1195,7 +1273,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-white">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{users.length}</p>
+            <p className="text-3xl font-bold text-white">{usersTotal || users.length}</p>
           </CardContent>
         </Card>
 
@@ -3105,7 +3183,7 @@ const AdminDashboard = () => {
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
-        <CardTitle className="text-white">Users Management ({users.length} Users)</CardTitle>
+        <CardTitle className="text-white">Users Management ({usersTotal || users.length} Users)</CardTitle>
           <div className="flex items-center gap-4">
             <input
               type="text"
@@ -3209,6 +3287,37 @@ const AdminDashboard = () => {
                 ))}
               </tbody>
             </table>
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-gray-400 text-sm">Page {usersPage} of {usersTotalPages} • {usersTotal} total</div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="bg-white text-black border-white hover:bg-white/90"
+                  disabled={usersPage <= 1}
+                  onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  className="bg-white text-black border-white hover:bg-white/90"
+                  disabled={usersPage >= usersTotalPages}
+                  onClick={() => setUsersPage(p => Math.min(usersTotalPages, p + 1))}
+                >
+                  Next
+                </Button>
+                <select
+                  className="bg-[#222] border border-[#333] text-white rounded px-2 py-1"
+                  value={usersLimit}
+                  onChange={(e) => { setUsersPage(1); setUsersLimit(parseInt(e.target.value, 10)); }}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
@@ -3225,7 +3334,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-white">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">₹0</p>
+            <p className="text-3xl font-bold text-white">₹{Number(totalRevenue || 0).toLocaleString('en-IN')}</p>
           </CardContent>
         </Card>
 
@@ -3234,7 +3343,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-white">Pending Withdrawals</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">0</p>
+            <p className="text-3xl font-bold text-white">{pendingWithdrawalsCount}</p>
           </CardContent>
         </Card>
 
@@ -3243,7 +3352,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-white">Total Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">₹0</p>
+            <p className="text-3xl font-bold text-white">₹{Number(totalPaidAmount || 0).toLocaleString('en-IN')}</p>
           </CardContent>
         </Card>
       </div>
@@ -3263,7 +3372,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-[#121212] flex">
       {/* Sidebar */}
-      <aside className={`bg-[#1A1A1A] h-screen ${isSidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 fixed left-0 top-0`}>
+      <aside style={{ height: '100%', overflow: 'auto' }} className={`bg-[#1A1A1A] h-screen ${isSidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 fixed left-0 top-0`}>
         <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
           <h2 className={`text-white font-bold ${isSidebarOpen ? 'block' : 'hidden'}`}>Admin Panel</h2>
           <Button

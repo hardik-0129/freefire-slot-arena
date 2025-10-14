@@ -191,7 +191,7 @@ const Compeleted = () => {
                                 const ta = new Date(((a as any).slot?.matchTime) || a.matchTime || a.updatedAt || a.createdAt || 0).getTime();
                                 const tb = new Date(((b as any).slot?.matchTime) || b.matchTime || b.updatedAt || b.createdAt || 0).getTime();
                                 // Earliest completed first (so 03:37 PM before 05:00 PM). Flip to `tb - ta` for latest first.
-                                return ta - tb;
+                                return tb - ta;
                               })
                               .map((match) => (
                                 <div key={match._id} className="match-card">

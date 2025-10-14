@@ -126,7 +126,14 @@ const FullMap = () => {
             if (!statusMatches) return false;
             return matchesSelectedType(slot);
         })
-        .sort((a, b) => new Date(a.matchTime).getTime() - new Date(b.matchTime).getTime());
+        .sort((a, b) => {
+            // For completed matches, show latest first (descending order)
+            if (activeFilter === 'completed') {
+                return new Date(b.matchTime).getTime() - new Date(a.matchTime).getTime();
+            }
+            // For upcoming and live matches, show earliest first (ascending order)
+            return new Date(a.matchTime).getTime() - new Date(b.matchTime).getTime();
+        });
 
     const handleFilterChange = (filter: 'upcoming' | 'live' | 'completed') => {
         setActiveFilter(filter);
