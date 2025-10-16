@@ -147,6 +147,8 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
     const token = localStorage.getItem('adminToken');
 
     let credited = 0, failed = 0;
+    // Count winners that cannot be credited because they are not saved/linked to a user yet
+    const unsavedCountBase = (winners || []).filter(w => !w.userId).length;
 
 
 
@@ -177,6 +179,13 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
         while (usedRanks.has(nextAutoRank)) nextAutoRank++;
 
 
+
+        // Track how many winners exist per rank to split rank bonuses fairly
+        const rankToCount: Record<number, number> = {};
+        (winners || []).forEach(w => {
+          const r = safeNum(w.rank);
+          if (r > 0) rankToCount[r] = (rankToCount[r] || 0) + 1;
+        });
 
         for (const booking of bookingsForMatch.bookings || []) {
 
@@ -215,8 +224,10 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
             }
 
             let bonus = 0; if (rank === 1) bonus = first; else if (rank === 2) bonus = second; else if (rank === 3) bonus = third;
-
-            const winningPrice = Math.max(0, Math.floor(kills * perKill + bonus));
+            // Split the bonus across players sharing the same rank (including this one)
+            const currentCount = (rankToCount[rank] || 0) + 1; // include this new winner
+            const share = currentCount > 0 ? (bonus / currentCount) : 0;
+            const winningPrice = Math.max(0, Math.floor(kills * perKill + share));
 
             try {
 
@@ -224,7 +235,12 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
 
               const created = await resCreate.json();
 
-              if (resCreate.ok && created?._id) { existingNames.add(norm); winners.push({ _id: created._id, rank, playerName: name, gameName: 'Free Fire', winningPrice, kills, userId: baseUserId, walletCredited: false }); }
+              if (resCreate.ok && created?._id) {
+                existingNames.add(norm);
+                winners.push({ _id: created._id, rank, playerName: name, gameName: 'Free Fire', winningPrice, kills, userId: baseUserId, walletCredited: false });
+                // Increment count for this rank so the next one gets a smaller share
+                rankToCount[rank] = (rankToCount[rank] || 0) + 1;
+              }
 
             } catch { }
 
@@ -260,9 +276,18 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
 
     setLoading(false);
 
-    if (credited > 0) toast({ title: 'Success', description: `${credited} winnings credited.`, variant: 'default' });
-
-    if (failed > 0) toast({ title: 'Error', description: `${failed} winnings failed.`, variant: 'destructive' });
+    // Build friendly summary messages
+    const unsavedCount = (winners || []).filter(w => !w.userId).length || unsavedCountBase;
+    if (credited > 0) {
+      toast({ title: 'Success', description: `${credited} winnings credited successfully.`, variant: 'default' });
+    }
+    if (unsavedCount > 0) {
+      toast({ title: 'Info', description: `${unsavedCount} winner${unsavedCount>1?'s':''} not saved/linked to user. Save winners first to credit them.`, variant: 'default' });
+    }
+    if (failed > 0 && credited === 0 && unsavedCount === 0) {
+      // Only true failures remain
+      toast({ title: 'Notice', description: `${failed} winning${failed>1?'s':''} could not be credited. Please retry.`, variant: 'default' });
+    }
 
     if (onSuccess) onSuccess();
 
@@ -1512,9 +1537,18 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                                   if (rank === 1) bonus = first; else if (rank === 2) bonus = second; else if (rank === 3) bonus = third;
 
-                                  return Math.max(0, Math.floor(kills * perKill + bonus));
+                                  // Split the positional bonus among all winners sharing that rank
+                                  let splitBy = 1;
+                                  const list = winnersBySlot?.[match._id] || [];
+                                  if (Array.isArray(list)) {
+                                    const sameRankCount = list.filter((w: any) => Number(w.rank) === Number(rank)).length;
+                                    splitBy = Math.max(1, sameRankCount || 1);
+                                  }
+                                  const share = bonus / splitBy;
 
-                                }, [match]);
+                                  return Math.max(0, Math.floor(kills * perKill + share));
+
+                                }, [match, winnersBySlot]);
 
 
 
@@ -1771,17 +1805,10 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                 );
 
                               };
-
-
-
                               return filteredWinners.length > 0
-
                                 ? filteredWinners.map((winner, idx) => (
-
                                   <WinnerRow key={winner._id || idx} winner={winner} onSuccess={fetchCompletedMatches} match={match} />
-
                                 ))
-
                                 : (
 
                                   <tr>
@@ -1825,12 +1852,10 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                         <thead>
 
                           <tr className="text-white">
-
+                          <th className="px-3 py-2 text-white text-left w-24">Position</th>
                             <th className="px-3 py-2 text-white text-center w-20">No. </th>
 
                             <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
-
-                            <th className="px-3 py-2 text-white text-left w-24">Position</th>
 
                             <th className="px-3 py-2 text-white text-left w-32">Mobile Number</th>
 
@@ -1850,81 +1875,87 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                           {(slotBookings[match._id]?.bookings?.length > 0) ? (
 
-                            slotBookings[match._id].bookings.flatMap((booking, bookingIdx) => {
-
-                              const playerNames = booking.playerNames ? Object.values(booking.playerNames).filter(Boolean) : [];
-
-                              if (playerNames.length === 0) {
-
-                                // fallback to booking.user.name
-
-                                return [
-
+                            (() => {
+                              const mode = String(match.slotType || '').toLowerCase();
+                              const isGrouped = mode.includes('duo') || mode.includes('squad');
+                              if (!isGrouped) {
+                                // Default flat list
+                                type Row = { booking: any; playerName: string; seat: number };
+                                const combined: Row[] = [];
+                                slotBookings[match._id].bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  if (entries.length === 0) {
+                                    combined.push({ booking, playerName: booking.user?.name || '', seat: Number.MAX_SAFE_INTEGER });
+                                    return;
+                                  }
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^(?:team[\w]+)-(\d+)$/i);
+                                    const seat = m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
+                                    combined.push({ booking, playerName: String(name), seat });
+                                  });
+                                });
+                                combined.sort((a, b) => a.seat - b.seat);
+                                let seq = 0;
+                                return combined.map((row, i) => (
                                   <BookingTableRow
-
-                                    key={booking._id + '-single'}
-
-                                    booking={booking}
-
-                                    idx={bookingIdx + 1}
-
-                                    playerName={booking.user?.name || ''}
-
+                                    key={(row.booking?._id || 'b') + '-' + i}
+                                    booking={row.booking}
+                                    idx={(seq += 1)}
+                                    playerName={row.playerName}
                                     onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
-
                                     winnersBySlot={winnersBySlot}
-
                                     onWinnerChange={fetchCompletedMatches}
-
                                     slotId={match._id}
-
                                     perKill={match.perKill}
-
                                     firstwin={match.firstwin}
-
                                     secwin={match.secwin}
-
                                     thirdwin={match.thirdwin}
-
                                   />
-
-                                ];
-
+                                ));
                               }
 
-                              return playerNames.map((playerName, i) => (
-
-                                <BookingTableRow
-
-                                  key={booking._id + '-' + i}
-
-                                  booking={booking}
-
-                                  idx={bookingIdx + 1}
-
-                                  playerName={playerName}
-
-                                  onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
-
-                                  winnersBySlot={winnersBySlot}
-
-                                  onWinnerChange={fetchCompletedMatches}
-
-                                  slotId={match._id}
-
-                                  perKill={match.perKill}
-
-                                  firstwin={match.firstwin}
-
-                                  secwin={match.secwin}
-
-                                  thirdwin={match.thirdwin}
-
-                                />
-
+                              // Group Duo/Squad by team number with a team header row
+                              type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
+                              const groups: Record<string, Member[]> = {};
+                              slotBookings[match._id].bookings.forEach((booking: any) => {
+                                const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                entries.forEach(([key, name]) => {
+                                  const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
+                                  const posLetter = m ? String(m[1]).toUpperCase() : '?';
+                                  const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+                                  const k = String(teamNum);
+                                  if (!groups[k]) groups[k] = [];
+                                  groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
+                                });
+                              });
+                              const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                              let seq = 0;
+                              return orderedTeams.map((team) => (
+                                <React.Fragment key={`team-${team}`}>
+                                  <tr>
+                                    <td colSpan={8} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{team}</td>
+                                  </tr>
+                                  {groups[String(team)]
+                                    .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
+                                    .map((member, idx) => (
+                                      <BookingTableRow
+                                        key={`team-${team}-${idx}`}
+                                        booking={member.booking}
+                                        idx={(seq += 1)}
+                                        playerName={member.playerName}
+                                        onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
+                                        winnersBySlot={winnersBySlot}
+                                        onWinnerChange={fetchCompletedMatches}
+                                        slotId={match._id}
+                                        perKill={match.perKill}
+                                        firstwin={match.firstwin}
+                                        secwin={match.secwin}
+                                        thirdwin={match.thirdwin}
+                                      />
+                                    ))}
+                                </React.Fragment>
                               ));
-
-                            })
+                            })()
 
                           ) : (
 
@@ -1955,8 +1986,6 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
         </div>
 
       </div>
-
-
 
       {/* Player Management Modal */}
 
@@ -2166,9 +2195,19 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
     if (r === 1) bonus = firstwin; else if (r === 2) bonus = secwin; else if (r === 3) bonus = thirdwin;
 
-    return Math.max(0, Math.floor(k * (perKill || 0) + bonus));
+    // Split positional bonus among players sharing that rank.
+    // Preview includes this pending save, so use existing winners count + 1.
+    let splitBy = 1;
+    const list = winnersBySlot?.[slotId] || [];
+    if (Array.isArray(list)) {
+      const sameRankCount = list.filter((w: any) => Number(w.rank) === Number(r)).length;
+      splitBy = Math.max(1, (sameRankCount + 1));
+    }
+    const share = bonus / splitBy;
 
-  }, [perKill, firstwin, secwin, thirdwin]);
+    return Math.max(0, Math.floor(k * (perKill || 0) + share));
+
+  }, [perKill, firstwin, secwin, thirdwin, winnersBySlot, slotId]);
 
 
 
@@ -2212,54 +2251,41 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
 
 
-  // Determine booked position for this player from selectedPositions (e.g., { teamA: ["1","2"] })
+  // Determine booked position for this player from playerNames keys (e.g., { teamB-48: "name" })
 
   const bookedPosition = React.useMemo(() => {
-
     try {
-
-      const positionsObj: any = (booking as any).selectedPositions || {};
-
-      const teamKey = Object.keys(positionsObj)[0];
-
-      if (!teamKey) return '';
-
-      const list: any[] = Array.isArray(positionsObj[teamKey]) ? positionsObj[teamKey] : [];
-
-      const names = booking.playerNames ? Object.values(booking.playerNames) : [];
-
-      let nameIndex = names.findIndex(n => (n || '').toLowerCase().trim() === playerName.toLowerCase().trim());
-
-      if (nameIndex < 0) nameIndex = 0;
-
-      const pos = list[nameIndex] || list[0] || '';
-
-      // Format team key, e.g., teamA -> Team-A
-
-      const prettyTeam = (() => {
-
-        const m = teamKey.match(/^team(.*)$/i);
-
-        if (m && m[1]) return `Team-${m[1].toUpperCase()}`;
-
-        // fallback: split camelCase
-
-        return teamKey
-
-          .replace(/([a-z])([A-Z])/g, '$1-$2')
-
-          .replace(/^./, c => c.toUpperCase());
-
-      })();
-
-      return pos ? `${prettyTeam} ${pos}` : '';
-
-    } catch {
-
+      const entries = Object.entries(booking.playerNames || {});
+      for (const [posKey, name] of entries) {
+        if ((String(name) || '').toLowerCase().trim() === playerName.toLowerCase().trim()) {
+          const m = String(posKey).match(/^team([A-Za-z]+)-(\d+)$/i);
+          if (m) {
+            // Convert from "Team-A 1" style to desired "Team-1 (A)"
+            return `Team-${m[2]} (${m[1].toUpperCase()})`;
+          }
+          // Fallback formatting: try to convert common patterns to Team-<num> (<letter>)
+          const m2 = String(posKey).match(/^team\s*(\d+)\s*[-_ ]\s*([A-Za-z])$/i);
+          if (m2) {
+            return `Team-${m2[1]} (${m2[2].toUpperCase()})`;
+          }
+          return String(posKey)
+            .replace(/^team\s*(\d+)\s*[-_ ]\s*([A-Za-z])$/i, (_s, n, l) => `Team-${n} (${String(l).toUpperCase()})`)
+            .replace(/^team/i, 'Team-')
+            .toUpperCase();
+        }
+      }
+      // Fallback to playerIndex seat number if available
+      const values = Object.values(booking.playerNames || {});
+      const idx = values.findIndex(n => (String(n) || '').toLowerCase().trim() === playerName.toLowerCase().trim());
+      const anyBooking: any = booking as any;
+      if (idx >= 0 && Array.isArray(anyBooking.playerIndex)) {
+        const seat = anyBooking.playerIndex[idx];
+        if (seat) return `Seat ${seat}`;
+      }
       return '';
-
+    } catch {
+      return '';
     }
-
   }, [booking, playerName]);
 
 
@@ -2344,8 +2370,14 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
       }
 
-      // Always create a winner for this booking
+      // Determine split by including this new winner
+      const existingForRank = Array.isArray(winnersBySlot?.[slotId]) ? winnersBySlot![slotId].filter((w: any) => Number(w.rank) === Number(rank)) : [];
+      const splitBy = Math.max(1, (existingForRank.length + 1));
+      let baseBonus = 0;
+      if (rank === 1) baseBonus = firstwin; else if (rank === 2) baseBonus = secwin; else if (rank === 3) baseBonus = thirdwin;
+      const share = baseBonus / splitBy;
 
+      // Create a winner with split amount applied
       const winnerPayload = {
 
         playerName,
@@ -2354,7 +2386,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
         rank,
 
-        winningPrice,
+        winningPrice: Math.max(0, Math.floor(kills * (perKill || 0) + share)),
 
         kills,
 
@@ -2385,6 +2417,22 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
         const postData = await postRes.json();
 
         if (postRes.ok && postData._id) {
+
+          // Update all winners of this rank to the same split
+          const targets = Array.isArray(winnersBySlot?.[slotId]) ? winnersBySlot![slotId].filter((w: any) => Number(w.rank) === Number(rank)) : [];
+          const allTargets = [...targets, { _id: postData._id, kills }];
+          for (const t of allTargets) {
+            try {
+              await fetch(`${import.meta.env.VITE_API_URL}/api/winners/${t._id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ winningPrice: Math.max(0, Math.floor((Number(t.kills) || 0) * (perKill || 0) + share)), rank })
+              });
+            } catch {}
+          }
 
           if (onWinnerChange) onWinnerChange();
 
@@ -2420,6 +2468,10 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
     <tr className={`border-b border-[#333] ${isPlayerAlreadyWinner ? 'bg-red-900/20 opacity-60' : ''}`}>
 
+      {/* Position first to match header */}
+      <td className="px-3 py-2 text-white">{bookedPosition}</td>
+
+      {/* No. */}
       <td className="px-3 py-2 text-center text-white">{idx}</td>
 
       <td className="px-3 py-2 text-white">
@@ -2442,7 +2494,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
       </td>
 
-      <td className="px-3 py-2 text-white">{bookedPosition}</td>
+      {/* Player team position moved to first column above */}
 
       <td className="px-3 py-2 text-white">{booking.user?.phone || "N/A"}</td>
 

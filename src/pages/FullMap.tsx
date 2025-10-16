@@ -8,6 +8,7 @@ import "../components/css/MatchModal.css"
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { jwtDecode } from 'jwt-decode'
+import Table from '@/components/table/Table'
 
 interface Slot {
     _id: string;
@@ -314,13 +315,16 @@ const FullMap = () => {
                                 const handleJoinClick = (e: React.MouseEvent) => {
                                     e.stopPropagation(); // Prevent card click when button is clicked
                                     const status = resolveStatus(slot);
-                                    if (status === 'live' || status === 'completed') {
-                                        // For live and completed matches, open stream link
+                                    if (status === 'live') {
+                                        // Live: open stream if available
                                         if (slot.streamLink) {
                                             window.open(slot.streamLink, '_blank');
                                         } else {
                                             alert('Stream link not available for this match');
                                         }
+                                    } else if (status === 'completed') {
+                                        // Completed: open results modal
+                                        openModal(slot);
                                     } else {
                                         // For upcoming matches, navigate to detail page
                                         navigate(`/detail`, {
@@ -419,9 +423,26 @@ const FullMap = () => {
                                                         }}
                                                     />
                                                 </>
-                                            ) : (
+                                            ) : resolveStatus(slot) === 'live' ? (
                                                 <>
                                                     <span style={{ fontWeight: "850", textAlign: "center" }}>SPECTATE</span>
+                                                    <img
+                                                        src="/assets/vector/Vector-Arrow.png"
+                                                        alt="Arrow"
+                                                        style={{
+                                                            width: '6.175px',
+                                                            height: '10px',
+                                                            transform: 'rotate(0deg)',
+                                                            opacity: 1,
+                                                            position: 'relative',
+                                                            top: '-2px',
+                                                            left: '7.16px'
+                                                        }}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span style={{ fontWeight: "850", textAlign: "center" }}>RESULT</span>
                                                     <img
                                                         src="/assets/vector/Vector-Arrow.png"
                                                         alt="Arrow"
@@ -465,7 +486,7 @@ const FullMap = () => {
                             {/* Match Info */}
                             <div className="match-info-section">
                                 <h3 className="match-info-title">
-                                    MATCH #{selectedMatch._id.slice(-4)} - {selectedMatch.slotType?.toUpperCase()}
+                                    MATCH #{selectedMatch.matchIndex} - {selectedMatch.slotType?.toUpperCase()}
                                 </h3>
                                 <div className="match-info-grid">
                                     <div className="match-info-item">
@@ -552,6 +573,14 @@ const FullMap = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* If match is completed, show Winners table */}
+                            {resolveStatus(selectedMatch) === 'completed' && (
+                                <div className="summary-section">
+                                    <h4 className="summary-title">Results</h4>
+                                    <Table slotId={selectedMatch._id} showWinners topOnly={false} />
+                                </div>
+                            )}
 
                             {/* User Booking Details (if any) */}
                             {bookingDetails && (

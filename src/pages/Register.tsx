@@ -21,7 +21,6 @@ const Register: React.FC = () => {
     profilePhoto: null as File | null
   });
 
-  type RegisterPayload = typeof form & { deviceToken?: string };
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +35,18 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Profile photo is now optional - no validation needed
+    // Basic validations
+    const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.-]+$/i;
+    if (!emailRegex.test(form.email.trim())) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+    const phoneDigits = form.phone.replace(/[^0-9]/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+      toast.error('Please enter a valid mobile number (10-13 digits).');
+      return;
+    }
+    // Profile photo is optional - no validation needed
     
     setLoading(true);
     try {
@@ -54,7 +64,7 @@ const Register: React.FC = () => {
       const payload: any = {
         name: form.name,
         email: form.email,
-        phone: form.phone,
+        phone: phoneDigits,
         password: form.password,
         freeFireUsername: form.freeFireUsername,
       };
@@ -86,7 +96,7 @@ const Register: React.FC = () => {
         const formData = new FormData();
         formData.append('name', form.name);
         formData.append('email', form.email);
-        formData.append('phone', form.phone);
+        formData.append('phone', phoneDigits);
         formData.append('password', form.password);
         formData.append('freeFireUsername', form.freeFireUsername);
         

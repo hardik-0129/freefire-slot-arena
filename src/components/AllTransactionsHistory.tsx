@@ -17,7 +17,8 @@ import {
   Eye,
   Calendar,
   DollarSign,
-  ArrowUpDown
+  ArrowUpDown,
+  Trash2
 } from "lucide-react";
 
 interface Transaction {
@@ -160,6 +161,37 @@ const AllTransactionsHistory = () => {
   const handleExport = () => {
     // Implement export functionality
     console.log('Exporting transactions...');
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (window.confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/admin/delete-transaction/${transactionId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          // Remove the transaction from the local state
+          setTransactions(prev => prev.filter(transaction => transaction._id !== transactionId));
+          // Update stats
+          setStats(prev => ({
+            ...prev,
+            totalTransactions: prev.totalTransactions - 1
+          }));
+          alert('Transaction deleted successfully!');
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to delete transaction: ${errorData.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+        alert('Error deleting transaction. Please try again.');
+      }
+    }
   };
 
   if (loading) {
@@ -353,7 +385,7 @@ const AllTransactionsHistory = () => {
                           ? 'text-green-400' 
                           : 'text-red-400'
                       }`}>
-                        {transaction.type === 'CREDIT' || transaction.type === 'DEPOSIT' || transaction.type === 'WIN' ? '+' : '-'}₹{transaction.amount}
+                        {transaction.type === 'CREDIT' || transaction.type === 'DEPOSIT' || transaction.type === 'WIN' ? '+' : '-'}₹{Math.abs(transaction.amount)}
                       </span>
                     </td>
                     <td className="p-3">
@@ -374,13 +406,25 @@ const AllTransactionsHistory = () => {
                       })}
                     </td>
                     <td className="p-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-white border-[#3A3A3A]"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0 text-white border-[#3A3A3A] hover:bg-[#3A3A3A]"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteTransaction(transaction._id)}
+                          className="h-8 w-8 p-0 text-red-400 border-red-500 hover:bg-red-500 hover:text-white"
+                          title="Delete Transaction"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

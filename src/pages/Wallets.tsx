@@ -127,6 +127,7 @@ const Wallets = () => {
     const [bookings, setBookings] = useState([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
     const [pendingHolds, setPendingHolds] = useState(0);
+    const [freeMatchPass, setFreeMatchPass] = useState(0);
 
 
     useEffect(() => {
@@ -267,17 +268,20 @@ const Wallets = () => {
                 setWalletBalance((data.totalBalance));
                 setTotalEarnings(data.winAmount);
                 setTotalPayouts(data.totalPayouts);
+                setFreeMatchPass(Number(data.freeMatchPass) || 0);
             } else {
                 setWalletBalance(0);
                 setTotalEarnings(0);
                 setTotalPayouts(0);
                 setPendingHolds(0);
+                setFreeMatchPass(0);
             }
         } catch (error) {
             setWalletBalance(0);
             setTotalEarnings(0);
             setTotalPayouts(0);
             setPendingHolds(0);
+            setFreeMatchPass(0);
         }
     };
 
@@ -333,6 +337,8 @@ const Wallets = () => {
                 return 'WITHDRAW';
             case 'DEPOSIT':
                 return 'DEPOSIT';
+            case 'SERVER_ERROR_BALANCE':
+                return 'SERVER ERROR BALANCE';
             default:
                 return type;
         }
@@ -350,45 +356,50 @@ const Wallets = () => {
         });
     };
 
-    const getTransactionIcon = (type) => {
-        switch (type) {
-            case 'CREDIT':
-            case 'DEPOSIT':
-            case 'WIN':
-            case 'REFUND':
-                return '+ ';
-            case 'DEBIT':
-            case 'WITHDRAW':
-            case 'LOSS':
-                return '- ';
-            default:
-                return '';
-        }
+    // Icon/sign should follow the numeric sign, not the type
+    const getAmountSign = (amount: any) => {
+        const n = Number(amount) || 0;
+        return n > 0 ? '+ ' : n < 0 ? '- ' : '';
     };
 
     // Function to combine and sort transactions and bookings
     const getCombinedHistory = () => {
         const combined = [];
 
-        // Add transactions
+        // Add transactions (normalize negatives as SERVER_ERROR_BALANCE)
         transactions.forEach(tx => {
+            const amt = Number((tx as any).amount) || 0;
+            const normalizedType = amt < 0 ? 'SERVER_ERROR_BALANCE' : (tx as any).type;
             combined.push({
                 ...tx,
+                type: normalizedType,
                 itemType: 'transaction',
-                sortDate: new Date(tx.createdAt)
+                sortDate: new Date((tx as any).createdAt)
             });
         });
 
-        // Add bookings
+        // Add bookings (but avoid duplicate display when a matching debit transaction exists)
         bookings.forEach(booking => {
+            const bookingTime = new Date(booking.createdAt).getTime();
+            const hasMatchingTxn = (transactions || []).some((tx: any) => {
+                const txType = String(tx.type || '').toUpperCase();
+                if (!(txType === 'BOOKING' || txType === 'DEBIT' || txType === 'WITHDRAW')) return false;
+                const txAmt = Math.abs(Number(tx.amount) || 0);
+                const bkAmt = Math.abs(Number(booking.totalAmount) || 0);
+                const t = new Date(tx.createdAt).getTime();
+                const within3Min = Math.abs(t - bookingTime) <= 3 * 60 * 1000; // 3 minutes window
+                return within3Min && txAmt === bkAmt;
+            });
+            if (hasMatchingTxn) return;
+
             combined.push({
                 _id: booking._id,
                 type: 'BOOKING',
-                amount: booking.totalAmount,
+                amount: -Math.abs(booking.totalAmount || 0),
                 description: `Match booking: ${booking.slot?.matchTitle || 'Unknown Match'} (${booking.slotType})`,
                 createdAt: booking.createdAt,
                 status: booking.status === 'confirmed' ? 'SUCCESS' : booking.status.toUpperCase(),
-                balanceAfter: walletBalance, // Use current wallet balance for bookings
+                balanceAfter: walletBalance,
                 itemType: 'booking',
                 sortDate: new Date(booking.createdAt),
                 metadata: {
@@ -601,6 +612,12 @@ const Wallets = () => {
                             <div className="coin-amount"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {(totalPayouts || 0).toFixed(2)}</div>
                         </div>
                     </div>
+                    <div className="wallet-card small">
+                        <span className="card-header">Free Match Pass</span>
+                        <div className="card-content center">
+                            <div className="coin-amount">Free Match Pass : {freeMatchPass}</div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Add Money Modal */}
@@ -770,10 +787,10 @@ const Wallets = () => {
                                     </div>
                                 </div>
                                 <div className="right">
-                                    <span className={item.type === 'CREDIT' || item.type === 'WIN' || item.type === 'REFUND' ? 'plus' : 'minus'}>
-                                        {getTransactionIcon(item.type)}<img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {item.amount.toFixed(2)}
+                                    <span className={(Number(item.amount) || 0) >= 0 ? 'plus' : 'minus'}>
+                                        {getAmountSign(item.amount)}<img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {Math.abs(Number(item.amount) || 0).toFixed(2)}
                                     </span>
-                                    <span className="coin"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {item.balanceAfter.toFixed(2)}</span>
+                                    <span className="coin"><img src="/assets/vector/Coin.png" alt="Coin" className="coin-icon" /> {(Number(item.balanceAfter) || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         ))

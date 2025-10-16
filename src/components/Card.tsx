@@ -135,7 +135,7 @@ const Card = ({ booking, totalBookingsCount, totalPositionsBooked, renderExtra }
                         <div className="pill-label">PER KILL</div>
                         <div className="pill-value">
                             <img src="/assets/vector/Coin.png" alt="Coin" />
-                            {booking?.slot?.perKill || 10}
+                            {booking?.slot?.perKill}
                         </div>
                     </div>
                     <div className="prize-pill">

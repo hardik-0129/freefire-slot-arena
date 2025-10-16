@@ -634,10 +634,13 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
               }
             })
             .sort((a: any, b: any) => {
-              // Sort by match time - earliest first
+              // For completed list, show latest first; otherwise earliest first
               const timeA = new Date(a.matchTime || 0).getTime();
               const timeB = new Date(b.matchTime || 0).getTime();
-              return timeA - timeB;
+              if (statusFilter === 'completed') {
+                return timeB - timeA; // latest first
+              }
+              return timeA - timeB; // upcoming/live by earliest first
             })
             .map((slot: any) => (
             <div key={slot._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden">

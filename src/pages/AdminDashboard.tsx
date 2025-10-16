@@ -2929,8 +2929,47 @@ const AdminDashboard = () => {
       });
       if (!res.ok) throw new Error('Failed to fetch transactions');
       const data = await res.json();
-      const list = Array.isArray(data) ? data : (data.transactions || data.data || []);
-      setUserTransactions(list);
+      const txns = Array.isArray(data) ? data : (data.transactions || data.data || []);
+
+      // Also fetch bookings and merge to include free bookings (₹0) which may not appear as wallet txns
+      let bookings: any[] = [];
+      try {
+        const bookingsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/user/${user._id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          bookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData.bookings || []);
+        }
+      } catch {}
+
+      // Merge: avoid duplicate display when a matching debit txn exists
+      const merged: any[] = [...txns];
+      bookings.forEach((b: any) => {
+        const bookingTime = new Date(b.createdAt).getTime();
+        const bkAmt = Math.abs(Number(b.totalAmount) || 0);
+        const hasMatchingTxn = (txns || []).some((t: any) => {
+          const tType = String(t.type || '').toUpperCase();
+          if (!(tType === 'BOOKING' || tType === 'DEBIT' || tType === 'WITHDRAW')) return false;
+          const tAmt = Math.abs(Number(t.amount) || 0);
+          const tTime = new Date(t.createdAt).getTime();
+          const within3Min = Math.abs(tTime - bookingTime) <= 3 * 60 * 1000;
+          return within3Min && tAmt === bkAmt;
+        });
+        if (hasMatchingTxn) return;
+        merged.push({
+          _id: b._id,
+          createdAt: b.createdAt,
+          type: 'BOOKING',
+          description: `Match booking - ${b.slot?.matchTitle || 'Unknown'} - ${b.slotType || ''}`.trim(),
+          status: (b.status === 'confirmed') ? 'SUCCESS' : String(b.status || '-').toUpperCase(),
+          amount: Number(b.totalAmount) || 0
+        });
+      });
+
+      // Sort newest first
+      merged.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setUserTransactions(merged);
     } catch (e: any) {
       setUserTransactions([]);
       toast({ title: 'Error', description: e.message || 'Failed to load transactions', variant: 'destructive' });
@@ -2960,13 +2999,14 @@ const AdminDashboard = () => {
     try {
       setIsUpdatingUser(true);
       const token = localStorage.getItem('adminToken');
-      // Only update profile details, NOT wallet or winAmount
+      // Update profile details and allow manual winAmount edits
       const payload = {
         name: editUserData.name,
         email: editUserData.email,
         phone: editUserData.phone,
         freeFireUsername: editUserData.freeFireUsername,
-        isAdmin: editUserData.isAdmin
+        isAdmin: editUserData.isAdmin,
+        winAmount: Number(editUserData.winAmount) || 0
       };
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/admin/update/${editingUser._id}`, {
@@ -2983,6 +3023,33 @@ const AdminDashboard = () => {
           title: "Success",
           description: "User updated successfully",
         });
+        // Try to sync winAmount by applying the delta via wallet API
+        try {
+          const desiredWinAmount = Number(editUserData.winAmount) || 0;
+          const currentWinAmount = Number(editingUser.winAmount) || 0;
+          const delta = desiredWinAmount - currentWinAmount;
+          if (delta !== 0) {
+            const winRes = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ userId: editingUser._id, amount: delta, description: 'Admin manual adjustment' })
+            });
+            if (!winRes.ok) {
+              const err = await winRes.json().catch(() => ({}));
+              // Common case: backend may disallow negative amounts (decrease)
+              throw new Error(err?.error || (delta < 0 ? 'Server does not allow decreasing win amount' : 'Failed to adjust win amount'));
+            }
+          }
+        } catch (e: any) {
+          toast({ variant: 'destructive', title: 'Win amount not fully updated', description: e?.message || 'Adjustment failed' });
+        }
+        // If transactions modal is open for this user, refresh it to show the new entry
+        if (showUserTransactionsModal && selectedUserForTransactions && selectedUserForTransactions._id === editingUser._id) {
+          await openUserTransactions(editingUser);
+        }
         if (!opts?.keepOpen) {
           setShowEditUserModal(false);
         }
@@ -4128,7 +4195,7 @@ const AdminDashboard = () => {
 
       {/* User Bookings Modal */}
       <Dialog open={showUserBookingsModal} onOpenChange={setShowUserBookingsModal}>
-        <DialogContent className="max-w-5xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForBookings ? `${selectedUserForBookings.name}'s Bookings` : 'User Bookings'}</DialogTitle>
           </DialogHeader>
@@ -4175,7 +4242,7 @@ const AdminDashboard = () => {
 
       {/* User Transactions Modal */}
       <Dialog open={showUserTransactionsModal} onOpenChange={setShowUserTransactionsModal}>
-        <DialogContent className="max-w-5xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+        <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForTransactions ? `${selectedUserForTransactions.name}'s Transactions` : 'User Transactions'}</DialogTitle>
           </DialogHeader>
@@ -4194,21 +4261,34 @@ const AdminDashboard = () => {
                     <th className="text-left px-4 py-3 text-white">Type</th>
                     <th className="text-left px-4 py-3 text-white">Description</th>
                     <th className="text-left px-4 py-3 text-white">Status</th>
-                    <th className="text-right px-4 py-3 text-white">Amount</th>
+                    <th className="text-right px-4 py-3 text-white whitespace-nowrap w-32">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2A2A2A]">
-                  {userTransactions.map((t: any) => (
-                    <tr key={t._id || t.transactionId} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
-                      <td className="px-4 py-3 text-white whitespace-nowrap">{t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : '-'}</td>
-                      <td className="px-4 py-3 text-white">{t.type || '-'}</td>
-                      <td className="px-4 py-3 text-white">{t.description || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">{t.status || '-'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-white">₹{t.amount ?? 0}</td>
-                    </tr>
-                  ))}
+                  {userTransactions.map((t: any) => {
+                    // Force debits (e.g., bookings/withdrawals) to be negative for display
+                    const rawAmt = Number(t.amount) || 0;
+                    const typeUpper = String(t.type || '').toUpperCase();
+                    const isDebitType = typeUpper === 'BOOKING' || typeUpper === 'WITHDRAW' || typeUpper === 'DEBIT';
+                    const isRefund = typeUpper === 'REFUND';
+                    // Show free bookings as 0 amount (no sign)
+                    const amt = isDebitType ? (rawAmt === 0 ? 0 : -Math.abs(rawAmt)) : (isRefund ? Math.abs(rawAmt) : rawAmt);
+                    const isPositive = amt > 0;
+                    const formatted = `${isPositive ? '+' : amt < 0 ? '-' : ''}₹${Math.abs(amt)}`;
+                    const displayType = amt < 0 && !isDebitType ? 'SERVER ERROR BALANCE' : (t.type || 'WIN');
+                    const displayDesc = t.description || (amt < 0 ? 'Admin balance correction' : '-');
+                    return (
+                      <tr key={t._id || t.transactionId} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
+                        <td className="px-4 py-3 text-white whitespace-nowrap">{t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : '-'}</td>
+                        <td className="px-4 py-3 text-white">{displayType}</td>
+                        <td className="px-4 py-3 text-white">{displayDesc}</td>
+                        <td className="px-4 py-3">
+                          <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">{t.status || '-'}</span>
+                        </td>
+                        <td className={`px-4 py-3 text-right whitespace-nowrap w-32 ${isPositive ? 'text-green-400' : amt < 0 ? 'text-red-400' : 'text-white'}`}>{formatted}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -4288,10 +4368,10 @@ const AdminDashboard = () => {
                   min="0"
                   step="0.01"
                   value={editUserData.winAmount}
-                  readOnly
-                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 cursor-not-allowed"
+                  onChange={(e) => setEditUserData(prev => ({ ...prev, winAmount: e.target.value }))}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
                 />
-                <p className="text-xs text-gray-500 mt-1">Read-only. Use the actions below to credit amounts.</p>
+                <p className="text-xs text-gray-500 mt-1">You can edit this directly or use actions below to credit.</p>
               </div>
             </div>
 
