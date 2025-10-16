@@ -35,6 +35,7 @@ import Terms from "./pages/Terms";
 import TournamentRules from "./pages/TournamentRules";
 import AlphaLionApp from "./pages/AlphaLionApp";
 
+
 // Admin Route Guard Component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const isAdmin = localStorage.getItem("isAdmin") === "true";

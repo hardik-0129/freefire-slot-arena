@@ -2981,7 +2981,7 @@ const AdminDashboard = () => {
   // User editing functions
   const openEditUser = (user: any) => {
     setEditingUser(user);
-    setEditUserData({
+    const nextData: any = {
       name: user.name || '',
       email: user.email || '',
       phone: user.phone || '',
@@ -2989,7 +2989,9 @@ const AdminDashboard = () => {
       wallet: user.wallet?.toString() || '0',
       winAmount: user.winAmount?.toString() || '0',
       isAdmin: user.isAdmin || false
-    });
+    };
+    nextData.freeMatchPass = (Number(user.freeMatchPass) || 0).toString();
+    setEditUserData(nextData as any);
     setShowEditUserModal(true);
   };
 
@@ -3006,7 +3008,8 @@ const AdminDashboard = () => {
         phone: editUserData.phone,
         freeFireUsername: editUserData.freeFireUsername,
         isAdmin: editUserData.isAdmin,
-        winAmount: Number(editUserData.winAmount) || 0
+        winAmount: Number(editUserData.winAmount) || 0,
+        freeMatchPass: Number((editUserData as any).freeMatchPass) || 0
       };
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/admin/update/${editingUser._id}`, {
@@ -3287,6 +3290,7 @@ const AdminDashboard = () => {
                   <th className="text-left p-3 text-white">User ID</th>
                   <th className="text-left p-3 text-white">Free Fire Username</th>
                   <th className="text-left p-3 text-white">Total Balance</th>
+                  <th className="text-left p-3 text-white">Free Pass</th>
                   <th className="text-left p-3 text-white">Joined</th>
                   <th className="text-right p-3 text-white">Actions</th>
                 </tr>
@@ -3329,6 +3333,7 @@ const AdminDashboard = () => {
                     <td className="p-3">
                       <span className="text-green-400 font-bold">₹{Math.floor((parseFloat(user.wallet) || 0) + (parseFloat(user.winAmount) || 0))}</span>
                     </td>
+                    <td className="p-3 text-cyan-300">{Number(user.freeMatchPass || 0)}</td>
                     <td className="p-3 text-gray-400">
                       {new Date(user.createdAt).toLocaleDateString('en-IN', {
                         day: '2-digit',
@@ -4372,6 +4377,23 @@ const AdminDashboard = () => {
                   className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
                 />
                 <p className="text-xs text-gray-500 mt-1">You can edit this directly or use actions below to credit.</p>
+              </div>
+            </div>
+
+            {/* Free Match Pass editor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editUserFreePass" className="text-white">Free Match Pass</Label>
+                <Input
+                  id="editUserFreePass"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={(editUserData as any).freeMatchPass || '0'}
+                  onChange={(e) => setEditUserData(prev => ({ ...prev, freeMatchPass: e.target.value }))}
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+                <p className="text-xs text-gray-500 mt-1">Manually adjust user's free match passes.</p>
               </div>
             </div>
 
