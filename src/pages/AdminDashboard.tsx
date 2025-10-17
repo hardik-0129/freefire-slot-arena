@@ -3280,7 +3280,7 @@ const AdminDashboard = () => {
             <p className="text-gray-400">Users will appear here once they start registering</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-hidden">
             <table className="w-full text-white">
               <thead>
                 <tr className="border-b border-[#2A2A2A]">
@@ -3310,15 +3310,12 @@ const AdminDashboard = () => {
                   })
                   .map((user: any) => (
                   <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-[#FF4D4F] rounded-full flex items-center justify-center text-white font-bold">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-white">{user.name}</span>
+                    <td className="p-3 text-white">{user.name}</td>
+                    <td className="p-3 text-white">
+                      <div className="max-w-[240px] overflow-x-auto whitespace-nowrap" style={{ scrollbarWidth: 'thin' }}>
+                        {user.email}
                       </div>
                     </td>
-                    <td className="p-3 text-white">{user.email}</td>
                     <td className="p-3 text-white">{user.phone}</td>
                     <td className="p-3">
                       <span className="bg-[#2A2A2A] px-2 py-1 rounded text-cyan-300 font-mono">
