@@ -15,7 +15,8 @@ const Login: React.FC = () => {
   const location = useLocation();
   const [form, setForm] = useState({
     email: '',
-    password: ''
+    password: '',
+    privacyAccepted: false
   });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,12 @@ const Login: React.FC = () => {
       const deviceToken = await getDeviceToken();
       if (otpPhase === 'idle') {
         // Try normal login (server will send OTP if 2FA enabled)
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { ...form, deviceToken });
+        if (!form.privacyAccepted) {
+          setLoading(false);
+          toast.error('You must accept the Privacy Policy to login.');
+          return;
+        }
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { email: form.email, password: form.password, privacyAccepted: true, deviceToken });
         if (res.data?.otpRequired) {
           toast.success('OTP sent to your email');
           setOtpPhase('sent');
@@ -60,7 +66,7 @@ const Login: React.FC = () => {
         } else if (res.data?.token) {
           toast.success('Login successful!');
           localStorage.setItem('token', res.data.token);
-          setForm({ email: '', password: '' });
+          setForm(prev => ({ email: '', password: '', privacyAccepted: prev.privacyAccepted }));
           setTimeout(() => navigate('/tournament'), 800);
         } else {
           toast.error(res.data?.message || 'Login failed.');
@@ -77,7 +83,7 @@ const Login: React.FC = () => {
         if (res.data.token) {
           toast.success('Login successful!');
           localStorage.setItem('token', res.data.token);
-          setForm({ email: '', password: '' });
+          setForm(prev => ({ email: '', password: '', privacyAccepted: prev.privacyAccepted }));
           setOtp(''); setOtpPhase('idle'); setOtpMethod(null); setShowOtpModal(false); setOtpDigits(['','','','','','']);
           setTimeout(() => navigate('/tournament'), 800);
         } else {
@@ -123,6 +129,24 @@ const Login: React.FC = () => {
                 required
                 disabled={otpPhase !== 'idle'}
               />
+            </div>
+
+            <div className="" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+              <input
+                id="privacyAcceptedLogin"
+                type="checkbox"
+                name="privacyAccepted"
+                checked={form.privacyAccepted}
+                onChange={(e) => setForm({ ...form, privacyAccepted: e.target.checked })}
+                required
+                disabled={otpPhase !== 'idle'}
+                style={{ width: 18, height: 18, margin: 0, padding: 0, display: 'inline-block', accentColor: '#FF8B00'}}
+              />
+              <label htmlFor="privacyAcceptedLogin" style={{ margin: 0 }}>
+                I agree to the{' '}
+                <a href="/privacy-policy" style={{ color: '#FF8B00', textDecoration: 'underline' }}>Privacy Policy</a>
+                .
+              </label>
             </div>
 
             {otpPhase === 'sent' && showOtpModal && (

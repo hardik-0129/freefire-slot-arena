@@ -11,6 +11,23 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import UsersPage from "./pages/admin/UsersPage";
+import BannerPage from "./pages/admin/BannerPage";
+import MatchesPage from "./pages/admin/MatchesPage";
+import WinnerPage from "./pages/admin/WinnerPage";
+import GameTypesPage from "./pages/admin/GameTypesPage";
+import GameModesPage from "./pages/admin/GameModesPage";
+import NftHoldersPage from "./pages/admin/NftHoldersPage";
+import ContactMessagesPage from "./pages/admin/ContactMessagesPage";
+import RevenuePage from "./pages/admin/RevenuePage";
+import AllTransactionsPage from "./pages/admin/AllTransactionsPage";
+import ApkManagementPage from "./pages/admin/ApkManagementPage";
+import AnnouncementSendPage from "./pages/admin/AnnouncementSendPage";
+import HtmlAnnouncementsPage from "./pages/admin/HtmlAnnouncementsPage";
+import BlogPage from "./pages/admin/BlogPage";
+import SitemapPage from "./pages/admin/SitemapPage";
 import FullMap from "./pages/FullMap";
 import DetailsPage from "./pages/DetailsPage";
 import SelectSlot from "./pages/SelectSlot";
@@ -120,6 +137,32 @@ const App = () => (
             <Route path="/al-admin-128900441" element={<AdminLogin />} />
             <Route
               path="/al-dashboard-1289"
+              element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="banner" element={<BannerPage />} />
+              <Route path="matches" element={<MatchesPage />} />
+              <Route path="matches/:matchIndex/winner" element={<WinnerPage />} />
+              <Route path="game-types" element={<GameTypesPage />} />
+              <Route path="game-modes" element={<GameModesPage />} />
+              <Route path="nft-holders" element={<NftHoldersPage />} />
+              <Route path="contact-messages" element={<ContactMessagesPage />} />
+              <Route path="revenue" element={<RevenuePage />} />
+              <Route path="all-transactions" element={<AllTransactionsPage />} />
+              <Route path="apk-management" element={<ApkManagementPage />} />
+              <Route path="announcement-send" element={<AnnouncementSendPage />} />
+              <Route path="html-announcements" element={<HtmlAnnouncementsPage />} />
+              <Route path="blog" element={<BlogPage />} />
+              <Route path="sitemap" element={<SitemapPage />} />
+            </Route>
+            {/* Legacy route for backward compatibility */}
+            <Route
+              path="/al-dashboard-1289-legacy"
               element={
                 <AdminRoute>
                   <AdminDashboard />

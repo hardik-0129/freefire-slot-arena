@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -97,6 +98,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   onOpenWinnerDetails,
   onOpenIdPass,
 }) => {
+  const navigate = useNavigate();
   // Helpers to show dd/MM/yyyy hh:mm AM/PM in inputs while keeping ISO under the hood
   const formatToDisplay = (iso?: string) => {
     if (!iso) return "";
@@ -147,10 +149,49 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   const [savingCancel, setSavingCancel] = useState<boolean>(false);
   const [localSlots, setLocalSlots] = useState<any[]>(slots || []);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [togglingRescheduleId, setTogglingRescheduleId] = useState<string | null>(null);
+  const [existingBanners, setExistingBanners] = useState<string[]>([]);
+  const [selectedExistingBanner, setSelectedExistingBanner] = useState<string | null>(null);
+  const [showBannerGallery, setShowBannerGallery] = useState<boolean>(false);
 
   useEffect(() => {
     setLocalSlots(slots || []);
+    // Extract unique banner images from existing slots
+    const banners = [...new Set(slots.map((slot: any) => slot.bannerImage).filter(Boolean))];
+    setExistingBanners(banners);
   }, [slots]);
+
+  // Fetch existing banners when modal opens
+  useEffect(() => {
+    if (showAddSlot) {
+      fetchExistingBanners();
+    }
+  }, [showAddSlot]);
+
+  const fetchExistingBanners = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.slots) {
+          // Get unique banner images
+          const allBanners = (data.slots as any[]).map((slot: any) => slot.bannerImage).filter((banner: any) => typeof banner === 'string' && banner.trim() !== '');
+          const banners = Array.from(new Set(allBanners)) as string[];
+          setExistingBanners(banners);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching existing banners:', error);
+    }
+  };
 
   // Helper: get current local time as ISO-like string YYYY-MM-DDTHH:mm
   const getNowLocalIsoMinutes = () => {
@@ -164,15 +205,17 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   };
 
   useEffect(() => {
-    setMatchTimeDisplay(formatToDisplay(formData.matchTime));
-  }, [formData.matchTime]);
+    if (formData && formData.matchTime) {
+      setMatchTimeDisplay(formatToDisplay(formData.matchTime));
+    }
+  }, [formData?.matchTime]);
 
 
   return (
     <>
     <Card className="bg-[#1A1A1A] border-[#2A2A2A] mb-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-white">Active Matches</CardTitle>
+        <CardTitle className="text-white">Active Matches</CardTitle>  
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
             <SelectTrigger className="w-[180px] bg-[#111] text-white border-[#2A2A2A]">
@@ -219,9 +262,16 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
           <Dialog open={showAddSlot} onOpenChange={(open) => {
             setShowAddSlot(open);
             if (!open) {
-              setFormData(initialFormData);
+              const nowIso = getNowLocalIsoMinutes();
+              setFormData({
+                ...initialFormData,
+                matchTime: nowIso,
+                bannerImage: ''
+              });
               setSlotBannerFile(null);
               setSlotBannerPreview('');
+              setSelectedExistingBanner(null);
+              setShowBannerGallery(false);
             } else {
               // Set current local time defaults when opening
               const nowIso = getNowLocalIsoMinutes();
@@ -229,6 +279,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                 ...initialFormData,
                 matchTime: nowIso
               });
+              fetchExistingBanners();
             }
           }}>
             <DialogTrigger asChild>
@@ -551,23 +602,84 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
 
                 {/* Banner Image */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">
-                    Banner Image <span className="text-red-400">*</span>
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">
+                      Banner Image <span className="text-red-400">*</span>
+                    </h3>
+                    {existingBanners.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-white border-[#2A2A2A] hover:bg-[#2A2A2A]"
+                        onClick={() => setShowBannerGallery(!showBannerGallery)}
+                      >
+                        {showBannerGallery ? 'Hide' : 'Use Existing'} ({existingBanners.length})
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {showBannerGallery && existingBanners.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-gray-400 text-sm">Select from existing banners:</p>
+                      <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto p-2 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+                        {existingBanners.map((banner, index) => (
+                          <div
+                            key={index}
+                            className={`relative cursor-pointer border-2 rounded-lg overflow-hidden ${
+                              selectedExistingBanner === banner
+                                ? 'border-blue-500 ring-2 ring-blue-500'
+                                : 'border-[#2A2A2A] hover:border-[#3A3A3A]'
+                            }`}
+                            onClick={() => {
+                              setSelectedExistingBanner(banner);
+                              setSlotBannerFile(null);
+                              setSlotBannerPreview(banner);
+                              setFormData({ ...formData, bannerImage: banner });
+                            }}
+                          >
+                            <img
+                              src={banner}
+                              alt={`Banner ${index + 1}`}
+                              className="w-full h-24 object-cover"
+                              onError={(e) => {
+                                const img = e.currentTarget;
+                                img.onerror = null;
+                                img.src = '/assets/images/category.png';
+                              }}
+                            />
+                            {selectedExistingBanner === banner && (
+                              <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
+                    <p className="text-gray-400 text-sm">Or upload a new banner:</p>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={handleSlotBannerFileChange}
-                      required
+                      onChange={(e) => {
+                        handleSlotBannerFileChange(e);
+                        setSelectedExistingBanner(null);
+                        setFormData({ ...formData, bannerImage: '' });
+                      }}
                       className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                     />
-                    {slotBannerPreview && (
+                    {(slotBannerPreview || selectedExistingBanner) && (
                       <div className="w-full max-w-md">
-                        <img src={slotBannerPreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                        <img
+                          src={slotBannerPreview || selectedExistingBanner || ''}
+                          alt="Preview"
+                          className="w-full h-40 object-cover rounded-lg"
+                        />
                       </div>
                     )}
-                    {!slotBannerFile && (
+                    {!slotBannerFile && !selectedExistingBanner && !formData.bannerImage && (
                       <p className="text-red-400 text-sm">Banner image is required to create a match</p>
                     )}
                   </div>
@@ -646,6 +758,9 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
             <div key={slot._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
+                  {slot.matchIndex !== undefined && slot.matchIndex !== null && (
+                    <span className="text-[#FF4D4F] font-bold text-lg min-w-[30px]">#{slot.matchIndex}</span>
+                  )}
                   <Users className="h-4 w-4 text-white" />
                   <span className="text-white font-medium">{slot.matchTitle && slot.matchTitle.trim() ? slot.matchTitle : `${slot.slotType.charAt(0).toUpperCase() + slot.slotType.slice(1)} Match`}</span>
                 </div>
@@ -781,7 +896,13 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   </Button>
                   <Button
                     className="flex-1 min-w-[90px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2"
-                    onClick={() => onOpenWinnerDetails ? onOpenWinnerDetails(slot) : undefined}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/winner`);
+                      } else if (onOpenWinnerDetails) {
+                        onOpenWinnerDetails(slot);
+                      }
+                    }}
                   >
                     Winners
                   </Button>
@@ -803,6 +924,43 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                     onClick={() => { setCancelSlotId(slot._id); setCancelReason(''); }}
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    className={`flex-1 min-w-[90px] text-white text-xs py-2 ${
+                      slot.autoRescheduleDisabled 
+                        ? 'bg-gray-600 hover:bg-gray-700' 
+                        : 'bg-purple-600 hover:bg-purple-700'
+                    }`}
+                    disabled={togglingRescheduleId === slot._id}
+                    onClick={async () => {
+                      try {
+                        setTogglingRescheduleId(slot._id);
+                        const token = localStorage.getItem('adminToken');
+                        const newDisabledValue = !slot.autoRescheduleDisabled;
+                        await axios.put(
+                          `${import.meta.env.VITE_API_URL}/api/admin/slots/${slot._id}/toggle-auto-reschedule`,
+                          { disabled: newDisabledValue },
+                          { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        // Update local state
+                        setLocalSlots(prev => prev.map(s => 
+                          s._id === slot._id 
+                            ? { ...s, autoRescheduleDisabled: newDisabledValue }
+                            : s
+                        ));
+                      } catch (e) {
+                        console.error('Toggle auto-reschedule error', e);
+                      } finally {
+                        setTogglingRescheduleId(null);
+                      }
+                    }}
+                  >
+                    {togglingRescheduleId === slot._id 
+                      ? 'Updating...' 
+                      : slot.autoRescheduleDisabled 
+                        ? '🔒 Disabled' 
+                        : '🔓 Enable'
+                    }
                   </Button>
                 </div>
               </div>

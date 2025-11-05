@@ -534,7 +534,7 @@ const Profile = () => {
                 referralHistory.map((txn, idx) => (
                   <div key={txn._id || idx} className="referral-history-item">
                     <div className="referral-history-left">
-                      <div className="referral-history-credit">CREDIT</div>
+                      <div className="referral-history-credit">{String(txn.type || '').toUpperCase()}</div>
                       <div className="referral-history-desc">{txn.description}</div>
                       <div className="referral-history-date">{new Date(txn.createdAt).toLocaleString('en-IN')}</div>
                     </div>

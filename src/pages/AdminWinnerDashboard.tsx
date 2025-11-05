@@ -491,6 +491,17 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
   }, [users, matches]);
 
+  // Refetch when filterSlotId changes
+  useEffect(() => {
+    if (filterSlotId) {
+      // Reset state when filter changes
+      setMatches([]);
+      setWinnersBySlot({});
+      setSlotBookings({});
+      fetchCompletedMatches();
+    }
+  }, [filterSlotId]);
+
 
 
   // Helper function to handle API responses and token expiration
@@ -644,7 +655,8 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
       // Accepts booking, checks booking.user._id or booking.userId
 
       const getUserPhone = (booking: any) => {
-
+        // First check if booking.user already has phone number directly from API
+        if (booking.user?.phone) return booking.user.phone;
         let userId = '';
 
         if (booking.user && booking.user._id) {
@@ -661,7 +673,11 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
         const user = users.find(u => String(u._id) === String(userId));
 
-        return user?.phone || '';
+        if (user) {
+          return user.phone ||'';
+        }
+
+        return '';
 
       };
 
@@ -716,15 +732,11 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                 if (booking.user) {
 
                   return {
-
                     ...booking,
-
                     user: {
-
                       ...booking.user,
-
                       phone
-
+                      
                     }
 
                   };
@@ -1419,9 +1431,14 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
             (() => {
 
-              const matchesWithBookings = matches.filter(match => slotBookings[match._id] && slotBookings[match._id].bookings.length > 0);
-
-              const matchesToShow = matchesWithBookings.length > 0 ? matchesWithBookings : matches;
+              // If filterSlotId is provided, only show that match
+              let matchesToShow = matches;
+              if (filterSlotId) {
+                matchesToShow = matches.filter(match => String(match._id) === String(filterSlotId));
+              } else {
+                const matchesWithBookings = matches.filter(match => slotBookings[match._id] && slotBookings[match._id].bookings.length > 0);
+                matchesToShow = matchesWithBookings.length > 0 ? matchesWithBookings : matches;
+              }
 
 
 
@@ -1839,14 +1856,154 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                   </div>
 
-                  {/* Booked Players Table - always visible */}
+                  {/* Booked Players Table - split into two side-by-side tables */}
 
                   <div className="player-list mt-6">
 
                     {/* <h4 className="text-white font-semibold mb-2">Booked Players</h4> */}
 
-                    <div className="overflow-x-auto">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* First Table: Players 1-24 */}
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full bg-[#232323] rounded-lg">
 
+                        <thead>
+
+                          <tr className="text-white">
+                          <th className="px-3 py-2 text-white text-left w-24">Position</th>
+                            <th className="px-3 py-2 text-white text-center w-20">No. </th>
+
+                          <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
+
+                          <th className="px-3 py-2 text-white text-left w-48">Email</th>
+
+                          <th className="px-3 py-2 text-white text-left w-32">Mobile Number</th>
+
+                            <th className="px-3 py-2 text-white text-center w-20">Kills</th>
+
+                            <th className="px-3 py-2 text-white text-center w-20">Rank</th>
+
+                            <th className="px-3 py-2 text-white text-center w-24">Winnings</th>
+
+                            <th className="px-3 py-2 text-white text-center w-24">Actions</th>
+
+                          </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                          {(slotBookings[match._id]?.bookings?.length > 0) ? (
+
+                            (() => {
+                              const mode = String(match.slotType || '').toLowerCase();
+                              const isGrouped = mode.includes('duo') || mode.includes('squad');
+                              
+                              // Build combined rows array
+                              type Row = { booking: any; playerName: string; seat: number; isTeamHeader?: boolean; teamNum?: number };
+                              const combined: Row[] = [];
+                              
+                              if (!isGrouped) {
+                                // Default flat list
+                                slotBookings[match._id].bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  if (entries.length === 0) {
+                                    combined.push({ booking, playerName: booking.user?.name || '', seat: Number.MAX_SAFE_INTEGER });
+                                    return;
+                                  }
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^(?:team[\w]+)-(\d+)$/i);
+                                    const seat = m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
+                                    combined.push({ booking, playerName: String(name), seat });
+                                  });
+                                });
+                                combined.sort((a, b) => a.seat - b.seat);
+                              } else {
+                                // Group Duo/Squad by team number with a team header row
+                                type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
+                                const groups: Record<string, Member[]> = {};
+                                slotBookings[match._id].bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
+                                    const posLetter = m ? String(m[1]).toUpperCase() : '?';
+                                    const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+                                    const k = String(teamNum);
+                                    if (!groups[k]) groups[k] = [];
+                                    groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
+                                  });
+                                });
+                                const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                                orderedTeams.forEach((team) => {
+                                  combined.push({ booking: null, playerName: '', seat: team, isTeamHeader: true, teamNum: team });
+                                  groups[String(team)]
+                                    .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
+                                    .forEach((member) => {
+                                      combined.push({ booking: member.booking, playerName: member.playerName, seat: member.teamNum });
+                                    });
+                                });
+                              }
+
+                              // Split into two arrays: first 24 and remaining
+                              const first24 = combined.slice(0, 24);
+                              
+                              let seq = 0;
+                              
+                              return (
+                                <>
+                                  {first24.map((row, i) => {
+                                    if (row.isTeamHeader) {
+                                      return (
+                                        <tr key={`header-${row.teamNum}-first`}>
+                                          <td colSpan={9} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
+                                        </tr>
+                                      );
+                                    }
+                                    seq += 1;
+                                    return (
+                                      <BookingTableRow
+                                        key={(row.booking?._id || 'b') + '-first-' + i}
+                                        booking={row.booking}
+                                        idx={seq}
+                                        playerName={row.playerName}
+                                        onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
+                                        winnersBySlot={winnersBySlot}
+                                        onWinnerChange={fetchCompletedMatches}
+                                        slotId={match._id}
+                                        perKill={match.perKill}
+                                        firstwin={match.firstwin}
+                                        secwin={match.secwin}
+                                        thirdwin={match.thirdwin}
+                                      />
+                                    );
+                                  })}
+                                  {first24.length === 0 && (
+                                    <tr>
+                                      <td colSpan={9} className="text-center text-gray-400">No players in this range.</td>
+                                    </tr>
+                                  )}
+                                </>
+                              );
+                            })()
+
+                          ) : (
+
+                            <tr>
+
+                              <td colSpan={9} className="text-center text-gray-400">No players booked for this match.</td>
+
+                            </tr>
+
+                          )}
+
+                        </tbody>
+
+                      </table>
+
+                    </div>
+
+                    {/* Second Table: Players 25-48 */}
+                    <div className="overflow-x-auto">
                       <table className="min-w-full bg-[#232323] rounded-lg">
 
                         <thead>
@@ -1880,10 +2037,13 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                             (() => {
                               const mode = String(match.slotType || '').toLowerCase();
                               const isGrouped = mode.includes('duo') || mode.includes('squad');
+                              
+                              // Build combined rows array
+                              type Row = { booking: any; playerName: string; seat: number; isTeamHeader?: boolean; teamNum?: number };
+                              const combined: Row[] = [];
+                              
                               if (!isGrouped) {
                                 // Default flat list
-                                type Row = { booking: any; playerName: string; seat: number };
-                                const combined: Row[] = [];
                                 slotBookings[match._id].bookings.forEach((booking: any) => {
                                   const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
                                   if (entries.length === 0) {
@@ -1897,54 +2057,54 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                   });
                                 });
                                 combined.sort((a, b) => a.seat - b.seat);
-                                let seq = 0;
-                                return combined.map((row, i) => (
-                                  <BookingTableRow
-                                    key={(row.booking?._id || 'b') + '-' + i}
-                                    booking={row.booking}
-                                    idx={(seq += 1)}
-                                    playerName={row.playerName}
-                                    onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
-                                    winnersBySlot={winnersBySlot}
-                                    onWinnerChange={fetchCompletedMatches}
-                                    slotId={match._id}
-                                    perKill={match.perKill}
-                                    firstwin={match.firstwin}
-                                    secwin={match.secwin}
-                                    thirdwin={match.thirdwin}
-                                  />
-                                ));
+                              } else {
+                                // Group Duo/Squad by team number with a team header row
+                                type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
+                                const groups: Record<string, Member[]> = {};
+                                slotBookings[match._id].bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
+                                    const posLetter = m ? String(m[1]).toUpperCase() : '?';
+                                    const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+                                    const k = String(teamNum);
+                                    if (!groups[k]) groups[k] = [];
+                                    groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
+                                  });
+                                });
+                                const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                                orderedTeams.forEach((team) => {
+                                  combined.push({ booking: null, playerName: '', seat: team, isTeamHeader: true, teamNum: team });
+                                  groups[String(team)]
+                                    .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
+                                    .forEach((member) => {
+                                      combined.push({ booking: member.booking, playerName: member.playerName, seat: member.teamNum });
+                                    });
+                                });
                               }
 
-                              // Group Duo/Squad by team number with a team header row
-                              type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
-                              const groups: Record<string, Member[]> = {};
-                              slotBookings[match._id].bookings.forEach((booking: any) => {
-                                const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
-                                entries.forEach(([key, name]) => {
-                                  const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
-                                  const posLetter = m ? String(m[1]).toUpperCase() : '?';
-                                  const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
-                                  const k = String(teamNum);
-                                  if (!groups[k]) groups[k] = [];
-                                  groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
-                                });
-                              });
-                              const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
-                              let seq = 0;
-                              return orderedTeams.map((team) => (
-                                <React.Fragment key={`team-${team}`}>
-                                  <tr>
-                                    <td colSpan={8} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{team}</td>
-                                  </tr>
-                                  {groups[String(team)]
-                                    .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
-                                    .map((member, idx) => (
+                              // Get remaining players (25-48)
+                              const remaining = combined.slice(24, 48);
+                              
+                              let seq = 24; // Start from 25
+                              
+                              return (
+                                <>
+                                  {remaining.map((row, i) => {
+                                    if (row.isTeamHeader) {
+                                      return (
+                                        <tr key={`header-${row.teamNum}-second`}>
+                                          <td colSpan={9} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
+                                        </tr>
+                                      );
+                                    }
+                                    seq += 1;
+                                    return (
                                       <BookingTableRow
-                                        key={`team-${team}-${idx}`}
-                                        booking={member.booking}
-                                        idx={(seq += 1)}
-                                        playerName={member.playerName}
+                                        key={(row.booking?._id || 'b') + '-second-' + i}
+                                        booking={row.booking}
+                                        idx={seq}
+                                        playerName={row.playerName}
                                         onSave={(winnerId, stats) => handleUpdatePlayerStats(winnerId, stats)}
                                         winnersBySlot={winnersBySlot}
                                         onWinnerChange={fetchCompletedMatches}
@@ -1954,16 +2114,22 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                         secwin={match.secwin}
                                         thirdwin={match.thirdwin}
                                       />
-                                    ))}
-                                </React.Fragment>
-                              ));
+                                    );
+                                  })}
+                                  {remaining.length === 0 && (
+                                    <tr>
+                                      <td colSpan={9} className="text-center text-gray-400">No players in this range.</td>
+                                    </tr>
+                                  )}
+                                </>
+                              );
                             })()
 
                           ) : (
 
                             <tr>
 
-                              <td colSpan={6} className="text-center text-gray-400">No players booked for this match.</td>
+                              <td colSpan={9} className="text-center text-gray-400">No players booked for this match.</td>
 
                             </tr>
 
@@ -1974,6 +2140,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                       </table>
 
                     </div>
+                  </div>
 
                   </div>
 
@@ -2482,15 +2649,12 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           <span className="truncate">{playerName}</span>
 
-          {isPlayerAlreadyWinner && (
+          {/* {isPlayerAlreadyWinner && (
 
             <span className="text-xs bg-red-600 text-white px-2 py-1 rounded whitespace-nowrap">
-
               Already Winner
-
             </span>
-
-          )}
+          )} */}
 
         </div>
 

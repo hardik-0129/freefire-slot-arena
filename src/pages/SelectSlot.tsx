@@ -70,6 +70,53 @@ const SelectSlot = () => {
   const [playerNames, setPlayerNames] = useState<{ [key: string]: string }>({});
   const [bookedPositions, setBookedPositions] = useState<{ [key: string]: string[] }>({});
   const [isJoining, setIsJoining] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ freeFireUsername?: string } | null>(null);
+
+  // Fetch user profile to get Free Fire username
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUserProfile(null);
+        return;
+      }
+
+      // Decode JWT token to get user ID
+      try {
+        const decoded = jwtDecode<DecodedToken>(token);
+        const userId = decoded.userId;
+
+        if (!userId) {
+          console.error('No userId found in decoded token');
+          setUserProfile(null);
+          return;
+        }
+
+        // Fetch user profile
+        const apiUrl = `${import.meta.env.VITE_API_URL}/api/user/profile/?userId=${userId}`;
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserProfile(data.user);
+        } else {
+          console.error('Failed to fetch user profile:', response.status);
+          setUserProfile(null);
+        }
+      } catch (decodeError) {
+        console.error('Error decoding JWT token:', decodeError);
+        setUserProfile(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUserProfile(null);
+    }
+  };
 
   // Fetch wallet balance
   const fetchWalletBalance = async () => {
@@ -264,6 +311,7 @@ const SelectSlot = () => {
   useEffect(() => {
     fetchWalletBalance();
     fetchBookedPositions();
+    fetchUserProfile();
   }, [slotData]);
 
   // Handle position selection
@@ -334,6 +382,20 @@ const SelectSlot = () => {
         return newSelectedPositions;
       }
     });
+
+    // Auto-fill Free Fire username only for the first position selected
+    if (isSelected && userProfile?.freeFireUsername) {
+      const key = `${teamName}-${position}`;
+      const currentSelectedCount = Object.values(selectedPositions).reduce((total, positions) => total + positions.length, 0);
+      
+      // Only auto-fill if this is the first position being selected
+      if (currentSelectedCount === 0) {
+        setPlayerNames(prev => ({
+          ...prev,
+          [key]: userProfile.freeFireUsername
+        }));
+      }
+    }
 
 
     // Clean up player names when position is deselected

@@ -128,10 +128,12 @@ const Wallets = () => {
     const [loadingTransactions, setLoadingTransactions] = useState(false);
     const [pendingHolds, setPendingHolds] = useState(0);
     const [freeMatchPass, setFreeMatchPass] = useState(0);
+    const [isSuspended, setIsSuspended] = useState(false);
 
 
     useEffect(() => {
         fetchWalletBalance();
+        fetchSuspension();
         fetchTransactionHistory();
 
         // --- SOCKET.IO REAL-TIME WALLET UPDATE ---
@@ -283,6 +285,21 @@ const Wallets = () => {
             setPendingHolds(0);
             setFreeMatchPass(0);
         }
+    };
+
+    const fetchSuspension = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            const decoded = jwtDecode<DecodedToken>(token);
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile/?userId=${decoded.userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                setIsSuspended(Boolean(data.user?.isSuspended));
+            }
+        } catch {}
     };
 
     const fetchTransactionHistory = async () => {
@@ -677,8 +694,15 @@ const Wallets = () => {
                                 </button>
                             </div>
                             <div className="modal-body">
+                                {/* Suspension message */}
+                                {isSuspended && (
+                                    <div className="message-alert error" style={{ marginBottom: 12 }}>
+                                        ⚠️ Your account is suspended. Withdrawals are disabled. Please contact support.
+                                    </div>
+                                )}
+                                {/* Dynamic runtime message (errors or additional info) */}
                                 {message && (
-                                    <div className={`message-alert ${message.includes('success') ? 'success' : 'error'}`}>
+                                    <div className={`message-alert ${message.includes('❌') ? 'error' : 'success'}`}>
                                         {message}
                                     </div>
                                 )}
@@ -713,9 +737,9 @@ const Wallets = () => {
                                     <button
                                         className="btn orange"
                                         onClick={handleWithdraw}
-                                        disabled={loading}
+                                        disabled={loading || isSuspended}
                                     >
-                                        {loading ? 'Processing...' : 'Withdraw Money'}
+                                        {isSuspended ? 'Account Suspended' : (loading ? 'Processing...' : 'Withdraw Money')}
                                     </button>
                                     <button
                                         className="btn secondary"

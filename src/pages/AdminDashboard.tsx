@@ -25,13 +25,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import GameTypeImage from "@/components/GameTypeImage";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -51,7 +44,6 @@ import {
   Trash,
   Trophy,
   History,
-  CreditCard,
   Smartphone
 } from "lucide-react";
 
@@ -265,16 +257,30 @@ const initialFormData: SlotFormData = {
   bannerImage: "" // Add banner image field
 };
 
-const AdminDashboard = () => {
+interface AdminDashboardProps {
+  hideLayout?: boolean;
+  section?: string;
+}
+
+const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {}) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState(section || 'dashboard');
+  
+  // Update activeSection when section prop changes
+  useEffect(() => {
+    if (section) {
+      setActiveSection(section);
+    }
+  }, [section]);
   const [slots, setSlots] = useState([]);
   const [users, setUsers] = useState([]);
   const [usersPage, setUsersPage] = useState(1);
-  const [usersLimit, setUsersLimit] = useState(20);
+  const [usersLimit, setUsersLimit] = useState(100);
   const [usersTotal, setUsersTotal] = useState(0);
   const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [usersEmailSearch, setUsersEmailSearch] = useState('');
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [slotBookings, setSlotBookings] = useState({});
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [showTournamentRules, setShowTournamentRules] = useState(false);
@@ -285,6 +291,9 @@ const AdminDashboard = () => {
   // Edit banner image state
   const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
   const [editBannerPreview, setEditBannerPreview] = useState<string>('');
+  const [existingEditBanners, setExistingEditBanners] = useState<string[]>([]);
+  const [selectedExistingEditBanner, setSelectedExistingEditBanner] = useState<string | null>(null);
+  const [showEditBannerGallery, setShowEditBannerGallery] = useState<boolean>(false);
   // ID/Pass modal state
   const [showIdPassModal, setShowIdPassModal] = useState(false);
   const [idPassSlotId, setIdPassSlotId] = useState<string>('');
@@ -438,14 +447,14 @@ const AdminDashboard = () => {
   });
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [winMoneyAmount, setWinMoneyAmount] = useState('');
+  const [winnerAmountNote, setWinnerAmountNote] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [walletCreditAmount, setWalletCreditAmount] = useState('');
+  const [joinAmountNote, setJoinAmountNote] = useState('');
 
   // Sitemap replace (admin)
   const [sitemapXml, setSitemapXml] = useState('');
   const [isReplacingSitemap, setIsReplacingSitemap] = useState(false);
-
-  
 
   // Auto status update function
   const updateMatchStatuses = async () => {
@@ -713,7 +722,8 @@ const AdminDashboard = () => {
     if (!file.type.startsWith('image/')) return;
     setEditBannerFile(file);
     setEditBannerPreview(URL.createObjectURL(file));
-    // Clear URL field when a file is chosen to avoid ambiguity
+    // Also clear any existing selection and URL
+    setSelectedExistingEditBanner(null);
     setEditData(prev => ({ ...prev, bannerImage: '' }));
   };
 
@@ -721,33 +731,6 @@ const AdminDashboard = () => {
   const [slotBannerFile, setSlotBannerFile] = useState<File | null>(null);
   const [slotBannerPreview, setSlotBannerPreview] = useState<string>('');
 
-  // const [tournamentRulesData, setTournamentRulesData] = useState<TournamentRulesData>({
-  //   minimumLevel: 40,
-  //   onlyMobileAllowed: true,
-  //   maxHeadshotRate: 70,
-  //   prohibitedActivities: [
-  //     'Using any type of emulator, hack or third-party application',
-  //     'Inviting unregistered players',
-  //     'Prohibited throwable items: Grenade, smoke, flash freeze, flashbang, etc.',
-  //     'Zone Pack is not allowed',
-  //     'Double Vector gun is not allowed'
-  //   ],
-  //   characterSkill: 'Yes',
-  //   gunAttributes: 'Yes',
-  //   airdropType: 'Yes',
-  //   limitedAmmo: 'Yes',
-  //   roomIdPasswordTime: 15,
-  //   accountNameVerification: true,
-  //   teamRegistrationRules: 'If team members accidentally register in different teams, they will still play together',
-  //   mustRecordGameplay: true,
-  //   screenRecordingRequired: true,
-  //   recordFromJoining: true,
-  //   penaltySystem: {
-  //     violatingRules: 'Penalties',
-  //     noRewards: true,
-  //     permanentBan: false
-  //   }
-  // });
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   // Game Type management state
@@ -831,41 +814,6 @@ const AdminDashboard = () => {
     return value;
   };
 
-  // Remove a single image from a banner
-  // const handleRemoveBannerImage = async (bannerId: string, imagePath: string) => {
-  //   try {
-  //     const token = localStorage.getItem('adminToken');
-  //     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/${bannerId}/remove-image`, {
-  //       method: 'DELETE',
-  //       headers: {
-  //         'Authorization': `Bearer ${token}`,
-  //         'Content-Type': 'application/json'
-  //       },
-  //       body: JSON.stringify({ imagePath })
-  //     });
-  //     if (!res.ok) throw new Error('Failed to remove image');
-  //     toast({ title: 'Removed', description: 'Banner image deleted.' });
-  //     await fetchBannerData();
-  //     await fetchAllBanners();
-  //   } catch (e: any) {
-  //     toast({ title: 'Error', description: e.message || 'Failed to remove image', variant: 'destructive' });
-  //   }
-  // };
-
-  // const toRelativeUploadsPath = (url: string): string => {
-  //   if (!url) return url;
-  //   const uploadsIdx = url.indexOf('/uploads/');
-  //   if (uploadsIdx !== -1) {
-  //     return url.substring(uploadsIdx);
-  //   }
-  //   // Fallback: strip API base if present
-  //   const apiBase = import.meta.env.VITE_API_URL as string;
-  //   if (apiBase && url.startsWith(apiBase)) {
-  //     return url.replace(apiBase, '');
-  //   }
-  //   return url;
-  // };
-
   useEffect(() => {
     // Check if admin is logged in
     const isAdmin = localStorage.getItem("isAdmin");
@@ -902,6 +850,41 @@ const AdminDashboard = () => {
     }
   }, [showAddSlot]);
 
+  // Load existing banners for the Edit modal
+  useEffect(() => {
+    if (showEditSlot) {
+      // Use already loaded slots first (fast)
+      if (Array.isArray(slots) && slots.length > 0) {
+        const all = (slots as any[])
+          .map((s: any) => s?.bannerImage)
+          .filter((b: any) => typeof b === 'string' && b.trim() !== '');
+        const unique = Array.from(new Set(all)) as string[];
+        if (unique.length > 0) setExistingEditBanners(unique);
+      }
+      fetchExistingEditBanners();
+    }
+  }, [showEditSlot, slots]);
+
+  const fetchExistingEditBanners = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.slots || []);
+      const all = (list as any[])
+        .map((s: any) => s?.bannerImage)
+        .filter((b: any) => typeof b === 'string' && b.trim() !== '');
+      const unique = Array.from(new Set(all)) as string[];
+      setExistingEditBanners(unique);
+    } catch (e) {
+      console.error('Error fetching existing banners for edit:', e);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("isAdmin");
@@ -926,8 +909,8 @@ const AdminDashboard = () => {
   const handleCreateSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required banner image
-    if (!slotBannerFile) {
+    // Validate required banner image - check for either new file upload or existing banner selection
+    if (!slotBannerFile && !formData.bannerImage) {
       toast({
         title: "Error",
         description: "Banner image is required to create a match",
@@ -941,8 +924,12 @@ const AdminDashboard = () => {
     try {
       let bannerImageUrl = '';
 
-      // Upload banner image first if selected
-      if (slotBannerFile) {
+      // If existing banner is selected, use it directly
+      if (formData.bannerImage && !slotBannerFile) {
+        bannerImageUrl = formData.bannerImage;
+      } 
+      // Otherwise upload new banner image if selected
+      else if (slotBannerFile) {
         const imageFormData = new FormData();
         imageFormData.append('banner', slotBannerFile);
 
@@ -1027,6 +1014,7 @@ const AdminDashboard = () => {
       setFormData(initialFormData);
       setSlotBannerFile(null); // Clear banner file
       setSlotBannerPreview(''); // Clear banner preview
+      // Note: selectedExistingBanner is cleared in MatchesManager when modal closes
       fetchSlots(); // Refresh the slots list
       fetchSlotBookings(); // Refresh the bookings list
     } catch (error: any) {
@@ -1072,7 +1060,13 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users?page=${usersPage}&limit=${usersLimit}` , {
+      // If there's a search query, use the search API, otherwise use regular users API
+      const url = usersEmailSearch.trim() 
+        ? `${import.meta.env.VITE_API_URL}/api/admin/users/search?email=${encodeURIComponent(usersEmailSearch.trim())}&page=${usersPage}&limit=${usersLimit}`
+        : `${import.meta.env.VITE_API_URL}/api/admin/users?page=${usersPage}&limit=${usersLimit}`;
+      
+      setIsSearchingUsers(!!usersEmailSearch.trim());
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -1090,6 +1084,8 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+    } finally {
+      setIsSearchingUsers(false);
     }
   };
 
@@ -1111,15 +1107,33 @@ const AdminDashboard = () => {
   };
 
 
+  // Debounce search to avoid too many API calls
   useEffect(() => {
     if (!loading) {
       fetchSlots();
-      fetchUsers();
       fetchSlotBookings();
       fetchGameModes();
       fetchGameMaps();
     }
-  }, [loading, usersPage, usersLimit]);
+  }, [loading]);
+
+  // Separate useEffect for search changes to reset page
+  useEffect(() => {
+    if (!loading) {
+      setUsersPage(1);
+    }
+  }, [loading, usersEmailSearch]);
+
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    if (!loading) {
+      const timeoutId = setTimeout(() => {
+        fetchUsers();
+      }, 500); // Wait 500ms after user stops typing
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading, usersPage, usersLimit, usersEmailSearch]);
 
   const handleDeleteSlot = async (slotId: string) => {
     try {
@@ -2878,7 +2892,6 @@ const AdminDashboard = () => {
   );
 
 
-  const [userSearch, setUserSearch] = useState('');
   const [showUserBookingsModal, setShowUserBookingsModal] = useState(false);
   const [selectedUserForBookings, setSelectedUserForBookings] = useState<any | null>(null);
   const [userBookings, setUserBookings] = useState<any[]>([]);
@@ -2992,6 +3005,11 @@ const AdminDashboard = () => {
     };
     nextData.freeMatchPass = (Number(user.freeMatchPass) || 0).toString();
     setEditUserData(nextData as any);
+    // Clear note fields when opening modal
+    setWinMoneyAmount('');
+    setWinnerAmountNote('');
+    setWalletCreditAmount('');
+    setJoinAmountNote('');
     setShowEditUserModal(true);
   };
 
@@ -3026,29 +3044,8 @@ const AdminDashboard = () => {
           title: "Success",
           description: "User updated successfully",
         });
-        // Try to sync winAmount by applying the delta via wallet API
-        try {
-          const desiredWinAmount = Number(editUserData.winAmount) || 0;
-          const currentWinAmount = Number(editingUser.winAmount) || 0;
-          const delta = desiredWinAmount - currentWinAmount;
-          if (delta !== 0) {
-            const winRes = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ userId: editingUser._id, amount: delta, description: 'Admin manual adjustment' })
-            });
-            if (!winRes.ok) {
-              const err = await winRes.json().catch(() => ({}));
-              // Common case: backend may disallow negative amounts (decrease)
-              throw new Error(err?.error || (delta < 0 ? 'Server does not allow decreasing win amount' : 'Failed to adjust win amount'));
-            }
-          }
-        } catch (e: any) {
-          toast({ variant: 'destructive', title: 'Win amount not fully updated', description: e?.message || 'Adjustment failed' });
-        }
+        // Sync local editingUser with latest winAmount to avoid duplicate adjustments later
+        setEditingUser((prev: any) => ({ ...(prev || {}), winAmount: Number(editUserData.winAmount) || 0 }));
         // If transactions modal is open for this user, refresh it to show the new entry
         if (showUserTransactionsModal && selectedUserForTransactions && selectedUserForTransactions._id === editingUser._id) {
           await openUserTransactions(editingUser);
@@ -3088,18 +3085,20 @@ const AdminDashboard = () => {
         body: JSON.stringify({
           userId: editingUser._id,
           amount: parseFloat(winMoneyAmount),
-          description: `Admin credit: Win Money`
+          description: winnerAmountNote ? `Admin credit: Win Money - ${winnerAmountNote}` : `Admin credit: Win Money`
         })
       });
 
       if (response.ok) {
-        toast({ title: 'Success', description: `Added ₹${winMoneyAmount} to win money` });
+        const added = parseFloat(winMoneyAmount) || 0;
+        toast({ title: 'Success', description: `Added ₹${added} to win money` });
         setWinMoneyAmount('');
+        setWinnerAmountNote('');
         fetchUsers(); // Refresh user list
-        // Update local state to reflect new winAmount
+        // Update local state to reflect new winAmount only (join money must not change)
         setEditUserData(prev => ({
           ...prev,
-          winAmount: String((parseFloat(prev.winAmount) || 0) + parseFloat(winMoneyAmount))
+          winAmount: String((parseFloat(prev.winAmount) || 0) + added)
         }));
       } else {
         const err = await response.json();
@@ -3128,13 +3127,14 @@ const AdminDashboard = () => {
         body: JSON.stringify({
           userId: editingUser._id,
           amount: parseFloat(walletCreditAmount),
-          description: `Admin credit: Join Money`
+          description: joinAmountNote ? `Admin credit: Join Money - ${joinAmountNote}` : `Admin credit: Join Money`
         })
       });
 
       if (response.ok) {
         toast({ title: 'Success', description: `Added ₹${walletCreditAmount} to wallet` });
         setWalletCreditAmount('');
+        setJoinAmountNote('');
         fetchUsers(); // Refresh user list
         // Update local state to reflect new wallet balance
         setEditUserData(prev => ({
@@ -3249,19 +3249,52 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleToggleSuspend = async (user: any) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const suspend = !user.isSuspended;
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/admin/suspend/${user._id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ suspend, reason: suspend ? 'Suspended from admin panel' : '' })
+      });
+      const data = await response.json();
+      if (data.status) {
+        toast({ title: 'Success', description: suspend ? 'User suspended' : 'User unsuspended' });
+        // update local list
+        setUsers(prev => prev.map((u: any) => u._id === user._id ? { ...u, isSuspended: data.user.isSuspended } : u));
+      } else {
+        throw new Error(data.error || 'Failed to update suspension');
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message || 'Failed to update suspension' });
+    }
+  };
+
   const renderUsers = () => (
     <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
         <CardTitle className="text-white">Users Management ({usersTotal || users.length} Users)</CardTitle>
           <div className="flex items-center gap-4">
-            <input
-              type="text"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              placeholder="Search by name, email, phone, username"
-              className="w-full max-w-md bg-[#222] border border-[#333] text-white rounded px-3 py-2"
-            />
+            <div className="relative w-full max-w-md">
+              <input
+                type="text"
+                value={usersEmailSearch}
+                onChange={(e) => setUsersEmailSearch(e.target.value)}
+                placeholder="Search by email"
+                className="w-full bg-[#222] border border-[#333] text-white rounded px-3 py-2 pr-10"
+                disabled={isSearchingUsers}
+              />
+              {isSearchingUsers && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-gray-400" />
+                </div>
+              )}
+            </div>
             <Button
               onClick={() => setShowAddUserModal(true)}
               className="bg-green-600 hover:bg-green-700 text-white"
@@ -3296,19 +3329,7 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {users
-                  .filter((user: any) => {
-                    if (!userSearch.trim()) return true;
-                    const q = userSearch.toLowerCase();
-                    return (
-                      (user.name || '').toLowerCase().includes(q) ||
-                      (user.email || '').toLowerCase().includes(q) ||
-                      (user.phone || '').toLowerCase().includes(q) ||
-                      (user.freeFireUsername || '').toLowerCase().includes(q) ||
-                      ((user.referCode || user.userId || user.referralCode || user.refCode || user._id || '') + '').toLowerCase().includes(q)
-                    );
-                  })
-                  .map((user: any) => (
+                {users.map((user: any) => (
                   <tr key={user._id} className="border-b border-[#2A2A2A] hover:bg-[#2A2A2A]">
                     <td className="p-3 text-white">{user.name}</td>
                     <td className="p-3 text-white">
@@ -3338,11 +3359,18 @@ const AdminDashboard = () => {
                         year: 'numeric'
                       })}
                     </td>
-                  <td className="p-3 text-right">
+                    <td className="p-3 text-right">
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openEditUser(user)}>Edit</Button>
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openUserBookings(user)}>View Bookings</Button>
                       <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => openUserTransactions(user)}>Transactions</Button>
+                      <Button
+                        size="sm"
+                        className={`${user.isSuspended ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-orange-600 hover:bg-orange-700'} text-white`}
+                        onClick={() => handleToggleSuspend(user)}
+                      >
+                        {user.isSuspended ? 'Unsuspend' : 'Suspend'}
+                      </Button>
                       <Button 
                         size="sm" 
                         className="bg-red-600 hover:bg-red-700 text-white" 
@@ -3380,10 +3408,9 @@ const AdminDashboard = () => {
                   value={usersLimit}
                   onChange={(e) => { setUsersPage(1); setUsersLimit(parseInt(e.target.value, 10)); }}
                 >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
                   <option value={100}>100</option>
+                  <option value={200}>200</option>
+                  <option value={300}>300</option>
                 </select>
               </div>
             </div>
@@ -3434,6 +3461,949 @@ const AdminDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#121212]">
         <div className="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If hideLayout is true, only render the content without sidebar
+  if (hideLayout) {
+    return (
+      <div className="p-6">
+        {activeSection === 'dashboard' && renderDashboard()}
+        {activeSection === 'users' && renderUsers()}
+        {activeSection === 'nftHolders' && <NftHoldersManagement />}
+        {activeSection === 'contactMessages' && <ContactMessagesTable />}
+        {activeSection === 'announcementSender' && <AnnouncementSender />}
+        {activeSection === 'htmlAnnouncements' && <AnnouncementManager />}
+        {activeSection === 'allTransactions' && <AllTransactionsHistory />}
+        {activeSection === 'transactionHistory' && <TransactionHistory />}
+        {activeSection === 'apkManagement' && <APKManagement />}
+        {activeSection === 'revenue' && renderRevenue()}
+        {(activeSection === 'matches' || activeSection === 'winners') && (
+          <>
+            {activeSection === 'matches' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                  <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                    <CardHeader>
+                      <CardTitle className="text-white">Total Matches</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-white">{slots.length}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                    <CardHeader>
+                      <CardTitle className="text-white flex items-center gap-2">
+                        Auto Status Updates
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-300">Active</p>
+                      <p className="text-xs text-gray-400">Updates every minute</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                    <CardHeader>
+                      <CardTitle className="text-white">Total Bookings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-white">
+                        {String(Object.values(slotBookings).reduce((total: number, slot: any) => total + (slot.bookings?.length || 0), 0))}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+                    <CardHeader>
+                      <CardTitle className="text-white">Match Revenue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-[#52C41A]">
+                        ₹{String(Object.values(slotBookings).reduce((total: number, slot: any) =>
+                          total + (slot.bookings?.reduce((slotTotal: number, booking: any) => slotTotal + (booking.totalAmount || 0), 0) || 0), 0
+                        ))}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <MatchesManager
+              slots={slots}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              customDateFrom={customDateFrom}
+              setCustomDateFrom={setCustomDateFrom}
+              customDateTo={customDateTo}
+              setCustomDateTo={setCustomDateTo}
+              showAddSlot={showAddSlot}
+              setShowAddSlot={setShowAddSlot}
+              formData={formData}
+              setFormData={setFormData}
+              initialFormData={initialFormData}
+              slotBannerFile={slotBannerFile}
+              setSlotBannerFile={setSlotBannerFile}
+              slotBannerPreview={slotBannerPreview}
+              setSlotBannerPreview={setSlotBannerPreview}
+              handleSlotBannerFileChange={handleSlotBannerFileChange}
+              gameTypes={gameTypes}
+              gameModes={gameModes}
+              gameMaps={gameMaps}
+              handleCreateSlot={handleCreateSlot}
+              getStatusColor={getStatusColor}
+              getNextStatus={getNextStatus}
+              handleUpdateMatchStatus={handleUpdateMatchStatus}
+              handleDeleteSlot={handleDeleteSlot}
+              Countdown={MatchCountdown}
+              onEditSlot={(slot) => handleOpenEditSlot(slot)}
+              onOpenRules={(slot) => {
+                setSelectedSlotId(slot._id);
+                setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
+                setShowTournamentRules(true);
+              }}
+              onOpenWinnerDetails={(slot) => {
+                setSelectedSlotId(slot._id);
+                // When hideLayout is true, we're in route mode, so show winners in the same view
+                if (hideLayout) {
+                  setActiveSection('winners');
+                } else {
+                  setActiveSection('winners');
+                }
+              }}
+              onOpenIdPass={(slot) => {
+                setIdPassSlotId(slot._id);
+                setShowIdPassModal(true);
+              }}
+            />
+              </>
+            )}
+            {activeSection === 'winners' && (
+              <div>
+                <div className="mb-4">
+                  <Button
+                    variant="outline"
+                    className="text-white border-[#2A2A2A]"
+                    onClick={() => setActiveSection('matches')}
+                  >
+                    ← Back to Matches
+                  </Button>
+                </div>
+                <AdminWinnerDashboard filterSlotId={selectedSlotId || undefined} />
+              </div>
+            )}
+          </>
+        )}
+        {activeSection === 'banner' && renderBannerManagement()}
+        {activeSection === 'gameTypes' && renderGameTypeManagement()}
+        {activeSection === 'gameModes' && (
+          <>
+            {renderGameModeManagement()}
+            {renderGameMapManagement()}
+          </>
+        )}
+        {activeSection === 'sitemap' && (
+          <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+            <CardHeader>
+              <CardTitle className="text-white">Replace sitemap.xml</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label className="text-white">Paste XML</Label>
+                <textarea
+                  value={sitemapXml}
+                  onChange={(e) => setSitemapXml(e.target.value)}
+                  placeholder={`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">...</urlset>`}
+                  className="w-full min-h-[240px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#2A2A2A] focus:border-[#52C41A] rounded-lg outline-none"
+                  style={{ fontFamily: 'monospace' }}
+                />
+                <div className="flex gap-3">
+                  <Button
+                    onClick={async () => {
+                      if (!sitemapXml.trim()) return;
+                      try {
+                        setIsReplacingSitemap(true);
+                        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/replace-sitemap`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                          },
+                          body: JSON.stringify({ xml: sitemapXml })
+                        });
+                        if (!res.ok) throw new Error('Failed');
+                        setSitemapXml('');
+                        toast({ title: 'Sitemap updated', description: 'sitemap.xml replaced successfully.' });
+                      } catch (e: any) {
+                        toast({ title: 'Error', description: e?.message || 'Failed to replace sitemap', variant: 'destructive' });
+                      } finally {
+                        setIsReplacingSitemap(false);
+                      }
+                    }}
+                    disabled={isReplacingSitemap}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isReplacingSitemap ? 'Updating...' : 'Replace Sitemap'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setSitemapXml('')} className="border-[#2A2A2A] text-white">Clear</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {activeSection === 'blog' && <BlogManagement />}
+
+        {/* Modals for hideLayout mode */}
+        {/* Tournament Rules Modal */}
+        <Dialog open={showTournamentRules} onOpenChange={setShowTournamentRules}>
+          <DialogContent className="max-w-3xl w-full bg-[#181818] border border-[#333] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white">Tournament Rules (HTML)</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Label htmlFor="rulesHtml" className="text-white">Rules Content</Label>
+              <textarea
+                id="rulesHtml"
+                value={formData.rules}
+                onChange={e => setFormData({ ...formData, rules: e.target.value })}
+                placeholder="Paste or write tournament rules HTML here..."
+                className="w-full min-h-[200px] px-4 py-3 text-white bg-[#23272F] border-2 border-[#FF4D4F] focus:border-[#52C41A] rounded-lg outline-none"
+                style={{ fontFamily: 'monospace' }}
+              />
+            </div>
+            <DialogFooter>
+              <Button onClick={handleSaveRules} className="bg-[#FF4D4F] hover:bg-[#FF7875] text-white">Save Rules</Button>
+              <Button variant="outline" onClick={() => setShowTournamentRules(false)} className="border-[#2A2A2A] text-white">Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ID/Pass Sender Modal */}
+        <Dialog open={showIdPassModal} onOpenChange={setShowIdPassModal}>
+          <DialogContent className="max-w-lg bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white">Send ID / Password</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              {idPassSlotId ? (
+                <SendSlotCredentials slotId={idPassSlotId} />
+              ) : (
+                <div className="text-gray-400 text-sm">No match selected.</div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Slot Edit Modal */}
+        <Dialog open={showEditSlot} onOpenChange={setShowEditSlot}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white">Edit Match</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white">Match Title</Label>
+                    <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTitle || ''} onChange={(e) => setEditData({ ...editData, matchTitle: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Tournament Name</Label>
+                    <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.tournamentName || ''} onChange={(e) => setEditData({ ...editData, tournamentName: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Host Name</Label>
+                    <Input className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.hostName || ''} onChange={(e) => setEditData({ ...editData, hostName: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Game Settings */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Game Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-white">Game Type</Label>
+                    <select
+                      className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                      value={editData.slotType || ''}
+                      onChange={(e) => setEditData({ ...editData, slotType: e.target.value })}
+                    >
+                      {Array.isArray(gameTypes) && gameTypes.length > 0 ? (
+                        gameTypes.map((g: any) => (
+                          <option key={g._id} value={g.gameType}>{g.gameType}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Solo">Solo</option>
+                          <option value="Duo">Duo</option>
+                          <option value="Squad">Squad</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-white">Map</Label>
+                    <select
+                      className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                      value={editData.mapName || ''}
+                      onChange={(e) => setEditData({ ...editData, mapName: e.target.value })}
+                    >
+                      {Array.isArray(gameMaps) && gameMaps.length > 0 ? (
+                        gameMaps.map((m: any) => (
+                          <option key={m._id || m.gameMap} value={m.gameMap || m.name}>{m.gameMap || m.name}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Bermuda">Bermuda</option>
+                          <option value="Purgatory">Purgatory</option>
+                          <option value="Kalahari">Kalahari</option>
+                          <option value="Alpine">Alpine</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-white">Game Mode</Label>
+                    <select
+                      className="w-full p-2 rounded bg-[#1A1A1A] text-white border border-[#2A2A2A]"
+                      value={editData.gameMode || ''}
+                      onChange={(e) => setEditData({ ...editData, gameMode: e.target.value })}
+                    >
+                      {Array.isArray(gameModes) && gameModes.length > 0 ? (
+                        gameModes.map((gm: any) => (
+                          <option key={gm._id} value={gm.gameMode}>{gm.gameMode}</option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Solo">Solo</option>
+                          <option value="Duo">Duo</option>
+                          <option value="Squad">Squad</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Match Configuration */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Match Configuration</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-white">Entry Fee</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.entryFee ?? ''} onChange={(e) => setEditData({ ...editData, entryFee: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Per Kill</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.perKill ?? ''} onChange={(e) => setEditData({ ...editData, perKill: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Winner Prize</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.totalWinningPrice ?? ''} onChange={(e) => setEditData({ ...editData, totalWinningPrice: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Match Time</Label>
+                    <Input type="datetime-local" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.matchTime || ''} onChange={(e) => setEditData({ ...editData, matchTime: e.target.value })} />
+                    <div className="text-xs text-gray-400 mt-1">
+                      {editData.matchTime ? new Date(editData.matchTime).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '') : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-white">Custom Start (Minutes)</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.customStartInMinutes ?? ''} onChange={(e) => setEditData({ ...editData, customStartInMinutes: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Max Players</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.maxPlayers ?? ''} onChange={(e) => setEditData({ ...editData, maxPlayers: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-white">1st Place Prize</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.firstwin ?? ''} onChange={(e) => setEditData({ ...editData, firstwin: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">2nd Place Prize</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.secwin ?? ''} onChange={(e) => setEditData({ ...editData, secwin: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">3rd Place Prize</Label>
+                    <Input type="number" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.thirdwin ?? ''} onChange={(e) => setEditData({ ...editData, thirdwin: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Additional Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-white">Stream Link</Label>
+                    <Input type="url" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.streamLink || ''} onChange={(e) => setEditData({ ...editData, streamLink: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Discord Link</Label>
+                    <Input type="url" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.discordLink || ''} onChange={(e) => setEditData({ ...editData, discordLink: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label className="text-white">Prize Distribution</Label>
+                    <Input type="text" className="bg-[#1A1A1A] border-[#2A2A2A] text-white" value={editData.prizeDistribution || ''} onChange={(e) => setEditData({ ...editData, prizeDistribution: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner Image */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">
+                    Banner Image <span className="text-red-400">*</span>
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-white border-[#2A2A2A] hover:bg-[#2A2A2A]"
+                    onClick={() => {
+                      if (existingEditBanners.length === 0) {
+                        fetchExistingEditBanners();
+                      }
+                      setShowEditBannerGallery(!showEditBannerGallery);
+                    }}
+                  >
+                    {showEditBannerGallery ? 'Hide' : 'Use Existing'}
+                    {existingEditBanners.length > 0 ? ` (${existingEditBanners.length})` : ''}
+                  </Button>
+                </div>
+
+                {showEditBannerGallery && existingEditBanners.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-gray-400 text-sm">Select from existing banners:</p>
+                    <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto p-2 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+                      {existingEditBanners.map((banner, index) => (
+                        <div
+                          key={index}
+                          className={`relative cursor-pointer border-2 rounded-lg overflow-hidden ${
+                            selectedExistingEditBanner === banner
+                              ? 'border-blue-500 ring-2 ring-blue-500'
+                              : 'border-[#2A2A2A] hover:border-[#3A3A3A]'
+                          }`}
+                          onClick={() => {
+                            setSelectedExistingEditBanner(banner);
+                            setEditBannerFile(null);
+                            setEditBannerPreview(banner);
+                            setEditData({ ...editData, bannerImage: banner });
+                          }}
+                        >
+                          <img
+                            src={banner}
+                            alt={`Banner ${index + 1}`}
+                            className="w-full h-24 object-cover"
+                            onError={(e) => {
+                              const img = e.currentTarget as HTMLImageElement;
+                              img.onerror = null;
+                              img.src = '/assets/images/category.png';
+                            }}
+                          />
+                          {selectedExistingEditBanner === banner && (
+                            <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                              ✓
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-white">Banner Image URL</Label>
+                  <Input
+                    type="text"
+                    placeholder="https://.../your-banner.jpg"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white mb-3"
+                    value={editData.bannerImage || ''}
+                    onChange={(e) => {
+                      setEditData({ ...editData, bannerImage: e.target.value });
+                      setSelectedExistingEditBanner(null);
+                      setEditBannerFile(null);
+                      setEditBannerPreview('');
+                    }}
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      handleEditBannerFileChange(e);
+                      setSelectedExistingEditBanner(null);
+                      setEditData({ ...editData, bannerImage: '' });
+                    }}
+                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  <div className="mt-2">
+                    {(editBannerPreview || selectedExistingEditBanner || editData.bannerImage) && (
+                      <img
+                        src={editBannerPreview || selectedExistingEditBanner || editData.bannerImage || ''}
+                        alt="Preview"
+                        className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleUpdateSlot} className="bg-blue-600 hover:bg-blue-700 text-white">Save Changes</Button>
+              <Button variant="outline" onClick={() => setShowEditSlot(false)} className="border-[#2A2A2A] text-white">Cancel</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* User Bookings Modal (hideLayout) */}
+        <Dialog open={showUserBookingsModal} onOpenChange={setShowUserBookingsModal}>
+          <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForBookings ? `${selectedUserForBookings.name}'s Bookings` : 'User Bookings'}</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]">
+              {loadingUserBookings ? (
+                <div className="p-8 flex justify-center">
+                  <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : userBookings.length === 0 ? (
+                <div className="p-8 text-center text-gray-400">No bookings found for this user.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-[#141414] sticky top-0 z-10">
+                    <tr className="border-b border-[#2A2A2A]">
+                      <th className="text-left px-4 py-3 text-white">Match Title</th>
+                      <th className="text-left px-4 py-3 text-white">Slot Type</th>
+                      <th className="text-left px-4 py-3 text-white">Status</th>
+                      <th className="text-left px-4 py-3 text-white">Match Time</th>
+                      <th className="text-right px-4 py-3 text-white">Entry Fee</th>
+                      <th className="text-right px-4 py-3 text-white">Total Amount</th>
+                      <th className="text-left px-4 py-3 text-white">Booked On</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2A2A2A]">
+                    {userBookings.map((b: any) => (
+                      <tr key={b._id} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
+                        <td className="px-4 py-3 text-white max-w-[260px] truncate" title={b.slot?.matchTitle || '-'}>{b.slot?.matchTitle || '-'}</td>
+                        <td className="px-4 py-3 text-white">{b.slot?.slotType || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`${(b.slot?.status || 'upcoming') === 'live' ? 'bg-green-600' : (b.slot?.status === 'completed' ? 'bg-gray-600' : 'bg-blue-600')} text-white text-xs px-2 py-1 rounded`}>{(b.slot?.status || '-')}</span>
+                        </td>
+                        <td className="px-4 py-3 text-white whitespace-nowrap">{b.slot?.matchTime ? new Date(b.slot.matchTime).toLocaleString('en-IN') : '-'}</td>
+                        <td className="px-4 py-3 text-right text-white">₹{b.slot?.entryFee ?? 0}</td>
+                        <td className="px-4 py-3 text-right text-white">₹{b.totalAmount ?? 0}</td>
+                        <td className="px-4 py-3 text-white whitespace-nowrap">{b.createdAt ? new Date(b.createdAt).toLocaleString('en-IN') : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* User Transactions Modal (hideLayout) */}
+        <Dialog open={showUserTransactionsModal} onOpenChange={setShowUserTransactionsModal}>
+          <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-white tracking-wide">{selectedUserForTransactions ? `${selectedUserForTransactions.name}'s Transactions` : 'User Transactions'}</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]">
+              {loadingUserTransactions ? (
+                <div className="p-8 flex justify-center">
+                  <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : userTransactions.length === 0 ? (
+                <div className="p-8 text-center text-gray-400">No transactions found for this user.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-[#141414] sticky top-0 z-10">
+                    <tr className="border-b border-[#2A2A2A]">
+                      <th className="text-left px-4 py-3 text-white">Date</th>
+                      <th className="text-left px-4 py-3 text-white">Type</th>
+                      <th className="text-left px-4 py-3 text-white">Description</th>
+                      <th className="text-left px-4 py-3 text-white">Status</th>
+                      <th className="text-right px-4 py-3 text-white whitespace-nowrap w-32">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2A2A2A]">
+                    {userTransactions.map((t: any) => {
+                      const rawAmt = Number(t.amount) || 0;
+                      const typeUpper = String(t.type || '').toUpperCase();
+                      const isDebitType = typeUpper === 'BOOKING' || typeUpper === 'WITHDRAW' || typeUpper === 'DEBIT';
+                      const isRefund = typeUpper === 'REFUND';
+                      const amt = isDebitType ? (rawAmt === 0 ? 0 : -Math.abs(rawAmt)) : (isRefund ? Math.abs(rawAmt) : rawAmt);
+                      const isPositive = amt > 0;
+                      const formatted = `${isPositive ? '+' : amt < 0 ? '-' : ''}₹${Math.abs(amt)}`;
+                      const displayType = amt < 0 && !isDebitType ? 'SERVER ERROR BALANCE' : (t.type || 'WIN');
+                      const displayDesc = t.description || (amt < 0 ? 'Admin balance correction' : '-');
+                      return (
+                        <tr key={t._id || t.transactionId} className="even:bg-[#101010] hover:bg-[#1A1A1A] transition-colors">
+                          <td className="px-4 py-3 text-white whitespace-nowrap">{t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : '-'}</td>
+                          <td className="px-4 py-3 text-white">{displayType}</td>
+                          <td className="px-4 py-3 text-white">{displayDesc}</td>
+                          <td className="px-4 py-3">
+                            <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">{t.status || '-'}</span>
+                          </td>
+                          <td className={`px-4 py-3 text-right whitespace-nowrap w-32 ${isPositive ? 'text-green-400' : amt < 0 ? 'text-red-400' : 'text-white'}`}>{formatted}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit User Modal (hideLayout) */}
+        <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
+          <DialogContent className="max-w-2xl bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-white tracking-wide">Edit User Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editUserNameHL" className="text-white">Name</Label>
+                  <Input
+                    id="editUserNameHL"
+                    value={editUserData.name}
+                    onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editUserEmailHL" className="text-white">Email</Label>
+                  <Input
+                    id="editUserEmailHL"
+                    type="email"
+                    value={editUserData.email}
+                    onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editUserPhoneHL" className="text-white">Phone</Label>
+                  <Input
+                    id="editUserPhoneHL"
+                    value={editUserData.phone}
+                    onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editUserFFUsernameHL" className="text-white">Free Fire Username</Label>
+                  <Input
+                    id="editUserFFUsernameHL"
+                    value={editUserData.freeFireUsername}
+                    onChange={(e) => setEditUserData({ ...editUserData, freeFireUsername: e.target.value })}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editUserWalletHL" className="text-white">Wallet Balance (Join Money)</Label>
+                  <Input
+                    id="editUserWalletHL"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editUserData.wallet}
+                    readOnly
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Read-only. Use the actions below to credit amounts.</p>
+                </div>
+                <div>
+                  <Label htmlFor="editUserWinAmountHL" className="text-white">Win Amount (Earnings)</Label>
+                  <Input
+                    id="editUserWinAmountHL"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editUserData.winAmount}
+                    onChange={(e) => setEditUserData(prev => ({ ...prev, winAmount: e.target.value }))}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">You can edit this directly or use actions below to credit.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editUserFreePassHL" className="text-white">Free Match Pass</Label>
+                  <Input
+                    id="editUserFreePassHL"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={(editUserData as any).freeMatchPass || '0'}
+                    onChange={(e) => setEditUserData(prev => ({ ...prev, freeMatchPass: e.target.value }))}
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Manually adjust user's free match passes.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <Label htmlFor="winMoneyAmountHL" className="text-white">Add Win Money (totalEarnings)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="winMoneyAmountHL"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={winMoneyAmount}
+                    onChange={(e) => setWinMoneyAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      const amt = Number(winMoneyAmount);
+                      if (!amt || amt <= 0 || !editingUser) return;
+                      try {
+                        setIsUpdatingUser(true);
+                        const adminToken = localStorage.getItem('adminToken');
+                        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
+                          },
+                          body: JSON.stringify({ 
+                            userId: editingUser._id, 
+                            amount: amt,
+                            description: winnerAmountNote ? `Admin credit: Win Money - ${winnerAmountNote}` : `Admin credit: Win Money`
+                          })
+                        });
+                        if (res.ok) {
+                          // Reflect winAmount locally only; do not change join money
+                          setEditUserData(prev => ({
+                            ...prev,
+                            winAmount: String((parseFloat(prev.winAmount) || 0) + amt)
+                          }));
+                          setWinMoneyAmount('');
+                          setWinnerAmountNote('');
+                          fetchUsers();
+                        }
+                      } catch (_) {
+                      } finally {
+                        setIsUpdatingUser(false);
+                      }
+                    }}
+                    disabled={isUpdatingUser || !winMoneyAmount}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Add Win Money
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-400">Creates a WIN transaction like NFT distribution, so it shows in earnings.</p>
+                {winMoneyAmount && (
+                  <div className="mt-2">
+                    <Label htmlFor="winnerAmountNoteHL" className="text-white">Winner Amount Note</Label>
+                    <Input
+                      id="winnerAmountNoteHL"
+                      value={winnerAmountNote}
+                      onChange={(e) => setWinnerAmountNote(e.target.value)}
+                      placeholder="Enter note for this transaction"
+                      className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <Label htmlFor="walletCreditAmountHL" className="text-white">Add to Wallet (admin credit)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="walletCreditAmountHL"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={walletCreditAmount}
+                    onChange={(e) => setWalletCreditAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddToWallet}
+                    disabled={isUpdatingUser || !walletCreditAmount}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Add to Wallet
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-400">Credits the wallet balance directly (admin action).</p>
+                {walletCreditAmount && (
+                  <div className="mt-2">
+                    <Label htmlFor="joinAmountNoteHL" className="text-white">Join Amount Note</Label>
+                    <Input
+                      id="joinAmountNoteHL"
+                      value={joinAmountNote}
+                      onChange={(e) => setJoinAmountNote(e.target.value)}
+                      placeholder="Enter note for this transaction"
+                      className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditUserModal(false)}
+                className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleUpdateUser({ keepOpen: false })}
+                disabled={isUpdatingUser}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isUpdatingUser ? 'Updating...' : 'Update User'}
+              </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New User Modal */}
+      <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+        <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Add New User</DialogTitle>
+            <p className="text-gray-400 text-sm">
+              Create a new user account with all necessary details.
+            </p>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserName" className="text-white">Full Name *</Label>
+                <Input
+                  id="newUserName"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  placeholder="Enter full name"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserEmail" className="text-white">Email *</Label>
+                <Input
+                  id="newUserEmail"
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="Enter email address"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserPhone" className="text-white">Phone *</Label>
+                <Input
+                  id="newUserPhone"
+                  value={newUserData.phone}
+                  onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserFFUsername" className="text-white">Free Fire Username *</Label>
+                <Input
+                  id="newUserFFUsername"
+                  value={newUserData.freeFireUsername}
+                  onChange={(e) => setNewUserData({ ...newUserData, freeFireUsername: e.target.value })}
+                  placeholder="Enter Free Fire username"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="newUserPassword" className="text-white">Password *</Label>
+                <Input
+                  id="newUserPassword"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  placeholder="Enter password"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newUserWallet" className="text-white">Initial Wallet Balance</Label>
+                <Input
+                  id="newUserWallet"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newUserData.wallet}
+                  onChange={(e) => setNewUserData({ ...newUserData, wallet: e.target.value })}
+                  placeholder="Enter initial wallet balance"
+                  className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="newUserIsAdmin"
+                checked={newUserData.isAdmin}
+                onChange={(e) => setNewUserData({ ...newUserData, isAdmin: e.target.checked })}
+                className="w-4 h-4 text-green-600 bg-[#1A1A1A] border-[#2A2A2A] rounded focus:ring-green-500 focus:ring-2"
+              />
+              <Label htmlFor="newUserIsAdmin" className="text-white cursor-pointer">Admin Access</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddUserModal(false);
+                resetNewUserForm();
+              }}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateUser}
+              disabled={isCreatingUser}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isCreatingUser ? 'Creating...' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     );
   }
@@ -4067,7 +5037,66 @@ const AdminDashboard = () => {
 
             {/* Banner Image */}
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">Banner Image</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white border-b border-[#2A2A2A] pb-2">
+                  Banner Image <span className="text-red-400">*</span>
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-white border-[#2A2A2A] hover:bg-[#2A2A2A]"
+                  onClick={() => {
+                    if (existingEditBanners.length === 0) {
+                      fetchExistingEditBanners();
+                    }
+                    setShowEditBannerGallery(!showEditBannerGallery);
+                  }}
+                >
+                  {showEditBannerGallery ? 'Hide' : 'Use Existing'}
+                  {existingEditBanners.length > 0 ? ` (${existingEditBanners.length})` : ''}
+                </Button>
+              </div>
+
+              {showEditBannerGallery && existingEditBanners.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-gray-400 text-sm">Select from existing banners:</p>
+                  <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto p-2 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+                    {existingEditBanners.map((banner, index) => (
+                      <div
+                        key={index}
+                        className={`relative cursor-pointer border-2 rounded-lg overflow-hidden ${
+                          selectedExistingEditBanner === banner
+                            ? 'border-blue-500 ring-2 ring-blue-500'
+                            : 'border-[#2A2A2A] hover:border-[#3A3A3A]'
+                        }`}
+                        onClick={() => {
+                          setSelectedExistingEditBanner(banner);
+                          setEditBannerFile(null);
+                          setEditBannerPreview(banner);
+                          setEditData({ ...editData, bannerImage: banner });
+                        }}
+                      >
+                        <img
+                          src={banner}
+                          alt={`Banner ${index + 1}`}
+                          className="w-full h-24 object-cover"
+                          onError={(e) => {
+                            const img = e.currentTarget as HTMLImageElement;
+                            img.onerror = null;
+                            img.src = '/assets/images/category.png';
+                          }}
+                        />
+                        {selectedExistingEditBanner === banner && (
+                          <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label className="text-white">Banner Image URL</Label>
                 <Input
@@ -4075,26 +5104,32 @@ const AdminDashboard = () => {
                   placeholder="https://.../your-banner.jpg"
                   className="bg-[#1A1A1A] border-[#2A2A2A] text-white mb-3"
                   value={editData.bannerImage || ''}
-                  onChange={(e) => setEditData({ ...editData, bannerImage: e.target.value })}
+                  onChange={(e) => {
+                    setEditData({ ...editData, bannerImage: e.target.value });
+                    setSelectedExistingEditBanner(null);
+                    setEditBannerFile(null);
+                    setEditBannerPreview('');
+                  }}
                 />
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleEditBannerFileChange}
+                  onChange={(e) => {
+                    handleEditBannerFileChange(e);
+                    setSelectedExistingEditBanner(null);
+                    setEditData({ ...editData, bannerImage: '' });
+                  }}
                   className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                 />
                 <div className="mt-2">
-                  {editBannerPreview ? (
-                    <img src={editBannerPreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
-                  ) : (
-                    editData.bannerImage && (
-                      <img src={editData.bannerImage} alt="Current Banner" className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]" />
-                    )
+                  {(editBannerPreview || selectedExistingEditBanner || editData.bannerImage) && (
+                    <img
+                      src={editBannerPreview || selectedExistingEditBanner || editData.bannerImage || ''}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
+                    />
                   )}
                 </div>
-                {!editBannerFile && (
-                  <p className="text-xs text-gray-400 mt-1">Tip: You can paste a banner image URL above. File upload requires a server upload endpoint.</p>
-                )}
               </div>
             </div>
 
@@ -4442,6 +5477,18 @@ const AdminDashboard = () => {
                 </Button>
               </div>
               <p className="text-xs text-gray-400">Creates a WIN transaction like NFT distribution, so it shows in earnings.</p>
+              {winMoneyAmount && (
+                <div className="mt-2">
+                  <Label htmlFor="winnerAmountNote" className="text-white">Winner Amount Note</Label>
+                  <Input
+                    id="winnerAmountNote"
+                    value={winnerAmountNote}
+                    onChange={(e) => setWinnerAmountNote(e.target.value)}
+                    placeholder="Enter note for this transaction"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Admin wallet credit (adds to wallet balance) */}
@@ -4468,6 +5515,18 @@ const AdminDashboard = () => {
                 </Button>
               </div>
               <p className="text-xs text-gray-400">Credits the wallet balance directly (admin action).</p>
+              {walletCreditAmount && (
+                <div className="mt-2">
+                  <Label htmlFor="joinAmountNote" className="text-white">Join Amount Note</Label>
+                  <Input
+                    id="joinAmountNote"
+                    value={joinAmountNote}
+                    onChange={(e) => setJoinAmountNote(e.target.value)}
+                    placeholder="Enter note for this transaction"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
+                  />
+                </div>
+              )}
             </div>
           </div>
           
@@ -4475,7 +5534,14 @@ const AdminDashboard = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowEditUserModal(false)}
+              onClick={() => {
+                setShowEditUserModal(false);
+                // Clear note fields when closing modal
+                setWinMoneyAmount('');
+                setWinnerAmountNote('');
+                setWalletCreditAmount('');
+                setJoinAmountNote('');
+              }}
               className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
             >
               Cancel

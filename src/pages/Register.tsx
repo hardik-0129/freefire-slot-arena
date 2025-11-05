@@ -18,7 +18,8 @@ const Register: React.FC = () => {
     password: '',
     freeFireUsername: '',
     referCode: '', // optional, for entering someone else's refer code
-    profilePhoto: null as File | null
+    profilePhoto: null as File | null,
+    privacyAccepted: true
   });
 
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,10 @@ const Register: React.FC = () => {
       return;
     }
     // Profile photo is optional - no validation needed
+    if (!form.privacyAccepted) {
+      toast.error('You must accept the Privacy Policy to register.');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -67,6 +72,7 @@ const Register: React.FC = () => {
         phone: phoneDigits,
         password: form.password,
         freeFireUsername: form.freeFireUsername,
+        privacyAccepted: true
       };
 
       // Only add referCode if user entered it
@@ -99,6 +105,7 @@ const Register: React.FC = () => {
         formData.append('phone', phoneDigits);
         formData.append('password', form.password);
         formData.append('freeFireUsername', form.freeFireUsername);
+        formData.append('privacyAccepted', 'true');
         
         if (form.referCode) {
           formData.append('referCode', form.referCode);
@@ -257,7 +264,24 @@ const Register: React.FC = () => {
                 )}
               </div>
             </div>
-
+            <div>
+            <div className="" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+              <input
+                id="privacyAccepted"
+                type="checkbox"
+                name="privacyAccepted"
+                checked={form.privacyAccepted}
+                onChange={(e) => setForm({ ...form, privacyAccepted: e.target.checked })}
+                // required
+                style={{ width: 18, height: 18, margin: 0, padding: 0, display: 'inline-block', accentColor: '#FF8B00'}}
+              />
+              <label htmlFor="privacyAccepted" style={{ margin: 0 }}>
+                I agree to the{' '}
+                <a href="/privacy-policy" style={{ color: '#FF8B00', textDecoration: 'underline' }}>Privacy Policy</a>
+                .
+              </label>
+            </div>
+          </div>
             
             <button
               type="submit"

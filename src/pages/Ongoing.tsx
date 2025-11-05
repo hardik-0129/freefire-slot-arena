@@ -260,9 +260,9 @@ const Ongoing = () => {
                                         {targetMs > now ? countdownText : 'Started'}
                                       </div>
                                       {/* Always-visible local time */}
-                                      <div style={{ fontSize: 12, opacity: 0.8 }}>
+                                      {/* <div style={{ fontSize: 12, opacity: 0.8 }}>
                                         {formatDateTime(booking.slot!.matchTime)}
-                                      </div>
+                                      </div> */}
                                     </div>
                                   ) : undefined}
                                 />
@@ -297,11 +297,11 @@ const Ongoing = () => {
                       <div className="match-info-grid">
                         <div className="match-info-item">
                           <div className="match-info-label">Tournament</div>
-                          <div className="match-info-value">{selectedMatch.slot.tournamentName || '#ALPHALIONS'}</div>
+                          <div className="match-info-value">{selectedMatch.slot.tournamentName}</div>
                         </div>
                         <div className="match-info-item">
                           <div className="match-info-label">Map</div>
-                          <div className="match-info-value">{selectedMatch.slot.mapName || 'Random'}</div>
+                          <div className="match-info-value">{selectedMatch.slot.mapName}</div>
                         </div>
                         <div className="match-info-item">
                           <div className="match-info-label">Match Time</div>

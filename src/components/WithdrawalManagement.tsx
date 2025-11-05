@@ -429,6 +429,29 @@ const WithdrawalManagement: React.FC = () => {
                 <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata.upiId}</p>
               </div>
             )}
+            {selectedWithdrawal && (
+              <div className="bg-[#111111] p-3 rounded border border-[#2A2A2A]">
+                <p className="text-sm text-gray-300 mb-2">Scan this UPI QR to pay the user (Google Pay/PhonePe/BHIM).</p>
+                {(() => {
+                  const upi = selectedWithdrawal.metadata.upiId;
+                  const name = selectedWithdrawal.userId.name || 'Player';
+                  const amount = Math.max(0, Number(selectedWithdrawal.amount));
+                  const note = `Tournament Withdrawal - ${selectedWithdrawal.transactionId}`;
+                  const upiLink = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
+                  return (
+                    <div className="flex items-center gap-4">
+                      <img src={qrUrl} alt="UPI QR" width={120} height={120} className="rounded" />
+                      <div className="text-sm text-gray-300 break-all">
+                        <div><strong>UPI:</strong> <span className="text-blue-400">{upi}</span></div>
+                        <div><strong>Pay:</strong> ₹{amount}</div>
+                        <a href={upiLink} target="_blank" rel="noreferrer" className="text-green-400 underline">Open in UPI app</a>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             <div>
               <Label htmlFor="approve-ref" className="text-white">
                 Payout Transaction ID (displayed to user)
