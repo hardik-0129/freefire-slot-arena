@@ -27,6 +27,7 @@ import {
 import GameTypeImage from "@/components/GameTypeImage";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import WithdrawalManagement from "@/components/WithdrawalManagement";
 import AdminWinnerDashboard from "./AdminWinnerDashboard";
@@ -446,6 +447,12 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
     isAdmin: false
   });
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  // Suspend user modal state
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [suspendUser, setSuspendUser] = useState<any>(null);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendDays, setSuspendDays] = useState<string>('');
   const [winMoneyAmount, setWinMoneyAmount] = useState('');
   const [winnerAmountNote, setWinnerAmountNote] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
@@ -3249,7 +3256,29 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
     }
   };
 
-  const handleToggleSuspend = async (user: any) => {
+  const openSuspendModal = (user: any) => {
+    setSuspendUser(user);
+    setSuspendReason('');
+    setSuspendDays('0');
+    setShowSuspendModal(true);
+  };
+
+  // Auto-populate suspend reason based on selected days
+  useEffect(() => {
+    if (!showSuspendModal) return;
+    
+    if (suspendDays === '0') {
+      setSuspendReason('Your account is permanently suspended');
+    } else if (suspendDays && suspendDays !== '0') {
+      const days = parseInt(suspendDays, 10);
+      if (!isNaN(days) && days > 0) {
+        const reasonText = `Your account is suspended for ${days} ${days === 1 ? 'day' : 'days'}`;
+        setSuspendReason(reasonText);
+      }
+    }
+  }, [suspendDays, showSuspendModal]);
+
+  const handleToggleSuspend = async (user: any, reason: string = '', days: string = '') => {
     try {
       const token = localStorage.getItem('adminToken');
       const suspend = !user.isSuspended;
@@ -3259,18 +3288,46 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ suspend, reason: suspend ? 'Suspended from admin panel' : '' })
+        body: JSON.stringify({ 
+          suspend, 
+          reason: suspend ? (reason || 'Suspended from admin panel') : '',
+          suspendDays: suspend ? (days || '') : ''
+        })
       });
       const data = await response.json();
       if (data.status) {
         toast({ title: 'Success', description: suspend ? 'User suspended' : 'User unsuspended' });
         // update local list
         setUsers(prev => prev.map((u: any) => u._id === user._id ? { ...u, isSuspended: data.user.isSuspended } : u));
+        setShowSuspendModal(false);
+        setSuspendReason('');
+        setSuspendDays('0');
+        setSuspendUser(null);
       } else {
         throw new Error(data.error || 'Failed to update suspension');
       }
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message || 'Failed to update suspension' });
+    }
+  };
+
+  const handleConfirmSuspend = () => {
+    if (suspendUser) {
+      if (suspendUser.isSuspended) {
+        // If unsuspending, no reason needed
+        handleToggleSuspend(suspendUser, '', '');
+      } else {
+        // If suspending, require reason
+        if (!suspendReason.trim()) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Please enter a suspend reason'
+          });
+          return;
+        }
+        handleToggleSuspend(suspendUser, suspendReason, suspendDays);
+      }
     }
   };
 
@@ -3367,7 +3424,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                       <Button
                         size="sm"
                         className={`${user.isSuspended ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-orange-600 hover:bg-orange-700'} text-white`}
-                        onClick={() => handleToggleSuspend(user)}
+                        onClick={() => openSuspendModal(user)}
                       >
                         {user.isSuspended ? 'Unsuspend' : 'Suspend'}
                       </Button>
@@ -3554,14 +3611,14 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
               getStatusColor={getStatusColor}
               getNextStatus={getNextStatus}
               handleUpdateMatchStatus={handleUpdateMatchStatus}
-              handleDeleteSlot={handleDeleteSlot}
+              // handleDeleteSlot={handleDeleteSlot}
               Countdown={MatchCountdown}
-              onEditSlot={(slot) => handleOpenEditSlot(slot)}
-              onOpenRules={(slot) => {
-                setSelectedSlotId(slot._id);
-                setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
-                setShowTournamentRules(true);
-              }}
+              // onEditSlot={(slot) => handleOpenEditSlot(slot)}
+              // onOpenRules={(slot) => {
+              //   setSelectedSlotId(slot._id);
+              //   setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
+              //   setShowTournamentRules(true);
+              // }}
               onOpenWinnerDetails={(slot) => {
                 setSelectedSlotId(slot._id);
                 // When hideLayout is true, we're in route mode, so show winners in the same view
@@ -4284,6 +4341,95 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
         </DialogContent>
       </Dialog>
 
+      {/* Suspend User Modal */}
+      <Dialog open={showSuspendModal} onOpenChange={setShowSuspendModal}>
+        <DialogContent className="max-w-md bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white tracking-wide">
+              {suspendUser?.isSuspended ? 'Unsuspend User' : 'Suspend User'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {suspendUser && (
+              <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]">
+                <p className="text-sm text-gray-400">User:</p>
+                <p className="text-white font-semibold">{suspendUser.name}</p>
+                <p className="text-sm text-gray-400">{suspendUser.email}</p>
+              </div>
+            )}
+            {!suspendUser?.isSuspended && (
+              <>
+                <div>
+                  <Label htmlFor="suspendReason" className="text-white">
+                    Suspend Reason *
+                  </Label>
+                  <Input
+                    id="suspendReason"
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    placeholder="Enter reason for suspension"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 mt-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Please provide a reason for suspending this user.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="suspendDays" className="text-white">
+                    Suspend Duration (Days)
+                  </Label>
+                  <Select value={suspendDays} onValueChange={setSuspendDays}>
+                    <SelectTrigger className="bg-[#1A1A1A] border-[#2A2A2A] text-white mt-2">
+                      <SelectValue placeholder="Select suspend duration (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white max-h-[300px] overflow-y-auto">
+                      <SelectItem value="0">Permanent (No auto-unsuspend)</SelectItem>
+                      {Array.from({ length: 365 }, (_, i) => i + 1).map((day) => (
+                        <SelectItem key={day} value={String(day)}>
+                          {day} {day === 1 ? 'Day' : 'Days'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select number of days to automatically unsuspend. Select "Permanent" for no auto-unsuspend.
+                  </p>
+                </div>
+              </>
+            )}
+            {suspendUser?.isSuspended && (
+              <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded-lg">
+                <p className="text-yellow-400 text-sm">
+                  This user is currently suspended. Click confirm to unsuspend them.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowSuspendModal(false);
+                setSuspendReason('');
+                setSuspendDays('');
+                setSuspendUser(null);
+              }}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSuspend}
+              className={`${suspendUser?.isSuspended ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-orange-600 hover:bg-orange-700'} text-white`}
+            >
+              {suspendUser?.isSuspended ? 'Unsuspend' : 'Confirm Suspend'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add New User Modal */}
       <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
         <DialogContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white max-w-2xl">
@@ -4782,14 +4928,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                 getStatusColor={getStatusColor}
                 getNextStatus={getNextStatus}
                 handleUpdateMatchStatus={handleUpdateMatchStatus}
-                handleDeleteSlot={handleDeleteSlot}
                 Countdown={MatchCountdown}
-                onEditSlot={(slot) => handleOpenEditSlot(slot)}
-                onOpenRules={(slot) => {
-                  setSelectedSlotId(slot._id);
-                  setFormData((prev) => ({ ...prev, rules: slot.rules || '' }));
-                  setShowTournamentRules(true);
-                }}
                 onOpenWinnerDetails={(slot) => {
                   setSelectedSlotId(slot._id);
                   setActiveSection('winners');
@@ -5553,6 +5692,95 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
               className="bg-green-600 hover:bg-green-700"
             >
               {isUpdatingUser ? 'Updating...' : 'Update User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend User Modal */}
+      <Dialog open={showSuspendModal} onOpenChange={setShowSuspendModal}>
+        <DialogContent className="max-w-md bg-[#0F0F0F] border border-[#2A2A2A] text-white rounded-xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white tracking-wide">
+              {suspendUser?.isSuspended ? 'Unsuspend User' : 'Suspend User'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {suspendUser && (
+              <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]">
+                <p className="text-sm text-gray-400">User:</p>
+                <p className="text-white font-semibold">{suspendUser.name}</p>
+                <p className="text-sm text-gray-400">{suspendUser.email}</p>
+              </div>
+            )}
+            {!suspendUser?.isSuspended && (
+              <>
+                <div>
+                  <Label htmlFor="suspendReason" className="text-white">
+                    Suspend Reason *
+                  </Label>
+                  <Input
+                    id="suspendReason"
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    placeholder="Enter reason for suspension"
+                    className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400 mt-2"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Please provide a reason for suspending this user.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="suspendDays" className="text-white">
+                    Suspend Duration (Days)
+                  </Label>
+                  <Select value={suspendDays} onValueChange={setSuspendDays}>
+                    <SelectTrigger className="bg-[#1A1A1A] border-[#2A2A2A] text-white mt-2">
+                      <SelectValue placeholder="Select suspend duration (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white max-h-[300px] overflow-y-auto">
+                      <SelectItem value="0">Permanent (No auto-unsuspend)</SelectItem>
+                      {Array.from({ length: 365 }, (_, i) => i + 1).map((day) => (
+                        <SelectItem key={day} value={String(day)}>
+                          {day} {day === 1 ? 'Day' : 'Days'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select number of days to automatically unsuspend. Select "Permanent" for no auto-unsuspend.
+                  </p>
+                </div>
+              </>
+            )}
+            {suspendUser?.isSuspended && (
+              <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded-lg">
+                <p className="text-yellow-400 text-sm">
+                  This user is currently suspended. Click confirm to unsuspend them.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowSuspendModal(false);
+                setSuspendReason('');
+                setSuspendDays('');
+                setSuspendUser(null);
+              }}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSuspend}
+              className={`${suspendUser?.isSuspended ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-orange-600 hover:bg-orange-700'} text-white`}
+            >
+              {suspendUser?.isSuspended ? 'Unsuspend' : 'Confirm Suspend'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,46 +1,38 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import AdminWinnerDashboard from '../AdminWinnerDashboard';
 import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import SendSlotCredentials from '@/components/SendSlotCredentials';
 
-const WinnerPage = () => {
+const IdPassPage = () => {
   const { matchIndex } = useParams<{ matchIndex: string }>();
   const navigate = useNavigate();
   const [slotId, setSlotId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    // Fetch slot by matchIndex to get the slotId
     const fetchSlotByMatchIndex = async () => {
       try {
         const token = localStorage.getItem('adminToken');
         if (!token) return;
-
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.slots) {
-            const slot = data.slots.find((s: any) => 
-              String(s.matchIndex) === String(matchIndex)
-            );
+            const slot = data.slots.find((s: any) => String(s.matchIndex) === String(matchIndex));
             if (slot && slot._id) {
               setSlotId(slot._id);
             }
           }
         }
-      } catch (error) {
-        console.error('Error fetching slot by matchIndex:', error);
+      } catch {
       }
     };
 
-    if (matchIndex) {
-      fetchSlotByMatchIndex();
-    }
+    if (matchIndex) fetchSlotByMatchIndex();
   }, [matchIndex]);
 
   return (
@@ -57,14 +49,24 @@ const WinnerPage = () => {
               Back to Matches
             </Button>
             <h1 className="text-2xl font-bold text-white">
-              Winners Management {matchIndex ? `- Match #${matchIndex}` : ''}
+              Send ID / Password {matchIndex ? `- Match #${matchIndex}` : ''}
             </h1>
           </div>
         </div>
       </header>
-      <AdminWinnerDashboard filterSlotId={slotId} />
+      <main className="p-6">
+        {slotId ? (
+          <div className="max-w-xl">
+            <SendSlotCredentials slotId={slotId} />
+          </div>
+        ) : (
+          <div className="text-gray-400">Loading match...</div>
+        )}
+      </main>
     </>
   );
 };
 
-export default WinnerPage;
+export default IdPassPage;
+
+

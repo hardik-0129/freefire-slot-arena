@@ -17,6 +17,11 @@ import UsersPage from "./pages/admin/UsersPage";
 import BannerPage from "./pages/admin/BannerPage";
 import MatchesPage from "./pages/admin/MatchesPage";
 import WinnerPage from "./pages/admin/WinnerPage";
+import EditMatchPage from "./pages/admin/EditMatchPage";
+import MatchRulesPage from "./pages/admin/MatchRulesPage";
+import DeleteMatchPage from "./pages/admin/DeleteMatchPage";
+import CancelMatchPage from "./pages/admin/CancelMatchPage";
+import IdPassPage from "./pages/admin/IdPassPage";
 import GameTypesPage from "./pages/admin/GameTypesPage";
 import GameModesPage from "./pages/admin/GameModesPage";
 import NftHoldersPage from "./pages/admin/NftHoldersPage";
@@ -147,6 +152,10 @@ const App = () => (
               <Route path="users" element={<UsersPage />} />
               <Route path="banner" element={<BannerPage />} />
               <Route path="matches" element={<MatchesPage />} />
+              <Route path="matches/:matchIndex/edit" element={<EditMatchPage />} />
+              <Route path="matches/:matchIndex/rules" element={<MatchRulesPage />} />
+              <Route path="matches/:matchIndex/delete" element={<DeleteMatchPage />} />
+              <Route path="matches/:matchIndex/cancel" element={<CancelMatchPage />} />
               <Route path="matches/:matchIndex/winner" element={<WinnerPage />} />
               <Route path="game-types" element={<GameTypesPage />} />
               <Route path="game-modes" element={<GameModesPage />} />
@@ -159,6 +168,7 @@ const App = () => (
               <Route path="html-announcements" element={<HtmlAnnouncementsPage />} />
               <Route path="blog" element={<BlogPage />} />
               <Route path="sitemap" element={<SitemapPage />} />
+              <Route path="matches/:matchIndex/id-pass" element={<IdPassPage />} />
             </Route>
             {/* Legacy route for backward compatibility */}
             <Route

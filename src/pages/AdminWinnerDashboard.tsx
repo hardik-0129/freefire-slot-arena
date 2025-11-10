@@ -137,6 +137,19 @@ interface CreditAllWinningsButtonProps {
 const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winners, onSuccess, bookingsForMatch, match }) => {
 
   const [loading, setLoading] = React.useState(false);
+  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
+  const [hasCredited, setHasCredited] = React.useState(false);
+
+  // Persist disabled state by match (first-time confirmation/credit)
+  React.useEffect(() => {
+    try {
+      const key = match?._id ? `credit_all_disabled_${match._id}` : '';
+      if (key) {
+        const stored = localStorage.getItem(key);
+        if (stored === 'true') setHasCredited(true);
+      }
+    } catch {}
+  }, [match?._id]);
 
   const { toast } = useToast();
 
@@ -262,7 +275,19 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
 
       try {
 
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ userId: winner.userId, amount: winner.winningPrice, winnerId: winner._id }) });
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/add-winning`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            userId: winner.userId,
+            amount: winner.winningPrice,
+            winnerId: winner._id,
+            // Include matchIndex in description so Wallet History shows the match number
+            description: match && (match as any).matchIndex != null
+              ? `Winning credited for match - #${(match as any).matchIndex}`
+              : 'Winning credited'
+          })
+        });
 
         const data = await res.json();
 
@@ -282,35 +307,111 @@ const CreditAllWinningsButton: React.FC<CreditAllWinningsButtonProps> = ({ winne
       toast({ title: 'Success', description: `${credited} winnings credited successfully.`, variant: 'default' });
     }
     if (unsavedCount > 0) {
-      toast({ title: 'Info', description: `${unsavedCount} winner${unsavedCount>1?'s':''} not saved/linked to user. Save winners first to credit them.`, variant: 'default' });
+      toast({ title: 'Info', description: `${unsavedCount} winner${unsavedCount > 1 ? 's' : ''} not saved/linked to user. Save winners first to credit them.`, variant: 'default' });
     }
     if (failed > 0 && credited === 0 && unsavedCount === 0) {
       // Only true failures remain
-      toast({ title: 'Notice', description: `${failed} winning${failed>1?'s':''} could not be credited. Please retry.`, variant: 'default' });
+      toast({ title: 'Notice', description: `${failed} winning${failed > 1 ? 's' : ''} could not be credited. Please retry.`, variant: 'default' });
     }
 
     if (onSuccess) onSuccess();
 
+    // Mark as credited after successful operation
+    if (credited > 0) {
+      setHasCredited(true);
+    }
+
+    // Close modal after processing
+    setShowConfirmModal(false);
+
   };
 
+  const handleButtonClick = () => {
+    if (!hasCredited) {
+      setShowConfirmModal(true);
+    }
+  };
 
+  const handleConfirm = () => {
+    // Disable immediately after user confirmation (first-time click)
+    try {
+      const key = match?._id ? `credit_all_disabled_${match._id}` : '';
+      if (key) localStorage.setItem(key, 'true');
+    } catch {}
+    setHasCredited(true);
+    handleCreditAll();
+  };
 
   // Show when uncredited winners exist or we can auto-create from bookings
-
   const hasUncredited = winners.some(w => w.userId && !w.walletCredited) || (!!bookingsForMatch && !!match);
 
-  if (!hasUncredited) return null;
+  // Check if all winners are already credited
+  const allCredited = winners.length > 0 && winners.every(w => !w.userId || w.walletCredited) && (!bookingsForMatch || !match);
 
+  // If everything became credited (e.g., via another action), also disable
+  React.useEffect(() => {
+    if (winners.length > 0 && allCredited) {
+      setHasCredited(true);
+      try {
+        const key = match?._id ? `credit_all_disabled_${match._id}` : '';
+        if (key) localStorage.setItem(key, 'true');
+      } catch {}
+    }
+  }, [winners, allCredited, match?._id]);
 
+  if (!hasUncredited && allCredited) return null;
+
+  const isDisabled = hasCredited || loading || allCredited;
 
   return (
-
-    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm mb-2" onClick={handleCreditAll} disabled={loading}>
-
-      {loading ? 'Processing...' : 'Save & Credit All Winnings'}
-
+    <>
+      <button
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={handleButtonClick}
+        disabled={isDisabled}
+      >
+        {loading ? 'Processing...' : hasCredited ? 'Winnings Credited' : 'Save & Credit All Winnings'}
     </button>
 
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent className="bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Confirm Credit All Winnings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-gray-300">
+              Are you sure you want to credit all winnings to the winners? This action will credit the winning amounts to all eligible players' wallets.
+            </p>
+            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3">
+              <p className="text-sm text-gray-400 mb-2">Summary:</p>
+              <ul className="text-sm text-gray-300 space-y-1">
+                <li>• Total winners: {winners.length}</li>
+                <li>• Winners with user accounts: {winners.filter(w => w.userId).length}</li>
+                <li>• Already credited: {winners.filter(w => w.walletCredited).length}</li>
+                <li>• To be credited: {winners.filter(w => w.userId && !w.walletCredited).length}</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#2A2A2A]">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmModal(false)}
+              className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loading ? 'Processing...' : 'Confirm & Credit'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 
 };
@@ -379,8 +480,6 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
   const [error, setError] = useState<string | null>(null);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [selectedMatch, setSelectedMatch] = useState<Match | undefined>();
 
 
@@ -394,6 +493,21 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
   const [slotBookings, setSlotBookings] = useState<{ [key: string]: { bookings: Booking[] } }>({});
 
   const [users, setUsers] = useState<any[]>([]); // Store users for phone lookup
+
+  // Cancel match states - using player key (bookingId + playerName) for unique selection
+  const [selectedPlayers, setSelectedPlayers] = useState<{ [slotId: string]: Set<string> }>({});
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [selectedMatchForCancel, setSelectedMatchForCancel] = useState<Match | null>(null);
+  const [selectedPlayersForRefund, setSelectedPlayersForRefund] = useState<{ [playerKey: string]: boolean }>({});
+  const [cancelling, setCancelling] = useState(false);
+  // Track refunded players by match ID and player key
+  const [refundedPlayers, setRefundedPlayers] = useState<{ [slotId: string]: Set<string> }>({});
+  
+  // Helper function to create unique player key
+  const getPlayerKey = (bookingId: string, playerName: string) => {
+    return `${bookingId}_${playerName}`;
+  };
 
   // Fetch all users for phone lookup
 
@@ -674,7 +788,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
         const user = users.find(u => String(u._id) === String(userId));
 
         if (user) {
-          return user.phone ||'';
+          return user.phone || '';
         }
 
         return '';
@@ -925,6 +1039,171 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
     }
 
+  };
+
+  // Handle checkbox selection for cancel match - using player name for unique selection
+  const handlePlayerCheckboxChange = (slotId: string, bookingId: string, playerName: string, checked: boolean) => {
+    const playerKey = getPlayerKey(bookingId, playerName);
+    setSelectedPlayers(prev => {
+      const newState = { ...prev };
+      if (!newState[slotId]) {
+        newState[slotId] = new Set<string>();
+      }
+      if (checked) {
+        newState[slotId].add(playerKey);
+      } else {
+        newState[slotId].delete(playerKey);
+      }
+      return newState;
+    });
+  };
+
+  // Handle select all checkboxes for a match - using player keys
+  const handleSelectAllPlayers = (slotId: string, checked: boolean, displayedRows: Array<{ booking: any; playerName: string }>) => {
+    setSelectedPlayers(prev => {
+      const newState = { ...prev };
+      if (checked) {
+        const playerKeys = displayedRows
+          .filter(row => row.booking && row.playerName)
+          .map(row => getPlayerKey(row.booking._id, row.playerName));
+        newState[slotId] = new Set(playerKeys);
+      } else {
+        newState[slotId] = new Set();
+      }
+      return newState;
+    });
+  };
+
+  // Open cancel modal
+  const handleOpenCancelModal = (match: Match) => {
+    const selected = selectedPlayers[match._id] || new Set();
+    if (selected.size === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select at least one player to cancel the match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedMatchForCancel(match);
+    // Initialize all selected players as selected for refund
+    const refundState: { [playerKey: string]: boolean } = {};
+    selected.forEach(playerKey => {
+      refundState[playerKey] = true;
+    });
+    setSelectedPlayersForRefund(refundState);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  // Handle cancel match
+  const handleCancelMatch = async () => {
+    if (!selectedMatchForCancel) return;
+    if (!cancelReason.trim()) {
+      toast({
+        title: "Cancel Reason Required",
+        description: "Please provide a reason for cancelling the match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedForRefund = Object.entries(selectedPlayersForRefund)
+      .filter(([_, selected]) => selected)
+      .map(([playerKey]) => playerKey);
+
+    if (selectedForRefund.length === 0) {
+      toast({
+        title: "No Players Selected",
+        description: "Please select at least one player to refund.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to cancel matches.",
+          variant: "destructive",
+        });
+        navigate('/al-admin-128900441');
+        return;
+      }
+
+      // Extract booking IDs and player names from player keys
+      const refundData = selectedForRefund.map(playerKey => {
+        const [bookingId, ...playerNameParts] = playerKey.split('_');
+        const playerName = playerNameParts.join('_'); // In case player name contains underscores
+        return { bookingId, playerName };
+      });
+
+      // Call cancel match API with selective refund
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/${selectedMatchForCancel._id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          cancelReason: cancelReason.trim(),
+          refundPlayers: refundData // Send array of {bookingId, playerName}
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Match Cancelled",
+          description: `Match cancelled successfully. ${selectedForRefund.length} player(s) refunded.`,
+          variant: "default",
+        });
+        
+        // Mark refunded players as disabled
+        setRefundedPlayers(prev => {
+          const newState = { ...prev };
+          if (!newState[selectedMatchForCancel._id]) {
+            newState[selectedMatchForCancel._id] = new Set();
+          }
+          selectedForRefund.forEach(playerKey => {
+            newState[selectedMatchForCancel._id].add(playerKey);
+          });
+          return newState;
+        });
+        
+        setShowCancelModal(false);
+        setSelectedMatchForCancel(null);
+        setCancelReason('');
+        setSelectedPlayersForRefund({});
+        // Clear selected players for this match
+        setSelectedPlayers(prev => {
+          const newState = { ...prev };
+          newState[selectedMatchForCancel._id] = new Set();
+          return newState;
+        });
+        // Refresh matches
+        fetchCompletedMatches();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || data.msg || "Failed to cancel match.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "An error occurred while cancelling the match.",
+        variant: "destructive",
+      });
+      console.error(err);
+    } finally {
+      setCancelling(false);
+    }
   };
 
 
@@ -1856,13 +2135,49 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                   </div>
 
-                  {/* Booked Players Table - split into two side-by-side tables */}
+                  {/* Booked Players Table - two full-width stacked tables */}
 
                   <div className="player-list mt-6">
 
+                    {/* Cancel Match Button - appears when checkboxes are selected */}
+                    {(selectedPlayers[match._id]?.size || 0) > 0 && (
+                      <div className="mb-4">
+                        <button
+                          onClick={() => handleOpenCancelModal(match)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold"
+                        >
+                          Cancel Match ({selectedPlayers[match._id]?.size || 0} selected)
+                        </button>
+                      </div>
+                    )}
+
                     {/* <h4 className="text-white font-semibold mb-2">Booked Players</h4> */}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-4" 
+                      style={{
+                        gridTemplateColumns: (() => {
+                          const bookings = slotBookings[match._id]?.bookings || [];
+                          let playerCount = 0;
+                          const modeOuter = String(match.slotType || '').toLowerCase();
+                          const groupedOuter = modeOuter.includes('duo') || modeOuter.includes('squad');
+                          if (bookings.length > 0) {
+                            if (!groupedOuter) {
+                              bookings.forEach((b: any) => {
+                                const names = Object.values(b.playerNames || {}).filter(Boolean);
+                                playerCount += names.length > 0 ? names.length : 1;
+                              });
+                            } else {
+                              bookings.forEach((b: any) => {
+                                const names = Object.values(b.playerNames || {}).filter(Boolean);
+                                playerCount += names.length;
+                              });
+                            }
+                          }
+                          const twoCols = playerCount > 24;
+                          return twoCols ? 'repeat(2,minmax(0,1fr))' : 'repeat(1,minmax(0,1fr))';
+                        })()
+                      }}
+                    >
                       {/* First Table: Players 1-24 */}
                       <div className="overflow-x-auto">
                         <table className="min-w-full bg-[#232323] rounded-lg">
@@ -1870,6 +2185,79 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                         <thead>
 
                           <tr className="text-white">
+                          <th className="px-3 py-2 text-white text-center w-12">
+                            {(() => {
+                              // Calculate if all displayed rows are selected
+                              const bookings = slotBookings[match._id]?.bookings || [];
+                              if (bookings.length === 0) return null;
+                              
+                              const mode = String(match.slotType || '').toLowerCase();
+                              const isGrouped = mode.includes('duo') || mode.includes('squad');
+                              
+                              // Build combined rows to count actual displayed rows
+                              type Row = { booking: any; playerName: string; seat: number; isTeamHeader?: boolean; teamNum?: number };
+                              const combined: Row[] = [];
+                              
+                              if (!isGrouped) {
+                                bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  if (entries.length === 0) {
+                                    combined.push({ booking, playerName: booking.user?.name || '', seat: Number.MAX_SAFE_INTEGER });
+                                    return;
+                                  }
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^(?:team[\w]+)-(\d+)$/i);
+                                    const seat = m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
+                                    combined.push({ booking, playerName: String(name), seat });
+                                  });
+                                });
+                                combined.sort((a, b) => a.seat - b.seat);
+                              } else {
+                                type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
+                                const groups: Record<string, Member[]> = {};
+                                bookings.forEach((booking: any) => {
+                                  const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                  entries.forEach(([key, name]) => {
+                                    const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
+                                    const posLetter = m ? String(m[1]).toUpperCase() : '?';
+                                    const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+                                    const k = String(teamNum);
+                                    if (!groups[k]) groups[k] = [];
+                                    groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
+                                  });
+                                });
+                                const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                                orderedTeams.forEach((team) => {
+                                  combined.push({ booking: null, playerName: '', seat: team, isTeamHeader: true, teamNum: team });
+                                  groups[String(team)]
+                                    .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
+                                    .forEach((member) => {
+                                      combined.push({ booking: member.booking, playerName: member.playerName, seat: member.teamNum });
+                                    });
+                                });
+                              }
+                              
+                              // Count displayed rows (excluding team headers) in first 24
+                              const first24 = combined.slice(0, 24);
+                              const displayedRows = first24.filter(row => !row.isTeamHeader && row.booking && row.playerName);
+                              const selectedRows = displayedRows.filter(row => {
+                                if (!row.booking || !row.playerName) return false;
+                                const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                return selectedPlayers[match._id]?.has(playerKey) || false;
+                              });
+                              
+                              const allSelected = displayedRows.length > 0 && selectedRows.length === displayedRows.length;
+                              
+                              return (
+                                <input
+                                  type="checkbox"
+                                  checked={allSelected}
+                                  onChange={(e) => handleSelectAllPlayers(match._id, e.target.checked, displayedRows)}
+                                  className="cursor-pointer"
+                                />
+                              );
+                            })()}
+                          </th>
                           <th className="px-3 py-2 text-white text-left w-24">Position</th>
                             <th className="px-3 py-2 text-white text-center w-20">No. </th>
 
@@ -1955,7 +2343,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                     if (row.isTeamHeader) {
                                       return (
                                         <tr key={`header-${row.teamNum}-first`}>
-                                          <td colSpan={9} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
+                                          <td colSpan={10} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
                                         </tr>
                                       );
                                     }
@@ -1974,12 +2362,23 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                         firstwin={match.firstwin}
                                         secwin={match.secwin}
                                         thirdwin={match.thirdwin}
+                                        isSelected={(() => {
+                                          if (!row.booking || !row.playerName) return false;
+                                          const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                          return selectedPlayers[match._id]?.has(playerKey) || false;
+                                        })()}
+                                        isRefunded={(() => {
+                                          if (!row.booking || !row.playerName) return false;
+                                          const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                          return refundedPlayers[match._id]?.has(playerKey) || false;
+                                        })()}
+                                        onCheckboxChange={(checked) => handlePlayerCheckboxChange(match._id, row.booking?._id, row.playerName, checked)}
                                       />
                                     );
                                   })}
                                   {first24.length === 0 && (
                                     <tr>
-                                      <td colSpan={9} className="text-center text-gray-400">No players in this range.</td>
+                                      <td colSpan={10} className="text-center text-gray-400">No players in this range.</td>
                                     </tr>
                                   )}
                                 </>
@@ -1990,7 +2389,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                             <tr>
 
-                              <td colSpan={9} className="text-center text-gray-400">No players booked for this match.</td>
+                              <td colSpan={10} className="text-center text-gray-400">No players booked for this match.</td>
 
                             </tr>
 
@@ -2002,48 +2401,14 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
                     </div>
 
-                    {/* Second Table: Players 25-48 */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full bg-[#232323] rounded-lg">
-
-                        <thead>
-
-                          <tr className="text-white">
-                          <th className="px-3 py-2 text-white text-left w-24">Position</th>
-                            <th className="px-3 py-2 text-white text-center w-20">No. </th>
-
-                          <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
-
-                          <th className="px-3 py-2 text-white text-left w-48">Email</th>
-
-                          <th className="px-3 py-2 text-white text-left w-32">Mobile Number</th>
-
-                            <th className="px-3 py-2 text-white text-center w-20">Kills</th>
-
-                            <th className="px-3 py-2 text-white text-center w-20">Rank</th>
-
-                            <th className="px-3 py-2 text-white text-center w-24">Winnings</th>
-
-                            <th className="px-3 py-2 text-white text-center w-24">Actions</th>
-
-                          </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                          {(slotBookings[match._id]?.bookings?.length > 0) ? (
-
-                            (() => {
+                      {/* Second Table: Players 25+ (render only when exists) */}
+                      {(() => {
+                        if (!(slotBookings[match._id]?.bookings?.length > 0)) return null;
                               const mode = String(match.slotType || '').toLowerCase();
                               const isGrouped = mode.includes('duo') || mode.includes('squad');
-                              
-                              // Build combined rows array
                               type Row = { booking: any; playerName: string; seat: number; isTeamHeader?: boolean; teamNum?: number };
                               const combined: Row[] = [];
-                              
                               if (!isGrouped) {
-                                // Default flat list
                                 slotBookings[match._id].bookings.forEach((booking: any) => {
                                   const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
                                   if (entries.length === 0) {
@@ -2058,7 +2423,6 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                 });
                                 combined.sort((a, b) => a.seat - b.seat);
                               } else {
-                                // Group Duo/Squad by team number with a team header row
                                 type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
                                 const groups: Record<string, Member[]> = {};
                                 slotBookings[match._id].bookings.forEach((booking: any) => {
@@ -2082,19 +2446,102 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                     });
                                 });
                               }
-
-                              // Get remaining players (25-48)
-                              const remaining = combined.slice(24, 48);
-                              
-                              let seq = 24; // Start from 25
-                              
+                        const remaining = combined.slice(24);
+                        if (remaining.length === 0) return null; // Do not render second table if empty
+                        let seq = 24;
                               return (
-                                <>
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full bg-[#232323] rounded-lg">
+                              <thead>
+                                <tr className="text-white">
+                                  <th className="px-3 py-2 text-white text-center w-12">
+                                    {(() => {
+                                      // Calculate if all displayed rows are selected (for second table)
+                                      const bookings = slotBookings[match._id]?.bookings || [];
+                                      if (bookings.length === 0) return null;
+                                      
+                                      const mode = String(match.slotType || '').toLowerCase();
+                                      const isGrouped = mode.includes('duo') || mode.includes('squad');
+                                      
+                                      type Row = { booking: any; playerName: string; seat: number; isTeamHeader?: boolean; teamNum?: number };
+                                      const combined: Row[] = [];
+                                      
+                                      if (!isGrouped) {
+                                        bookings.forEach((booking: any) => {
+                                          const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                          if (entries.length === 0) {
+                                            combined.push({ booking, playerName: booking.user?.name || '', seat: Number.MAX_SAFE_INTEGER });
+                                            return;
+                                          }
+                                          entries.forEach(([key, name]) => {
+                                            const m = String(key).match(/^(?:team[\w]+)-(\d+)$/i);
+                                            const seat = m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
+                                            combined.push({ booking, playerName: String(name), seat });
+                                          });
+                                        });
+                                        combined.sort((a, b) => a.seat - b.seat);
+                                      } else {
+                                        type Member = { booking: any; playerName: string; teamNum: number; posLetter: string };
+                                        const groups: Record<string, Member[]> = {};
+                                        bookings.forEach((booking: any) => {
+                                          const entries = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                                          entries.forEach(([key, name]) => {
+                                            const m = String(key).match(/^team([A-Za-z]+)-(\d+)$/i);
+                                            const posLetter = m ? String(m[1]).toUpperCase() : '?';
+                                            const teamNum = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+                                            const k = String(teamNum);
+                                            if (!groups[k]) groups[k] = [];
+                                            groups[k].push({ booking, playerName: String(name), teamNum, posLetter });
+                                          });
+                                        });
+                                        const orderedTeams = Object.keys(groups).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                                        orderedTeams.forEach((team) => {
+                                          combined.push({ booking: null, playerName: '', seat: team, isTeamHeader: true, teamNum: team });
+                                          groups[String(team)]
+                                            .sort((a, b) => a.posLetter.localeCompare(b.posLetter))
+                                            .forEach((member) => {
+                                              combined.push({ booking: member.booking, playerName: member.playerName, seat: member.teamNum });
+                                            });
+                                        });
+                                      }
+                                      
+                                      const remaining = combined.slice(24);
+                                      const displayedRows = remaining.filter(row => !row.isTeamHeader && row.booking && row.playerName);
+                                      const selectedRows = displayedRows.filter(row => {
+                                        if (!row.booking || !row.playerName) return false;
+                                        const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                        return selectedPlayers[match._id]?.has(playerKey) || false;
+                                      });
+                                      
+                                      const allSelected = displayedRows.length > 0 && selectedRows.length === displayedRows.length;
+                                      
+                                      return (
+                                        <input
+                                          type="checkbox"
+                                          checked={allSelected}
+                                          onChange={(e) => handleSelectAllPlayers(match._id, e.target.checked, displayedRows)}
+                                          className="cursor-pointer"
+                                        />
+                                      );
+                                    })()}
+                                  </th>
+                                  <th className="px-3 py-2 text-white text-left w-24">Position</th>
+                                  <th className="px-3 py-2 text-white text-center w-20">No. </th>
+                                  <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
+                                  <th className="px-3 py-2 text-white text-left w-48">Email</th>
+                                  <th className="px-3 py-2 text-white text-left w-32">Mobile Number</th>
+                                  <th className="px-3 py-2 text-white text-center w-20">Kills</th>
+                                  <th className="px-3 py-2 text-white text-center w-20">Rank</th>
+                                  <th className="px-3 py-2 text-white text-center w-24">Winnings</th>
+                                  <th className="px-3 py-2 text-white text-center w-24">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
                                   {remaining.map((row, i) => {
                                     if (row.isTeamHeader) {
                                       return (
                                         <tr key={`header-${row.teamNum}-second`}>
-                                          <td colSpan={9} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
+                                          <td colSpan={10} className="px-3 py-2 text-white bg-[#111] border border-[#333]" style={{ fontWeight: 700 }}>Team-{row.teamNum}</td>
                                         </tr>
                                       );
                                     }
@@ -2113,33 +2560,25 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                                         firstwin={match.firstwin}
                                         secwin={match.secwin}
                                         thirdwin={match.thirdwin}
+                                        isSelected={(() => {
+                                          if (!row.booking || !row.playerName) return false;
+                                          const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                          return selectedPlayers[match._id]?.has(playerKey) || false;
+                                        })()}
+                                        isRefunded={(() => {
+                                          if (!row.booking || !row.playerName) return false;
+                                          const playerKey = getPlayerKey(row.booking._id, row.playerName);
+                                          return refundedPlayers[match._id]?.has(playerKey) || false;
+                                        })()}
+                                        onCheckboxChange={(checked) => handlePlayerCheckboxChange(match._id, row.booking?._id, row.playerName, checked)}
                                       />
                                     );
                                   })}
-                                  {remaining.length === 0 && (
-                                    <tr>
-                                      <td colSpan={9} className="text-center text-gray-400">No players in this range.</td>
-                                    </tr>
-                                  )}
-                                </>
-                              );
-                            })()
-
-                          ) : (
-
-                            <tr>
-
-                              <td colSpan={9} className="text-center text-gray-400">No players booked for this match.</td>
-
-                            </tr>
-
-                          )}
-
                         </tbody>
-
                       </table>
-
                     </div>
+                        );
+                      })()}
                   </div>
 
                   </div>
@@ -2284,6 +2723,139 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
 
       </Dialog>
 
+      {/* Cancel Match Modal */}
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] bg-[#0F0F0F] border border-[#2A2A2A] text-white overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">
+              Cancel Match
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedMatchForCancel && (
+            <div className="space-y-6 py-4">
+              {/* Match Info */}
+              <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]">
+                <h3 className="text-white font-semibold mb-2">
+                  {selectedMatchForCancel.matchTitle || selectedMatchForCancel.slotType.toUpperCase()} TOURNAMENT
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-yellow-500">Entry Fee: </span>
+                    <span className="text-white">₹{selectedMatchForCancel.entryFee}</span>
+                  </div>
+                  <div>
+                    <span className="text-yellow-500">Match Time: </span>
+                    <span className="text-white">{formatDateTime(selectedMatchForCancel.matchTime)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancel Reason */}
+              <div className="space-y-2">
+                <label className="text-white font-semibold">
+                  Cancel Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Enter the reason for cancelling this match..."
+                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#FF4D4F] min-h-[100px]"
+                  rows={4}
+                />
+              </div>
+
+              {/* Selected Players for Refund */}
+              <div className="space-y-2">
+                <label className="text-white font-semibold">
+                  Select Players to Refund Entry Fee
+                </label>
+                <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4 max-h-[300px] overflow-y-auto">
+                  {(() => {
+                    // Get all selected players and display them individually
+                    const selectedPlayerKeys = selectedPlayers[selectedMatchForCancel._id] || new Set();
+                    const playersList: Array<{ playerKey: string; booking: Booking; playerName: string }> = [];
+                    
+                    slotBookings[selectedMatchForCancel._id]?.bookings?.forEach((booking) => {
+                      const playerNames = Object.entries(booking.playerNames || {}).filter(([, n]) => !!n);
+                      if (playerNames.length === 0) {
+                        // If no player names, use user name
+                        const playerName = booking.user?.name || 'Unknown Player';
+                        const playerKey = getPlayerKey(booking._id, playerName);
+                        if (selectedPlayerKeys.has(playerKey)) {
+                          playersList.push({ playerKey, booking, playerName });
+                        }
+                      } else {
+                        // Each player name is a separate entry
+                        playerNames.forEach(([_, name]) => {
+                          const playerName = String(name);
+                          const playerKey = getPlayerKey(booking._id, playerName);
+                          if (selectedPlayerKeys.has(playerKey)) {
+                            playersList.push({ playerKey, booking, playerName });
+                          }
+                        });
+                      }
+                    });
+                    
+                    return playersList.length > 0 ? (
+                      playersList.map(({ playerKey, booking, playerName }) => (
+                        <div key={playerKey} className="flex items-center gap-3 py-2 border-b border-[#2A2A2A] last:border-b-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedPlayersForRefund[playerKey] || false}
+                            onChange={(e) => {
+                              setSelectedPlayersForRefund(prev => ({
+                                ...prev,
+                                [playerKey]: e.target.checked
+                              }));
+                            }}
+                            className="cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="text-white font-medium">{playerName}</div>
+                            <div className="text-gray-400 text-sm">
+                              {booking.user?.email || 'N/A'} • {booking.user?.phone || 'N/A'}
+                            </div>
+                            <div className="text-yellow-500 text-sm">
+                              Entry Fee: ₹{booking.totalAmount || selectedMatchForCancel.entryFee}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-400 text-center py-4">No players selected</div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#2A2A2A]">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason('');
+                    setSelectedPlayersForRefund({});
+                  }}
+                  className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+                  disabled={cancelling}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCancelMatch}
+                  disabled={cancelling || !cancelReason.trim()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {cancelling ? 'Cancelling...' : 'Cancel Match & Refund'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Sidebar hidden when embedded from AdminDashboard with a specific match */}
 
       {/* Sidebar removed per requirement - showing only header and content */}
@@ -2340,11 +2912,17 @@ interface BookingTableRowProps {
 
   thirdwin?: number;
 
+  isSelected?: boolean;
+
+  isRefunded?: boolean;
+
+  onCheckboxChange?: (checked: boolean) => void;
+
 }
 
 
 
-const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerName, onSave, winnersBySlot, onWinnerChange, slotId, perKill = 0, firstwin = 0, secwin = 0, thirdwin = 0 }) => {
+const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerName, onSave, winnersBySlot, onWinnerChange, slotId, perKill = 0, firstwin = 0, secwin = 0, thirdwin = 0, isSelected = false, isRefunded = false, onCheckboxChange }) => {
 
   // Debug: log the phone number for each booking row
 
@@ -2600,7 +3178,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
                 },
                 body: JSON.stringify({ winningPrice: Math.max(0, Math.floor((Number(t.kills) || 0) * (perKill || 0) + share)), rank })
               });
-            } catch {}
+            } catch { }
           }
 
           if (onWinnerChange) onWinnerChange();
@@ -2635,7 +3213,20 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
   return (
 
-    <tr className={`border-b border-[#333] ${isPlayerAlreadyWinner ? 'bg-red-900/20 opacity-60' : ''}`}>
+    <tr className={`border-b border-[#333] ${isPlayerAlreadyWinner ? 'bg-red-900/20 opacity-60' : ''} ${isRefunded ? 'bg-gray-900/40 opacity-50' : ''}`}>
+
+      {/* Checkbox column */}
+      <td className="px-3 py-2 text-center">
+        {onCheckboxChange && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onCheckboxChange(e.target.checked)}
+            className="cursor-pointer"
+            disabled={isPlayerAlreadyWinner || isRefunded}
+          />
+        )}
+      </td>
 
       {/* Position first to match header */}
       <td className="px-3 py-2 text-white">{bookedPosition}</td>
@@ -2673,7 +3264,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           type="number"
 
-          className={`w-16 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner
+          className={`w-16 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner || isRefunded
 
             ? 'bg-[#2A2A2A] text-gray-500 border-[#555] cursor-not-allowed'
 
@@ -2685,7 +3276,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           onChange={e => setKills(Number(e.target.value))}
 
-          disabled={isPlayerAlreadyWinner}
+          disabled={isPlayerAlreadyWinner || isRefunded}
 
         />
 
@@ -2697,7 +3288,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           type="number"
 
-          className={`w-16 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner
+          className={`w-16 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner || isRefunded
 
             ? 'bg-[#2A2A2A] text-gray-500 border-[#555] cursor-not-allowed'
 
@@ -2711,7 +3302,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           placeholder="Rank"
 
-          disabled={isPlayerAlreadyWinner}
+          disabled={isPlayerAlreadyWinner || isRefunded}
 
         />
 
@@ -2723,7 +3314,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           type="number"
 
-          className={`w-24 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner
+          className={`w-24 rounded px-2 py-1 border text-center ${isPlayerAlreadyWinner || isRefunded
 
             ? 'bg-[#2A2A2A] text-gray-500 border-[#555] cursor-not-allowed'
 
@@ -2735,7 +3326,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           onChange={e => setWinningPrice(Number(e.target.value))}
 
-          disabled={isPlayerAlreadyWinner}
+          disabled={isPlayerAlreadyWinner || isRefunded}
 
         />
 
@@ -2745,7 +3336,7 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
         <button
 
-          className={`px-3 py-1 rounded text-sm ${isPlayerAlreadyWinner
+          className={`px-3 py-1 rounded text-sm ${isPlayerAlreadyWinner || isRefunded
 
             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
 
@@ -2755,11 +3346,11 @@ const BookingTableRow: React.FC<BookingTableRowProps> = ({ booking, idx, playerN
 
           onClick={handleSave}
 
-          disabled={loading || isPlayerAlreadyWinner}
+          disabled={loading || isPlayerAlreadyWinner || isRefunded}
 
         >
 
-          {loading ? 'Saving...' : isPlayerAlreadyWinner ? 'Already Winner' : 'Save'}
+          {loading ? 'Saving...' : isRefunded ? 'Refunded' : isPlayerAlreadyWinner ? 'Already Winner' : 'Save'}
 
         </button>
 

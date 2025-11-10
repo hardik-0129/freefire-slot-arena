@@ -4,7 +4,7 @@ import MatchNotificationModal from './MatchNotificationModal';
 import AnnouncementBar from './AnnouncementBar';
 import { useEffect, useState } from "react";
 import { useWallet } from '../context/WalletContext';
-import { requestForToken, messaging, onMessage, initializeMessaging } from '../lib/firebase';
+import { requestForToken } from '../lib/firebase';
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import "./css/Header.css";
@@ -110,7 +110,7 @@ export const Header = () => {
 
     const handleDownloadApk = async () => {
         try {
-            const base = import.meta?.env?.VITE_API_URL || '';
+            const base = import.meta?.env?.VITE_API_URL;
             const res = await fetch(`${base}/api/apk/latest/public`, { method: 'GET' });
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
@@ -151,12 +151,13 @@ export const Header = () => {
 
                         {/* Desktop Navigation */}
                         <nav className="desktop-nav">
-                            <a href="/" className="nav-link">EVENTS</a>
+                            {/* <a href="/" className="nav-link">EVENTS</a> */}
                             <a href="/tournament" className="nav-link">TOURNAMENT</a>
                             <a href="/task" className="nav-link">Lions NFT</a>
                             <a href="/about" className="nav-link">ABOUT US</a>
                             <a href="/contact" className="nav-link">CONTACT US</a>
                             <a href="/blog" className="nav-link">BLOG</a>
+                            <a href="/alpha-lions-app" className="nav-link">App Download</a>
                         </nav>
 
                         {/* Right Side Actions */}

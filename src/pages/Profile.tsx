@@ -30,6 +30,8 @@ interface UserProfile {
   };
   twoFactorEnabled?: boolean;
   totpEnabled?: boolean;
+  isSuspended?: boolean;
+  suspendedReason?: string;
 }
 
 const Profile = () => {
@@ -301,6 +303,52 @@ const Profile = () => {
               Joined: {new Date(profile.createdAt).toLocaleDateString()}
             </div>
           </div>
+          
+          {/* Account Status Section - Show if suspended */}
+          {profile.isSuspended && (
+            <div className="profile-card" style={{ marginTop: 16, backgroundColor: '#ffffff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                
+                <span style={{ 
+                  background: '#ff4444', 
+                  color: '#fff', 
+                  padding: '4px 12px', 
+                  borderRadius: 12, 
+                  fontSize: 12, 
+                  fontWeight: 600 
+                }}>
+                  SUSPENDED
+                </span>
+              </div>
+              {profile.suspendedReason && (
+                <div style={{ 
+                  background: '#fff', 
+                  padding: 8, 
+                  borderRadius: 8, 
+                  border: '1px solid #ffcccc',
+                  marginTop: 12
+                }}>
+                  <div style={{ 
+                    fontSize: 13, 
+                    fontWeight: 600, 
+                    color: '#666', 
+                    marginBottom: 8 
+                  }}>
+                    Suspension Reason: <span style={{ color: '#333', fontSize: 14, fontWeight: 400 }}>{profile.suspendedReason}</span>
+                  </div>
+                </div>
+              )}
+              <div style={{ 
+                fontSize: 12, 
+                color: '#999', 
+                marginTop: 12, 
+                fontStyle: 'italic' 
+              }}>
+                Please contact support if you have any questions about your account suspension.
+              </div>
+            </div>
+          )}
+          
           {/* Referral Reward Card Section */}
           <div className="profile-card" style={{ marginTop: 16 }}>
             <div className="referral-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -524,7 +572,7 @@ const Profile = () => {
                 <span className="referral-value reward">₹{Math.floor(totalReferralReward)}</span>
               </div>
               <div className="referral-row">
-                <span className="referral-label">Share your code to earn 5% on your friends' winnings!</span>
+                <span className="referral-label">Share your code to earn 5 Rs bonus on your friends' winnings!</span>
               </div>
             </div>
             {/* Referral History Section */}

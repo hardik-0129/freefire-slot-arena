@@ -5,12 +5,14 @@ import AppScreenshot from '@/components/AppScreenshot';
 import Features from '@/components/Features';
 import { TournamentSection } from '@/components/TournamentSection';
 import HowToPlay from '@/components/HowToPlay';
+import { HeroBanner } from '@/components/HeroBanner';
 
 const AlphaLionApp = () => {
   return (
     <div>
         <Header /> 
-        <LandingPage />
+        {/* <LandingPage /> */}
+        <HeroBanner />
         <AppScreenshot />
         <Features />
         <TournamentSection />

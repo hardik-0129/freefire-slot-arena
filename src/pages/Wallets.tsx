@@ -299,7 +299,7 @@ const Wallets = () => {
                 const data = await resp.json();
                 setIsSuspended(Boolean(data.user?.isSuspended));
             }
-        } catch {}
+        } catch { }
     };
 
     const fetchTransactionHistory = async () => {
@@ -325,6 +325,7 @@ const Wallets = () => {
                 const data = await response.json();
                 setTransactions(data.transactions || []);
                 setBookings(data.bookings || []);
+
                 // Calculate total payouts (sum of all successful withdrawals)
                 const total = (data.transactions || [])
                     .filter((tx) => (tx.type === 'WITHDRAW' || tx.type === 'DEBIT') && (tx.status === 'SUCCESS' || tx.status === 'ADMIN_APPROVED'))
@@ -384,12 +385,22 @@ const Wallets = () => {
         const combined = [];
 
         // Add transactions (normalize negatives as SERVER_ERROR_BALANCE)
+        // Also ensure BOOKING, DEBIT, WITHDRAW transactions show as negative
         transactions.forEach(tx => {
             const amt = Number((tx as any).amount) || 0;
+            const txType = String((tx as any).type || '').toUpperCase();
             const normalizedType = amt < 0 ? 'SERVER_ERROR_BALANCE' : (tx as any).type;
+
+            // For BOOKING, DEBIT, WITHDRAW transactions, ensure amount is negative (deduction)
+            let normalizedAmount = amt;
+            if ((txType === 'BOOKING' || txType === 'DEBIT' || txType === 'WITHDRAW') && amt > 0) {
+                normalizedAmount = -Math.abs(amt);
+            }
+
             combined.push({
                 ...tx,
                 type: normalizedType,
+                amount: normalizedAmount,
                 itemType: 'transaction',
                 sortDate: new Date((tx as any).createdAt)
             });
@@ -413,7 +424,7 @@ const Wallets = () => {
                 _id: booking._id,
                 type: 'BOOKING',
                 amount: -Math.abs(booking.totalAmount || 0),
-                description: `Match booking: ${booking.slot?.matchTitle || 'Unknown Match'} (${booking.slotType})`,
+                description: `Match booking: ${booking.slot?.matchTitle} (${booking.slotType})`,
                 createdAt: booking.createdAt,
                 status: booking.status === 'confirmed' ? 'SUCCESS' : booking.status.toUpperCase(),
                 balanceAfter: walletBalance,
@@ -454,8 +465,7 @@ const Wallets = () => {
             }
             const decoded = jwtDecode<{ userId: string, phone?: string }>(token);
             const userId = decoded.userId;
-            
-            console.log(userId);
+
             if (!userId) {
                 setMessage('User info missing');
                 setLoading(false);
@@ -794,18 +804,26 @@ const Wallets = () => {
                                         ) : (
                                             <>
                                                 {item.description}
-                                                {item.metadata?.externalTxnId ? (
-                                                    <> • Ref: {item.metadata.externalTxnId}</>
+                                                {item.type === 'REFUND' ? (
+                                                    <>
+                                                        {item.metadata?.matchIndex !== undefined && item.metadata?.matchIndex !== null ? (
+                                                            <> • #{item.metadata.matchIndex}</>
+                                                        ) : null}
+                                                        {item.metadata?.cancelReason && (
+                                                            <> • Cancel reason: {item.metadata.cancelReason}</>
+                                                        )}
+                                                        {item.metadata?.matchTitle && (
+                                                            <> • Match: {item.metadata.matchTitle}</>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <> - #{item.transactionId ? item.transactionId.slice(-6) : item._id.slice(-6)}</>
+                                                    <>
+                                                        {item.metadata?.externalTxnId && (
+                                                            <> • Ref: {item.metadata.externalTxnId}</>
+                                                        )}
+                                                    </>
                                                 )}
-                                                {item.type === 'REFUND' && item.metadata?.cancelReason && (
-                                                    <> • Cancel reason: {item.metadata.cancelReason}</>
-                                                )}
-                                                {item.type === 'REFUND' && item.metadata?.matchTitle && (
-                                                    <> • Match: {item.metadata.matchTitle}</>
-                                                )}
-                                                <> {formatDate(item.createdAt)}</>
+                                                <> - {formatDate(item.createdAt)}</>
                                             </>
                                         )}
                                     </div>

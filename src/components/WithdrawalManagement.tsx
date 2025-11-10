@@ -275,6 +275,11 @@ const WithdrawalManagement: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white">User:</span>
                       <span className="text-gray-300">{withdrawal.userId.name}</span>
+                      {withdrawal.userId && (withdrawal as any).userId.isSuspended && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-600 text-white" title={(withdrawal as any).userId.suspendedReason || 'Suspended by admin'}>
+                          Suspended
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white">Email:</span>
@@ -309,8 +314,9 @@ const WithdrawalManagement: React.FC = () => {
                   <div className="flex gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
                     <Button
                       onClick={() => openApproveModal(withdrawal)}
-                      disabled={processingId === withdrawal.transactionId}
+                      disabled={processingId === withdrawal.transactionId || ((withdrawal as any).userId?.isSuspended === true)}
                       className="bg-green-600 hover:bg-green-700 text-white"
+                      title={((withdrawal as any).userId?.isSuspended === true) ? ((withdrawal as any).userId?.suspendedReason || 'User account is suspended') : undefined}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Approve
@@ -434,19 +440,14 @@ const WithdrawalManagement: React.FC = () => {
                 <p className="text-sm text-gray-300 mb-2">Scan this UPI QR to pay the user (Google Pay/PhonePe/BHIM).</p>
                 {(() => {
                   const upi = selectedWithdrawal.metadata.upiId;
-                  const name = selectedWithdrawal.userId.name || 'Player';
+                  const name = selectedWithdrawal.userId.name;
                   const amount = Math.max(0, Number(selectedWithdrawal.amount));
                   const note = `Tournament Withdrawal - ${selectedWithdrawal.transactionId}`;
                   const upiLink = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
-                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(upiLink)}`;
                   return (
-                    <div className="flex items-center gap-4">
-                      <img src={qrUrl} alt="UPI QR" width={120} height={120} className="rounded" />
-                      <div className="text-sm text-gray-300 break-all">
-                        <div><strong>UPI:</strong> <span className="text-blue-400">{upi}</span></div>
-                        <div><strong>Pay:</strong> ₹{amount}</div>
-                        <a href={upiLink} target="_blank" rel="noreferrer" className="text-green-400 underline">Open in UPI app</a>
-                      </div>
+                    <div className="flex justify-center items-center">
+                      <img src={qrUrl} alt="UPI QR" width={300} height={300} className="rounded" />
                     </div>
                   );
                 })()}

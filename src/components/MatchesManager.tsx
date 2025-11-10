@@ -54,12 +54,9 @@ type MatchesManagerProps = {
   getStatusColor: (status: string) => string;
   getNextStatus: (status: string) => string | null;
   handleUpdateMatchStatus: (slotId: string, nextStatus: string) => void | Promise<void>;
-  handleDeleteSlot: (slotId: string) => void | Promise<void>;
   // countdown renderer
   Countdown: React.ComponentType<{ matchTime: string }>;
   // actions outside this component
-  onEditSlot?: (slot: any) => void;
-  onOpenRules?: (slot: any) => void;
   onOpenWinnerDetails?: (slot: any) => void;
   onOpenIdPass?: (slot: any) => void;
 };
@@ -91,10 +88,7 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   getStatusColor,
   getNextStatus,
   handleUpdateMatchStatus,
-  handleDeleteSlot,
   Countdown,
-  onEditSlot,
-  onOpenRules,
   onOpenWinnerDetails,
   onOpenIdPass,
 }) => {
@@ -144,9 +138,6 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   };
 
   const [matchTimeDisplay, setMatchTimeDisplay] = useState<string>("");
-  const [cancelSlotId, setCancelSlotId] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState<string>("");
-  const [savingCancel, setSavingCancel] = useState<boolean>(false);
   const [localSlots, setLocalSlots] = useState<any[]>(slots || []);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [togglingRescheduleId, setTogglingRescheduleId] = useState<string | null>(null);
@@ -840,7 +831,12 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     className="flex-1 min-w-[90px] bg-yellow-600 hover:bg-yellow-700 text-white text-xs py-2"
-                    onClick={() => onEditSlot ? onEditSlot(slot) : undefined}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/edit`);
+                      }
+                    }}
+                    disabled={slot.matchIndex === undefined || slot.matchIndex === null}
                   >
                     Edit
                   </Button>
@@ -890,7 +886,12 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   </Button>
                   <Button
                     className="flex-1 min-w-[90px] bg-[#52C41A] hover:bg-[#73D13D] text-white text-xs py-2"
-                    onClick={() => onOpenRules ? onOpenRules(slot) : undefined}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/rules`);
+                      }
+                    }}
+                    disabled={slot.matchIndex === undefined || slot.matchIndex === null}
                   >
                     📋 Rules
                   </Button>
@@ -908,20 +909,36 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                   </Button>
                   <Button
                     className="flex-1 min-w-[90px] bg-teal-600 hover:bg-teal-700 text-white text-xs py-2"
-                    onClick={() => onOpenIdPass ? onOpenIdPass(slot) : undefined}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/id-pass`);
+                      } else if (onOpenIdPass) {
+                        onOpenIdPass(slot);
+                      }
+                    }}
                   >
                     ID/Pass
                   </Button>
                   <Button
                     variant="destructive"
                     className="flex-1 min-w-[90px] bg-[#FF4D4F] hover:bg-[#FF7875] text-white text-xs py-2"
-                    onClick={() => handleDeleteSlot(slot._id)}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/delete`);
+                      }
+                    }}
+                    disabled={slot.matchIndex === undefined || slot.matchIndex === null}
                   >
                     Delete
                   </Button>
                   <Button
                     className="flex-1 min-w-[90px] bg-orange-600 hover:bg-orange-700 text-white text-xs py-2"
-                    onClick={() => { setCancelSlotId(slot._id); setCancelReason(''); }}
+                    onClick={() => {
+                      if (slot.matchIndex !== undefined && slot.matchIndex !== null) {
+                        navigate(`/al-dashboard-1289/matches/${slot.matchIndex}/cancel`);
+                      }
+                    }}
+                    disabled={slot.matchIndex === undefined || slot.matchIndex === null}
                   >
                     Cancel
                   </Button>
@@ -969,49 +986,6 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
         </div>
       </CardContent>
     </Card>
-    {/* Cancel Match Modal */}
-    <Dialog open={!!cancelSlotId} onOpenChange={(open) => { if (!open) { setCancelSlotId(null); setCancelReason(''); } }}>
-      <DialogContent className="max-w-md bg-[#0F0F0F] border border-[#2A2A2A] text-white">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Cancel Match</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <Label htmlFor="cancelReason" className="text-white">Reason</Label>
-          <textarea
-            id="cancelReason"
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="Enter reason for cancellation (visible to admins)"
-            className="w-full px-3 py-2 text-white bg-[#2A2A2A] border border-[#3A3A3A] rounded-md resize-none h-24"
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => { setCancelSlotId(null); setCancelReason(''); }} className="border-[#2A2A2A] text-white">Close</Button>
-            <Button
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-              disabled={savingCancel || !cancelReason.trim()}
-              onClick={async () => {
-                if (!cancelSlotId || !cancelReason.trim()) return;
-                try {
-                  setSavingCancel(true);
-                  const token = localStorage.getItem('adminToken');
-                  await axios.put(`${import.meta.env.VITE_API_URL}/api/admin/slots/${cancelSlotId}/status`, { status: 'cancelled', cancelReason }, { headers: { Authorization: `Bearer ${token}` } });
-                  // Optimistically update list without full page refresh
-                  setLocalSlots(prev => prev.map(s => s._id === cancelSlotId ? { ...s, status: 'cancelled', cancelReason } : s));
-                  setCancelSlotId(null);
-                  setCancelReason('');
-                } catch (e: any) {
-                  console.error(e);
-                } finally {
-                  setSavingCancel(false);
-                }
-              }}
-            >
-              {savingCancel ? 'Cancelling...' : 'Confirm Cancel'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
     </>
   );
 };
