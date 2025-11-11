@@ -19,6 +19,7 @@ interface WithdrawalRequest {
   transactionId: string;
   amount: number;
   userId: {
+    _id?: string;
     name: string;
     email: string;
     phone: string;
@@ -34,6 +35,17 @@ interface WithdrawalRequest {
   externalTxnId?: string;
 }
 
+interface TxnItem {
+  _id: string;
+  transactionId: string;
+  type: string;
+  status: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+  paymentMethod?: string;
+}
+
 const WithdrawalManagement: React.FC = () => {
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +57,12 @@ const WithdrawalManagement: React.FC = () => {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approveRefId, setApproveRefId] = useState('');
   const { toast } = useToast();
+
+  // Transactions modal state
+  const [showTxnModal, setShowTxnModal] = useState(false);
+  const [txnLoading, setTxnLoading] = useState(false);
+  const [txns, setTxns] = useState<TxnItem[]>([]);
+  const [txnUserName, setTxnUserName] = useState('');
 
   useEffect(() => {
     fetchWithdrawals();
@@ -92,6 +110,31 @@ const WithdrawalManagement: React.FC = () => {
       });
     }
     setLoading(false);
+  };
+
+  const openTransactions = async (withdrawal: WithdrawalRequest) => {
+    try {
+      setTxnLoading(true);
+      setShowTxnModal(true);
+      setTxnUserName(withdrawal.userId?.name || '');
+      const adminToken = localStorage.getItem('adminToken');
+      const userId = (withdrawal as any)?.userId?._id;
+      const query = userId ? `?userId=${userId}&limit=50&sortBy=createdAt&sortOrder=desc` : `?limit=50`;
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/admin/all-transactions${query}`, {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      });
+      const data = await res.json();
+      if (res.ok && data && Array.isArray(data.transactions)) {
+        setTxns(data.transactions);
+      } else if (data && Array.isArray(data.data)) {
+        setTxns(data.data);
+      } else {
+        setTxns([]);
+      }
+    } catch (e) {
+      setTxns([]);
+    }
+    setTxnLoading(false);
   };
 
   const handleApproveWithdrawal = async (transactionId: string, externalTxnId?: string) => {
@@ -310,37 +353,76 @@ const WithdrawalManagement: React.FC = () => {
                   </div>
                 </div>
                 
-                {statusFilter === 'pending' && (
-                  <div className="flex gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
-                    <Button
-                      onClick={() => openApproveModal(withdrawal)}
-                      disabled={processingId === withdrawal.transactionId || ((withdrawal as any).userId?.isSuspended === true)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      title={((withdrawal as any).userId?.isSuspended === true) ? ((withdrawal as any).userId?.suspendedReason || 'User account is suspended') : undefined}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve
-                    </Button>
-                    
-                    <Button
-                      onClick={() => {
-                        setSelectedWithdrawal(withdrawal);
-                        setShowRejectModal(true);
-                      }}
-                      disabled={processingId === withdrawal.transactionId}
-                      variant="destructive"
-                      className="text-white"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-[#3A3A3A]">
+                  {statusFilter === 'pending' && (
+                    <>
+                      <Button
+                        onClick={() => openApproveModal(withdrawal)}
+                        disabled={processingId === withdrawal.transactionId || ((withdrawal as any).userId?.isSuspended === true)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        title={((withdrawal as any).userId?.isSuspended === true) ? ((withdrawal as any).userId?.suspendedReason || 'User account is suspended') : undefined}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          setSelectedWithdrawal(withdrawal);
+                          setShowRejectModal(true);
+                        }}
+                        disabled={processingId === withdrawal.transactionId}
+                        variant="destructive"
+                        className="text-white"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    onClick={() => openTransactions(withdrawal)}
+                    variant="outline"
+                    className="border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
+                  >
+                    View Transactions
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+
+      {/* Transactions Modal */}
+      <Dialog open={showTxnModal} onOpenChange={setShowTxnModal}>
+        <DialogContent className="max-w-6xl bg-[#0F0F0F] border border-[#2A2A2A] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">
+              {txnLoading ? 'Loading Transactions...' : `Transaction History${txnUserName ? ' - ' + txnUserName : ''}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {txnLoading ? (
+              <div className="text-center py-8 text-gray-300">Please wait</div>
+            ) : txns.length === 0 ? (
+              <div className="text-center py-8 text-gray-300">No transactions found</div>
+            ) : (
+              txns.map((t) => (
+                <div key={t._id} className="p-3 rounded border border-[#2A2A2A] bg-[#111]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">{new Date(t.createdAt).toLocaleString('en-IN')}</span>
+                    <span className="font-semibold {t.type === 'WITHDRAW' ? 'text-red-400' : 'text-green-400'}">{t.type}</span>
+                  </div>
+                  <div className="mt-1 text-white">₹{Number(t.amount).toFixed(2)} - {t.status}</div>
+                  <div className="text-gray-400 text-sm break-words">{t.description}</div>
+                  <div className="text-gray-500 text-xs break-words">ID: {t.transactionId}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Rejection Modal */}
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
