@@ -818,7 +818,7 @@ const SelectSlot = () => {
             <table className="details-table">
               <thead>
                 <tr>
-                  <th>No.</th>
+                  {/* <th>No.</th> */}
                   <th>TEAM</th>
                   <th>POSITION</th>
                   <th>FF SAME GAME NAME</th>
@@ -833,7 +833,7 @@ const SelectSlot = () => {
                     const key = `${teamName}-${position}`;
                     return (
                       <tr key={key}>
-                        <td>{index + 1}</td>
+                        {/* <td>{index + 1}</td> */}
                         <td><span className="team-badge">TEAM : {teamName.replace('Team', '')}</span></td>
                         <td><span className="position-badge">POSITION :{position}</span></td>
                         <td>
@@ -876,7 +876,7 @@ const SelectSlot = () => {
             </p>
 
             {!hasSufficientBalance && !isLoading && totalCost > 0 && (
-              <div className="error-note" style={{ color: '#ffffffff', fontWeight: 'bold' }}>
+              <div className="error-note" style={{ color: '#ffffffff'}}>
                 Insufficient Balance! You need {(totalCost - walletBalance).toFixed(2)} more coins to join this match.
               </div>
             )}

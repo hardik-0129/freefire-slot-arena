@@ -56,6 +56,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import TournamentRules from "./pages/TournamentRules";
 import AlphaLionApp from "./pages/AlphaLionApp";
+import FloatingWhatsApp from "./components/FloatingWhatsApp";
 
 
 // Admin Route Guard Component
@@ -182,6 +183,7 @@ const App = () => (
             {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <FloatingWhatsApp />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

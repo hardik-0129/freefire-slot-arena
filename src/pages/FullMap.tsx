@@ -380,7 +380,7 @@ const FullMap = () => {
                                                     </div>
                                                 </div>
                                                 <div className="prize-pill">
-                                                    <div className="pill-label">WINNING PRIZE</div>
+                                                    <div className="pill-label">PRIZE POOL</div>
                                                     <div className="pill-value">
                                                         <img src="/assets/vector/Coin.png" alt="Coin" />
                                                         {slot.totalWinningPrice}
@@ -506,7 +506,7 @@ const FullMap = () => {
                                         <div className="match-info-value">₹{selectedMatch.perKill}</div>
                                     </div>
                                     <div className="match-info-item">
-                                        <div className="match-info-label">Winning Prize</div>
+                                        <div className="match-info-label">PRIZE POOL</div>
                                         <div className="match-info-value">₹{selectedMatch.totalWinningPrice}</div>
                                     </div>
                                     <div className="match-info-item">

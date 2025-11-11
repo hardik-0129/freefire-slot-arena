@@ -171,7 +171,7 @@
 }
 
 /* Ultra-small screens (375px and below) */
-@media (max-width: 375px) {
+@media (max-width: 425px) {
   .winner-table-container {
     margin: 10px 5px;
     border-radius: 6px;

@@ -103,7 +103,6 @@
     font-size: 18px;
     cursor: pointer;
     width: calc(100% - 40px);
-    margin: 10px auto 0;
     transition: all 0.3s ease;
     display: block;
     text-transform: uppercase;

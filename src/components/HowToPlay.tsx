@@ -16,15 +16,16 @@ const HowToPlay = () => {
                         <h2 className="subheading">How To Play</h2>
                         <h3 className="subheading">Solo Mode:</h3>
                         <ul className="list">
-                            <li>You can join a tournament whatever works for you (modes: Top Position, Most Kills or Damage).</li>
-                            <li>Top 10 winners get prizes up to $50.</li>
+                            <li>You can join a tournament whatever works for you (modes: Top Position, Most Kills).</li>
+                            <li>Get Price if you kill someone and get up to 50INR.</li>
+                            <li>Top 3 winners get prizes up to 2000INR.</li>
                         </ul>
 
                         <h3 className="subheading">Duo Mode:</h3>
                         <ul className="list">
                             <li>Play PUBG with your friend and you both can win cash prizes.</li>
                             <li>Just invite your teammate and join 100-team tournament.</li>
-                            <li>The top prize is $100. It’s possible to join 3 tournaments at once.</li>
+                            <li>The top prize is up to 2000INR. It’s possible to join 3 tournaments at once.</li>
                         </ul>
                     </div>
                 </div>
@@ -36,18 +37,17 @@ const HowToPlay = () => {
                         <h3 className="subheading">Registration</h3>
                         <ul className="list">
                             <li>Create a free account</li>
-                            <li>Connect your Steam account or play PUBG via consoles (PS4, Xbox One)</li>
+                            <li>Book your slote and play Free fire and BGMI on Mobile/Tablet</li>
                             <li>That’s all! You’re ready to play.</li>
                         </ul>
 
                         <h3 className="subheading">Additional Information</h3>
                         <ul className="list">
-                            <li>FREE PUBG tournaments are available 24/7.</li>
-                            <li>We support both SOLO and DUO modes.</li>
+                            <li>FREE BGMI and Free fire tournaments are available 12hr.</li>
+                            <li>We support SOLO, DUO and SQUAD modes.</li>
                             <li>When competing, always try to do your best/get more kills.</li>
-                            <li>The top 10 winners get prizes up to $50.</li>
-                            <li>Your chances to win are 1 to 10 (places 6–10 win $1).</li>
-                            <li>There is no limit; participate in PUBG tournaments as often as you want.</li>
+                            <li>The top 3 winners get prizes up to 5000INR.</li>
+                            <li>There is no limit; participate in BGMI and Free fire tournaments as often as you want.</li>
                         </ul>
                     </div>
                     <div className="image-container">
@@ -62,10 +62,10 @@ const HowToPlay = () => {
                     <div className="text-container">
                         <h2 className="subheading">Money Prizes</h2>
                         <p>
-                            Once you win your first tournament, you can request your earnings to be withdrawn from your Battlemania account.
+                            Once you win your first tournament, you can request your earnings to be withdrawn from your Alpha Lions Esports account.
                         </p>
                         <p>It’s also possible to keep playing to get bigger prizes.</p>
-                        <p>The following payment systems are supported on our website:</p>
+                        <p>The following payment systems are supported on our website: UPI, Bank Transfer, Paytm, Google Pay and PhonePe.</p>
                     </div>
                 </div>
                 </div>

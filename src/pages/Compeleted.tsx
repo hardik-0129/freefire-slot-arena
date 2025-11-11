@@ -257,7 +257,7 @@ const Compeleted = () => {
                                                 </div>
                                             </div>
                                             <div className="prize-pill">
-                                                <div className="pill-label">WINNING PRIZE</div>
+                                                <div className="pill-label">PRIZE POOL</div>
                                                 <div className="pill-value">
                                                     <img src="/assets/vector/Coin.png" alt="Coin" />
                                                     {(() => {

@@ -233,7 +233,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 16px;
   flex-direction: row;
   width: 100%;
 }
@@ -557,7 +556,7 @@
   }
 }
 
-@media (max-width: 375px) {
+@media (max-width: 425px) {
   .wallet-title {
     font-size: 18px;
     margin-bottom: 16px;

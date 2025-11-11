@@ -21,7 +21,7 @@ const ForgotPasswordFlow: React.FC = () => {
                 placeholder="Enter your email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                style={{ marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ccc', width: '100%' }}
+                style={{ marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #fff', width: '100%' }}
             />
             <button
                 onClick={handleForgotClick}

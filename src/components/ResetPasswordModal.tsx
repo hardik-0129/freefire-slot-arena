@@ -55,14 +55,14 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ email, onClose 
           placeholder="Enter OTP"
           value={otp}
           onChange={e => setOtp(e.target.value)}
-          style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ccc' }}
+          style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #fff' }}
         />
         <input
           type="password"
           placeholder="Enter New Password"
           value={newPassword}
           onChange={e => setNewPassword(e.target.value)}
-          style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ccc' }}
+          style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #fff' }}
         />
   {/* Toast notifications will show messages */}
         <button

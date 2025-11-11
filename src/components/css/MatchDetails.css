@@ -28,12 +28,14 @@
 .badge.orange {
   background-color: #FF8B00;
   color: #ffffff;
+  height: 32px;
 }
 
 /* Black Badge */
 .badge.black {
   background-color: #000;
   color: #fff;
+  height: 32px;
 }
 
 /* Prize title */

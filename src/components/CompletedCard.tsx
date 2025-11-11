@@ -68,7 +68,7 @@ const CompletedCard: React.FC<Props> = ({ slot, winners = [] }) => {
             </div>
           </div>
           <div className="prize-pill">
-            <div className="pill-label">WINNING PRIZE</div>
+            <div className="pill-label">PRIZE POOL</div>
             <div className="pill-value">
               <img src="/assets/vector/Coin.png" alt="Coin" />
               {Number(slot.totalWinningPrice) || 0}

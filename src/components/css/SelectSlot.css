@@ -103,20 +103,16 @@ input[type="checkbox"]:disabled:checked::after {
 }
 
 .match-form-box {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-  flex: 1 1 300px;
+  border-radius: 8px;
+  border: 1px solid #b7b7b77d;
 }
 
 .form-heading {
   background: black;
   color: white;
   padding: 10px 20px;
-  margin: -1.5rem -1.5rem 1rem;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
   font-size: 18px;
   font-weight: 700;
   text-align: center;
@@ -160,6 +156,11 @@ input[type="checkbox"]:disabled:checked::after {
   background: #111;
   color: white;
   font-weight: bold;
+  font-size: 9px;
+}
+
+.input-name::placeholder {
+  font-size: 14px;
 }
 
 .add-info {
@@ -173,9 +174,6 @@ input[type="checkbox"]:disabled:checked::after {
   font-weight: 850;
 }
 
-.payment-details {
-  flex: 1 1 300px;
-}
 
 .payment-details p {
   font-size: 16px;
@@ -183,10 +181,12 @@ input[type="checkbox"]:disabled:checked::after {
   margin-bottom: 25px;
   display: flex;
   gap: 5px;
+  align-items: center;
 }
 
 .payment-details img {
-  width: 25px;
+  width: 20px;
+  height: 20px;
   margin: 0 5px;
   vertical-align: middle;
 }
@@ -214,7 +214,7 @@ input[type="checkbox"]:disabled:checked::after {
   border: none;
   font-size: 18px;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: 8px;
   margin: 12px 0 0 0px;
 }
 
@@ -226,7 +226,7 @@ input[type="checkbox"]:disabled:checked::after {
   border: none;
   font-size: 18px;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -270,7 +270,7 @@ input[type="checkbox"]:disabled:checked::after {
   .match-details-container {
     flex-direction: column;
     gap: 1rem;
-    padding: 0.5rem;
+    padding: 0rem;
   }
 
   .details-table th,
@@ -309,28 +309,21 @@ input[type="checkbox"]:disabled:checked::after {
   }
 
   th {
-    padding: 8px 4px;
+    padding: 5px 11px;
     font-size: 14px;
     font-weight: 700;
-    text-align: center;
   }
 
   td {
     padding: 6px 4px;
     font-size: 16px;
     color: #000;
-    text-align: center;
   }
 
   input[type="checkbox"] {
     width: 16px;
     height: 16px;
     margin: 0 auto;
-  }
-
-  .payment-details {
-    flex: 1 1 222px;
-    padding: 15px;
   }
 
   /* .match-form-box {
@@ -342,22 +335,10 @@ input[type="checkbox"]:disabled:checked::after {
     font-size: 12px;
   }
 
-  .details-table th {
-    padding: 6px 4px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
   .details-table td {
     padding: 6px 4px;
     font-size: 12px;
     vertical-align: middle;
-  }
-
-  .team-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-    white-space: nowrap;
   }
 
   .position-badge {
@@ -366,16 +347,6 @@ input[type="checkbox"]:disabled:checked::after {
     white-space: nowrap;
   }
 
-  .input-name {
-    padding: 4px 6px;
-    font-size: 12px;
-    min-width: 120px;
-  }
-
-  .form-heading {
-    font-size: 14px;
-    padding: 8px 15px;
-  }
 
   .action-buttons {
     flex-direction: column;
@@ -394,7 +365,7 @@ input[type="checkbox"]:disabled:checked::after {
 
 }
 
-@media (max-width: 375px) {
+@media (max-width: 425px) {
   .match-slot-wrapper {
     padding: 10px 5px;
     gap: 12px;
@@ -410,15 +381,16 @@ input[type="checkbox"]:disabled:checked::after {
   }
 
   th {
-    padding: 6px 2px;
+    padding: 6px 10px;
     font-size: 12px;
     font-weight: 700;
   }
 
   td {
-    padding: 4px 2px;
-    font-size: 11px;
+    padding: 4px 10px;
+    font-size: 16px;
     color: #000;
+    font-weight: 800;
   }
 
   input[type="checkbox"] {
@@ -426,17 +398,14 @@ input[type="checkbox"]:disabled:checked::after {
     height: 14px;
   }
 
-  .payment-details {
-    padding: 12px;
-  }
-
   .payment-details p {
-    font-size: 12px;
-    margin-bottom: 8px;
+    font-size: 16px;
+    margin-bottom: 12px;
   }
 
   .details-table {
     font-size: 11px;
+    margin: 15px 0px 6px 0px;
   }
 
   .details-table th {
@@ -451,19 +420,19 @@ input[type="checkbox"]:disabled:checked::after {
 
   .team-badge,
   .position-badge {
-    font-size: 9px;
-    padding: 2px 4px;
+    font-size: 14px;
+    padding: 6px 6px;
   }
 
   .input-name {
-    padding: 3px 4px !important;
-    font-size: 11px !important;
-    min-width: 100px;
+    padding: 10px 10px !important;
+    font-size: 9px !important;
+    font-family: 'LL Riforma', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
   }
 
   .form-heading {
-    font-size: 12px;
-    padding: 6px 12px;
+    font-size: 14px;
+    padding: 14px 0px;
   }
 
   .action-buttons {
@@ -478,9 +447,5 @@ input[type="checkbox"]:disabled:checked::after {
 
   .payment-details {
     flex: 1 1 174px;
-  }
-
-  .match-form-box {
-    flex: 1 1 223px;
   }
 }

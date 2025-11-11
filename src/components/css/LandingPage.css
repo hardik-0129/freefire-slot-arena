@@ -14,16 +14,16 @@
     padding: 15px 30px;
     font-size: 16px;
     font-weight: bold;
-    border: 2px solid #ff4d4d;
+    border: 2px solid #ff8d00;
     background: transparent;
-    color: #ff4d4d;
+    color: #ff8d00;
     border-radius: 6px;
     cursor: pointer;
     transition: 0.3s ease;
   }
 
   .download-btn:hover {
-    background: #ff4d4d;
+    background: #ff8d00;
     color: #fff;
   }
 

@@ -139,7 +139,7 @@ const Card = ({ booking, totalBookingsCount, totalPositionsBooked, renderExtra }
                         </div>
                     </div>
                     <div className="prize-pill">
-                        <div className="pill-label">WINNING PRIZE</div>
+                        <div className="pill-label">PRIZE POOL</div>
                         <div className="pill-value">
                             <img src="/assets/vector/Coin.png" alt="Coin" />
                             {booking?.slot?.totalWinningPrice || 920}

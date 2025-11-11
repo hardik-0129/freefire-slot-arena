@@ -435,7 +435,7 @@
   }
 }
 
-@media (max-width: 375px) {
+@media (max-width: 425px) {
   .modal-container {
     margin: 2px;
     padding: 0 2px 4px 2px;

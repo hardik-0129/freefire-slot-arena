@@ -202,7 +202,7 @@ h1 {
 }
 
 /* 425px breakpoint responsive design */
-@media(max-width: 375px) {
+@media(max-width: 425px) {
   h1 {
     font-size: 28px;
     font-weight: 800;

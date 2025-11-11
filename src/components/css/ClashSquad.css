@@ -166,7 +166,7 @@
   border-radius: 8px;
   background: #2A2A2A;
   color: white;
-  font-size: 14px;
+  font-size: 9px;
   transition: border-color 0.3s ease;
 }
 
@@ -178,6 +178,7 @@
 
 .input-name::placeholder {
   color: #8C8C8C;
+  font-size: 9px;
 }
 
 .payment-details {

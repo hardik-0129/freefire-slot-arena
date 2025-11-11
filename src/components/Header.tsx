@@ -157,7 +157,7 @@ export const Header = () => {
                             <a href="/about" className="nav-link">ABOUT US</a>
                             <a href="/contact" className="nav-link">CONTACT US</a>
                             <a href="/blog" className="nav-link">BLOG</a>
-                            {/* <a href="/alpha-lions-app" className="nav-link">App Download</a> */}
+                            <a href="/alpha-lions-app" className="nav-link">App Download</a>
                         </nav>
 
                         {/* Right Side Actions */}

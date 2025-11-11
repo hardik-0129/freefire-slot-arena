@@ -1,5 +1,5 @@
 .features-section {
-    background: #2c2c2c;
+    background: #000;
     color: #fff;
     text-align: center;
     padding: 60px 20px;
@@ -13,7 +13,7 @@
   
   .features-header p {
     font-size: 16px;
-    color: #ccc;
+    color: #fff;
   }
   
   .features-tabs {
@@ -29,17 +29,17 @@
   .features-tabs span {
     cursor: pointer;
     padding: 5px 10px;
-    color: #ccc;
+    color: #fff;
     transition: 0.3s;
   }
   
   .features-tabs span:hover {
-    color: #ff4d4d;
+    color: #ff8d00;
   }
   
   .features-tabs .active {
-    color: #ff4d4d;
-    border-bottom: 2px solid #ff4d4d;
+    color: #ff8d00;
+    border-bottom: 2px solid #ff8d00;
   }
   
   .features-content {
@@ -51,7 +51,7 @@
   .features-content h3 {
     font-size: 28px;
     margin-bottom: 20px;
-    color: #ff4d4d;
+    color: #ff8d00;
     text-align: center;
     font-weight: bold;
   }
@@ -59,7 +59,7 @@
   .features-content > p {
     font-size: 18px;
     margin: 0 auto 40px;
-    color: #ccc;
+    color: #fff;
     text-align: center;
     line-height: 1.8;
     max-width: 800px;
@@ -76,7 +76,7 @@
     background: #333;
     padding: 25px;
     border-radius: 10px;
-    border-left: 4px solid #ff4d4d;
+    border-left: 4px solid #ff8d00;
     transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -94,7 +94,7 @@
   .detail-icon {
     width: 70px;
     height: 70px;
-    background: #ff4d4d;
+    background: #ff8d00c4;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -111,11 +111,12 @@
     color: #fff;
     font-weight: bold;
     text-align: center;
+    font-family: var(--font-heading);
   }
   
   .detail-item p {
     font-size: 15px;
-    color: #ccc;
+    color: #fff;
     line-height: 1.7;
     margin: 0;
     text-align: center;
@@ -148,7 +149,7 @@
   }
   
   .feature-item .icon {
-    background: #ff4d4d;
+    background: #ff8d00;
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -167,7 +168,7 @@
   
   .feature-item p {
     font-size: 14px;
-    color: #ccc;
+    color: #fff;
     line-height: 1.6;
   }
   

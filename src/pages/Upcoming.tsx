@@ -354,7 +354,7 @@ const Upcoming = () => {
                                         <div className="match-info-value">₹{selectedMatch.slot.perKill}</div>
                                     </div>
                                     <div className="match-info-item">
-                                        <div className="match-info-label">Winning Prize</div>
+                                        <div className="match-info-label">PRIZE POOL</div>
                                         <div className="match-info-value">₹{selectedMatch.slot.totalWinningPrice}</div>
                                     </div>
                                     <div className="match-info-item">

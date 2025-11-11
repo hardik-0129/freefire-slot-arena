@@ -476,10 +476,10 @@ const Task: React.FC = () => {
               }}
             >
               {[
-                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2Bv8Z4fuwA6Ygh3gkp65AjPXb3hwexDsPSw91xN6X9ALw%3D%3D.png',
-                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2B%2FnoMJ1o4TyMgMEC7u8lXJCCFc97pA%2BGXno6FA2kDtTw%3D%3D.png',
-                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2B%2FobN85oUu006Spm8by6DZS1x8%2BXwTv7MGuFeYLJiLeg%3D%3D.png',
-                'https://img.reservoir.tools/images/v2/apechain/i9YO%2F4yHXUdJsWcTqhqvf2ciDYtkHh6tiFKPMvGMqomt7mSR78kK7aciogklt7Rkfnz%2FAFEtgSCUxNAPfRrjiYBi2u9XNHDrGI8cCTTyWv%2FkH46UWUvmqynIYBd03dmzPuzt%2BEfseO4tdDkC06Twnw%3D%3D.png'
+                'https://alphalions.io/assets/1-DgqAzPfm.jpg',
+                'https://alphalions.io/assets/2-BnBo2uPE.jpg',
+                'https://alphalions.io/assets/3-CL8xVfT1.jpg',
+                'https://alphalions.io/assets/4%20(1)-rT6ot56x.jpg'
               ].map((src, idx) => (
                 <div
                   key={idx}

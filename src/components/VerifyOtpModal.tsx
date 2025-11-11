@@ -73,7 +73,7 @@ const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({ email, onVerified, onCl
           placeholder="Enter OTP"
           value={otp}
           onChange={e => setOtp(e.target.value)}
-          style={{ width: '100%', marginBottom: 16, padding: 10, borderRadius: 8, border: '1px solid #ccc', fontSize: 16 }}
+          style={{ width: '100%', marginBottom: 16, padding: 10, borderRadius: 8, border: '1px solid #fff', fontSize: 16 }}
         />
         {msg && <div style={{ color: msg.includes('verified') ? 'green' : 'red', marginBottom: 14, fontWeight: 600 }}>{msg}</div>}
         <button

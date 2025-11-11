@@ -150,7 +150,7 @@
   color: #fff;
   font-weight: bold;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 14px;
   font-size: 16px;
   cursor: pointer;
@@ -171,7 +171,7 @@
 
 .join-btn.no-stream {
   background-color: #666;
-  color: #ccc;
+  color: #fff;
   cursor: not-allowed;
 }
 
@@ -194,7 +194,7 @@
 }
 
 .match-details-box .date-time {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: #000;
 }
@@ -238,17 +238,6 @@
   width: 16px;
   height: 16px;
   margin-right: 5px;
-}
-
-/* Optional: Responsive adjustments */
-@media (max-width: 480px) {
-  .match-details-box {
-    flex-direction: column;
-  }
-
-  .match-details-box .prize-pill-container {
-    justify-content: flex-start;
-  }
 }
 
 .join-btn {
@@ -369,20 +358,12 @@
 
   .badge {
     font-size: 10px !important;
-    padding: 4px 8px !important;
+    padding: 10px 10px !important;
   }
 
   .match-details-box {
     margin: 8px 10px 0 !important;
-    padding: 10px 8px !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 10px !important;
-  }
-
-  .prize-pill-container {
-    width: 100% !important;
-    justify-content: space-between !important;
+    padding: 4px 4px 4px 10px !important;
   }
 
   .prize-pill {
@@ -396,7 +377,6 @@
 
   .join-btn {
     width: calc(100% - 30px) !important;
-    margin: 8px 15px 0 !important;
     padding: 12px !important;
     font-size: 14px !important;
   }
