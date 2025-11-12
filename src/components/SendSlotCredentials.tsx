@@ -21,12 +21,61 @@ interface Player {
 
 const SendSlotCredentials: React.FC<SendSlotCredentialsProps> = ({ slotId }) => {
   const [loading, setLoading] = useState(false);
-  const [id, setId] = useState('723456');
-  const [password, setPassword] = useState('pass789');
+  const [id, setId] = useState('');
+  const [password, setPassword] = useState("");
   const [title, setTitle] = useState('Match Room Credentials');
   const [showModal, setShowModal] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch credentials from database on component mount and when slotId changes
+  useEffect(() => {
+    const fetchCredentials = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        if (!token || !slotId) return;
+
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/notification/slot-credentials/${slotId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (res.data.status && res.data.credentials) {
+          setId(res.data.credentials.id || '');
+          setPassword(res.data.credentials.password || '');
+        }
+      } catch (error) {
+        console.warn('Error fetching credentials from database:', error);
+      }
+    };
+
+    fetchCredentials();
+  }, [slotId]);
+
+  // Save credentials to database when id or password changes (with debounce)
+  useEffect(() => {
+    if (!slotId) return;
+
+    const saveTimer = setTimeout(async () => {
+      try {
+        setSaving(true);
+        const token = localStorage.getItem('adminToken');
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/notification/slot-credentials/${slotId}`,
+          { id: id || '', password: password || '' },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (error) {
+        console.warn('Error saving credentials to database:', error);
+        toast.error('Failed to save credentials');
+      } finally {
+        setSaving(false);
+      }
+    }, 1000); // Wait 1 second after user stops typing
+
+    return () => clearTimeout(saveTimer);
+  }, [id, password, slotId]);
 
   // Fetch players and send credentials when modal opens
   useEffect(() => {
@@ -59,7 +108,7 @@ const SendSlotCredentials: React.FC<SendSlotCredentialsProps> = ({ slotId }) => 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      toast.success(res.data.msg || 'Credentials sent!');
+      toast.success(res.data.msg);
       
     } catch (err: any) {
       toast.error(err.response?.data?.msg || 'Failed to send credentials');
@@ -93,21 +142,27 @@ const SendSlotCredentials: React.FC<SendSlotCredentialsProps> = ({ slotId }) => 
           />
         </div>
         <div>
-          <label className="block text-white mb-1">Room ID</label>
+          <label className="block text-white mb-1">
+            Room ID 
+          </label>
           <input
             type="text"
             className="w-full p-2 rounded bg-[#222] text-white border border-[#333]"
             value={id}
             onChange={e => setId(e.target.value)}
+            placeholder="Enter Room ID"
           />
         </div>
         <div>
-          <label className="block text-white mb-1">Room Password</label>
+          <label className="block text-white mb-1">
+            Room Password 
+          </label>
           <input
             type="text"
             className="w-full p-2 rounded bg-[#222] text-white border border-[#333]"
             value={password}
             onChange={e => setPassword(e.target.value)}
+            placeholder="Enter Room Password"
           />
         </div>
         <div>
@@ -138,10 +193,6 @@ const SendSlotCredentials: React.FC<SendSlotCredentialsProps> = ({ slotId }) => 
               <button
                 onClick={() => {
                   setShowModal(false);
-                  // Reset form
-                  setId('723456');
-                  setPassword('pass789');
-                  setTitle('Match Room Credentials');
                 }}
                 className="text-gray-400 hover:text-white text-2xl"
               >
