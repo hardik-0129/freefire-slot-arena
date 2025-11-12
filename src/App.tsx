@@ -137,7 +137,7 @@ const App = () => (
             <Route path="/winner" element={<ProtectedRoute><WinnerDetails /></ProtectedRoute>} />
             <Route path="/wallets" element={<ProtectedRoute><Wallets /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/alpha-lions-app" element={<ProtectedRoute><AlphaLionApp /></ProtectedRoute>} />
+            <Route path="/alpha-lions-app" element={<AlphaLionApp />} />
 
             {/* Admin Routes */}
             <Route path="/al-admin-128900441" element={<AdminLogin />} />

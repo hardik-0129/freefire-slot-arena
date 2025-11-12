@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../components/css/Features.css";
 
 const Features = () => {
-  const [activeTab, setActiveTab] = useState("contest");
+  const [activeTab, setActiveTab] = useState("join");
 
   const renderContent = () => {
     switch (activeTab) {
