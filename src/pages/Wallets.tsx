@@ -167,23 +167,57 @@ const Wallets = () => {
         const upiIdParam = searchParams.get('upi_id');
         const orderIdFromUrl = searchParams.get('order_id');
 
-        // Auto-check TranzUPI payment status if order_id is present
+        // Auto-check payment status if order_id is present
         if (orderIdFromUrl && userId) {
             (async () => {
                 setMessage('Checking payment status...');
-                const result = await checkOrderStatus(orderIdFromUrl, userId);
-                if (result.success) {
-                    setMessage('✅ Payment successful! Amount added to your wallet.');
-                    fetchWalletBalance();
-                    fetchTransactionHistory();
-                } else {
-                    setMessage('❌ Payment not completed: ' + (result.message || 'Unknown error'));
-                }
-                // Clear URL parameters after showing message
-                setTimeout(() => {
-                    window.history.replaceState({}, '', '/wallets');
-                    setMessage('');
-                }, 5000);
+                
+                // Retry mechanism for pending payments (especially for Neo UPI)
+                let retries = 0;
+                const maxRetries = 10; // Check up to 10 times
+                const retryDelay = 2000; // 2 seconds between retries
+                
+                const checkStatus = async (): Promise<boolean> => {
+                    const result = await checkOrderStatus(orderIdFromUrl, userId);
+                    
+                    if (result.success) {
+                        setMessage('✅ Payment successful! Amount added to your wallet.');
+                        fetchWalletBalance();
+                        fetchTransactionHistory();
+                        // Clear URL parameters after showing message
+                        setTimeout(() => {
+                            window.history.replaceState({}, '', '/wallets');
+                            setMessage('');
+                        }, 5000);
+                        return true;
+                    } else if (result.message && result.message.includes('pending')) {
+                        // Payment is still pending, retry if we haven't exceeded max retries
+                        if (retries < maxRetries) {
+                            retries++;
+                            setMessage(`⏳ Payment is being processed... (Checking ${retries}/${maxRetries})`);
+                            await new Promise(resolve => setTimeout(resolve, retryDelay));
+                            return checkStatus(); // Retry
+                        } else {
+                            // Max retries reached
+                            setMessage('⏳ Payment is still processing. Please refresh the page in a few moments or check your transaction history.');
+                            setTimeout(() => {
+                                window.history.replaceState({}, '', '/wallets');
+                                setMessage('');
+                            }, 10000);
+                            return false;
+                        }
+                    } else {
+                        // Payment failed or other error
+                        setMessage('❌ Payment not completed: ' + (result.message || 'Unknown error'));
+                        setTimeout(() => {
+                            window.history.replaceState({}, '', '/wallets');
+                            setMessage('');
+                        }, 5000);
+                        return false;
+                    }
+                };
+                
+                await checkStatus();
             })();
             return;
         }
@@ -465,12 +499,76 @@ const Wallets = () => {
             }
             const decoded = jwtDecode<{ userId: string, phone?: string }>(token);
             const userId = decoded.userId;
+            const customerMobile = decoded.phone;
 
             if (!userId) {
                 setMessage('User info missing');
                 setLoading(false);
                 return;
             }
+
+            // If phone is not in token, try to get it from user profile or use a default
+            // For Neo UPI, customer_mobile is required and must be a valid phone number
+            if (!customerMobile) {
+                // Try to fetch user profile to get phone number
+                try {
+                    const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (userResponse.ok) {
+                        const userData = await userResponse.json();
+                        if (userData.user?.phone) {
+                            const finalPhone = userData.user.phone;
+                            const orderId = `ORDER_${userId}_${Date.now()}`;
+                            const redirectUrl = `${window.location.origin}/wallets?order_id=${orderId}`;
+                            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/tranzupi/create-order`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    customerMobile: finalPhone,
+                                    amount: parseFloat(addAmount),
+                                    orderId,
+                                    redirectUrl,
+                                    remark1: userId,
+                                    remark2: 'AddMoney'
+                                })
+                            });
+                            const data = await response.json();
+                            // Handle both Tranzupi and Neo UPI response formats
+                            let paymentUrl = null;
+                            if (data.success && data.order) {
+                                // Neo UPI format: data.order.result.payment_url
+                                if (data.order.result && data.order.result.payment_url) {
+                                    paymentUrl = data.order.result.payment_url;
+                                }
+                                // Tranzupi format: data.order.payment_url or data.order.result.payment_url
+                                else if (data.order.payment_url) {
+                                    paymentUrl = data.order.payment_url;
+                                }
+                            }
+                            
+                            if (paymentUrl) {
+                                window.location.href = paymentUrl;
+                            } else {
+                                setMessage(data.error || data.order?.message || 'Failed to create payment');
+                            }
+                            setLoading(false);
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching user profile:', err);
+                }
+                setMessage('Phone number is required for payment. Please update your profile.');
+                setLoading(false);
+                return;
+            }
+
             const orderId = `ORDER_${userId}_${Date.now()}`;
             const redirectUrl = `${window.location.origin}/wallets?order_id=${orderId}`;
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/tranzupi/create-order`, {
@@ -480,7 +578,7 @@ const Wallets = () => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    customerMobile: userId,
+                    customerMobile: customerMobile,
                     amount: parseFloat(addAmount),
                     orderId,
                     redirectUrl,
@@ -489,15 +587,29 @@ const Wallets = () => {
                 })
             });
             const data = await response.json();
-            if (data.success && data.order && data.order.result && data.order.result.payment_url) {
-                window.location.href = data.order.result.payment_url;
-            } else {
-                setMessage(data.error || 'Failed to create payment');
+            // Handle both Tranzupi and Neo UPI response formats
+            let paymentUrl = null;
+            if (data.success && data.order) {
+                // Neo UPI format: data.order.result.payment_url
+                if (data.order.result && data.order.result.payment_url) {
+                    paymentUrl = data.order.result.payment_url;
+                }
+                // Tranzupi format: data.order.payment_url or data.order.result.payment_url
+                else if (data.order.payment_url) {
+                    paymentUrl = data.order.payment_url;
+                }
             }
-        } catch (error) {
+            
+            if (paymentUrl) {
+                window.location.href = paymentUrl;
+            } else {
+                setMessage(data.error || data.order?.message || 'Failed to create payment');
+            }
+        } catch (error: any) {
             setMessage('Error creating payment: ' + (error.message || error));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleWithdraw = async () => {

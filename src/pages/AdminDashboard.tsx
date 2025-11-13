@@ -32,6 +32,7 @@ import { useToast } from "@/components/ui/use-toast";
 import WithdrawalManagement from "@/components/WithdrawalManagement";
 import AdminWinnerDashboard from "./AdminWinnerDashboard";
 import DashboardAnalytics from "@/components/DashboardAnalytics";
+import PaymentGatewaySettings from "@/components/PaymentGatewaySettings";
 import {
   LayoutDashboard,
   Users,
@@ -3532,7 +3533,14 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
   if (hideLayout) {
     return (
       <div className="p-6">
-        {activeSection === 'dashboard' && renderDashboard()}
+        {activeSection === 'dashboard' && (
+          <>
+            <div className="mb-6">
+              <PaymentGatewaySettings />
+            </div>
+            {renderDashboard()}
+          </>
+        )}
         {activeSection === 'users' && renderUsers()}
         {activeSection === 'nftHolders' && <NftHoldersManagement />}
         {activeSection === 'contactMessages' && <ContactMessagesTable />}
