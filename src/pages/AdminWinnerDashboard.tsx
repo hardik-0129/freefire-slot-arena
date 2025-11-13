@@ -2259,7 +2259,7 @@ const AdminWinnerDashboard: React.FC<{ filterSlotId?: string }> = ({ filterSlotI
                             })()}
                           </th>
                           <th className="px-3 py-2 text-white text-left w-24">Position</th>
-                            {/* <th className="px-3 py-2 text-white text-center w-20">No. </th> */}
+                            <th className="px-3 py-2 text-white text-center w-20">No. </th>
 
                           <th className="px-3 py-2 text-white text-left min-w-[150px]">Player Name</th>
 

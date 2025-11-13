@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import WithdrawalManagement from "@/components/WithdrawalManagement";
 import AdminWinnerDashboard from "./AdminWinnerDashboard";
+import DashboardAnalytics from "@/components/DashboardAnalytics";
 import {
   LayoutDashboard,
   Users,
@@ -1288,6 +1289,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
   // Render functions for different sections
   const renderDashboard = () => (
     <>
+      {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
           <CardHeader>
@@ -1317,7 +1319,11 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
         </Card>
       </div>
 
-      <Card className="bg-[#1A1A1A] border-[#2A2A2A]">
+      {/* Analytics Charts */}
+      <DashboardAnalytics />
+
+      {/* Recent Activity */}
+      {/* <Card className="bg-[#1A1A1A] border-[#2A2A2A] mt-6">
         <CardHeader>
           <CardTitle className="text-white">Recent Activity</CardTitle>
         </CardHeader>
@@ -1328,7 +1334,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
             <p>• All services operational</p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </>
   );
 
