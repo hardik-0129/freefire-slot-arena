@@ -60,7 +60,14 @@ const APKManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(12);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalApks: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingApk, setEditingApk] = useState<APK | null>(null);
@@ -107,6 +114,15 @@ const APKManagement = () => {
       if (response.ok) {
         const data = await response.json();
         setApks(data.apks || []);
+        if (data.pagination) {
+          setPagination({
+            currentPage: data.pagination.currentPage || 1,
+            totalPages: data.pagination.totalPages || 1,
+            totalApks: data.pagination.totalApks || 0,
+            hasNextPage: data.pagination.hasNextPage || false,
+            hasPrevPage: data.pagination.hasPrevPage || false
+          });
+        }
       } else {
         console.error('Failed to fetch APKs');
       }
@@ -120,6 +136,11 @@ const APKManagement = () => {
   useEffect(() => {
     fetchApks();
   }, [currentPage, searchTerm]);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Handle search on Enter key press
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -520,11 +541,47 @@ const APKManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {apks.length === 0 && (
+      {/* Pagination */}
+      {pagination.totalApks > 0 && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-gray-400 text-sm">
+            Showing {apks.length} of {pagination.totalApks} APKs
+          </div>
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={!pagination.hasPrevPage || currentPage === 1}
+                className="text-white border-[#3A3A3A] disabled:opacity-50"
+              >
+                Previous
+              </Button>
+              <span className="text-white text-sm px-4">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!pagination.hasNextPage}
+                className="text-white border-[#3A3A3A] disabled:opacity-50"
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {apks.length === 0 && !loading && (
         <div className="text-center py-10">
           <Smartphone className="h-16 w-16 mx-auto mb-4 text-gray-500" />
           <h3 className="text-xl font-semibold text-white mb-2">No APKs Found</h3>
-          <p className="text-gray-400">Upload your first APK to get started</p>
+          <p className="text-gray-400">
+            {searchTerm ? 'No APKs match your search criteria' : 'Upload your first APK to get started'}
+          </p>
         </div>
       )}
     </div>

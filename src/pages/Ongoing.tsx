@@ -28,7 +28,7 @@ const formatDateTime = (dateString: string) => {
   const seconds = date.getSeconds().toString().padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   const formattedHours = (hours % 12 || 12).toString().padStart(2, '0');
-  
+
   return `${day}/${month}/${year} ${formattedHours}:${minutes}:${seconds} ${ampm}`;
 };
 
@@ -45,7 +45,7 @@ const Ongoing = () => {
     totalPositionsBookedFromAllUsers?: number;
   } | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [slotStats, setSlotStats] = useState<{[key: string]: any}>({});
+  const [slotStats, setSlotStats] = useState<{ [key: string]: any }>({});
   const [now, setNow] = useState<number>(Date.now());
 
   // Tick every second for countdowns
@@ -92,21 +92,21 @@ const Ongoing = () => {
 
   // Fetch slot statistics for all unique slots
   const fetchSlotStats = async (slotIds: string[]) => {
-    const stats: {[key: string]: any} = {};
-    
+    const stats: { [key: string]: any } = {};
+
     await Promise.all(slotIds.map(async (slotId) => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/stats/${slotId}`);
         if (response.ok) {
           const data = await response.json();
-          
+
           stats[slotId] = data.stats;
         }
       } catch (error) {
         console.error(`Error fetching stats for slot ${slotId}:`, error);
       }
     }));
-    
+
     setSlotStats(stats);
   };
 
@@ -135,15 +135,15 @@ const Ongoing = () => {
         const totalUserPositions = allBookingsForThisSlot.reduce((total, b) => {
           return total + Object.values(b.selectedPositions).flat().length;
         }, 0);
-        
+
         // Create a modified booking object with combined position data
         const enhancedBooking = {
           ...booking,
           selectedPositions: {
-            combined: Array.from({length: totalUserPositions}, (_, i) => (i + 1).toString())
+            combined: Array.from({ length: totalUserPositions }, (_, i) => (i + 1).toString())
           }
         };
-        
+
         acc.push(enhancedBooking);
       }
     }
@@ -159,7 +159,7 @@ const Ongoing = () => {
       const totalUserPositions = allBookingsForThisSlot.reduce((total, b) => {
         return total + Object.values(b.selectedPositions).flat().length;
       }, 0);
-      
+
       // Get total bookings from all users
       let totalPositionsBookedFromAllUsers = 0;
       try {
@@ -186,294 +186,306 @@ const Ongoing = () => {
     setSelectedMatch(null);
   };
 
-    return (
-        <>
-            <Header />
-            <section className="py-16 match-section">
-                <div className="container">
-                <h2 className="text-[42px] font-bold text-center mb-12">Ongoing</h2>
+  return (
+    <>
+      <Header />
+      <section className="py-16 match-section">
+        <div className="container">
+          <h2 className="text-[42px] font-bold text-center mb-12">Ongoing</h2>
+          <div
+            className="card-container"
+            style={(!isLoading && !error && uniqueMatches.length === 0)
+              ? { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', width: '100%' }
+              : undefined}
+          >
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-xl">Loading your matches...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-xl text-red-500">{error}</p>
+              </div>
+            ) : uniqueMatches.length === 0 ? (
+              <div className="text-center" style={{ display: 'flex', flexDirection: 'column' }}>
+                <p className="text-xl text-gray-600">No ongoing matches found</p>
+                <p className="text-gray-500 mt-2">Book a match to see it here!</p>
+              </div>
+            ) : (
+              uniqueMatches
+                .slice()
+                .sort((a, b) => {
+                  const nowMs = Date.now();
+                  const ta = new Date(a.slot?.matchTime || 0).getTime();
+                  const tb = new Date(b.slot?.matchTime || 0).getTime();
+                  const da = ta - nowMs;
+                  const db = tb - nowMs;
+                  const aIsFuture = da >= 0;
+                  const bIsFuture = db >= 0;
+                  if (aIsFuture && bIsFuture) return da - db; // both future: closest first
+                  if (aIsFuture && !bIsFuture) return -1;     // future before past/live
+                  if (!aIsFuture && bIsFuture) return 1;      // future before past/live
+                  // both already started/past: most recent first
+                  return tb - ta;
+                })
+                .map((booking) => {
+                  const slotId = booking.slot?._id;
+                  const totalPositionsBooked = slotStats[slotId]?.totalPositionsBooked || 0;
+                  const matchTime = booking.slot?.matchTime || '';
+                  const targetMs = matchTime ? new Date(matchTime).getTime() : 0;
+                  const diff = Math.max(0, targetMs - now);
+                  const totalSeconds = Math.floor(diff / 1000);
+                  const days = Math.floor(totalSeconds / 86400);
+                  const hours = Math.floor((totalSeconds % 86400) / 3600);
+                  const minutes = Math.floor((totalSeconds % 3600) / 60);
+                  const seconds = totalSeconds % 60;
+                  const pad = (n: number) => n.toString().padStart(2, '0');
+                  const countdownText = days > 0
+                    ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+                    : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+                  return (
                     <div
-                      className="card-container"
-                      style={(!isLoading && !error && uniqueMatches.length === 0)
-                        ? { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', width: '100%' }
-                        : undefined}
+                      key={booking.slot?._id || booking._id}
+                      onClick={() => handleCardClick(booking)}
+                      style={{ cursor: 'pointer' }}
                     >
-                        {isLoading ? (
-                          <div className="text-center py-8">
-                            <p className="text-xl">Loading your matches...</p>
-                          </div>
-                        ) : error ? (
-                          <div className="text-center py-8">
-                            <p className="text-xl text-red-500">{error}</p>
-                          </div>
-                        ) : uniqueMatches.length === 0 ? (
-                          <div className="text-center" style={{ display: 'flex', flexDirection: 'column' }}>
-                            <p className="text-xl text-gray-600">No ongoing matches found</p>
-                            <p className="text-gray-500 mt-2">Book a match to see it here!</p>
-                          </div>
-                        ) : (
-                          uniqueMatches
-                            .slice()
-                            .sort((a, b) => {
-                              const nowMs = Date.now();
-                              const ta = new Date(a.slot?.matchTime || 0).getTime();
-                              const tb = new Date(b.slot?.matchTime || 0).getTime();
-                              const da = ta - nowMs;
-                              const db = tb - nowMs;
-                              const aIsFuture = da >= 0;
-                              const bIsFuture = db >= 0;
-                              if (aIsFuture && bIsFuture) return da - db; // both future: closest first
-                              if (aIsFuture && !bIsFuture) return -1;     // future before past/live
-                              if (!aIsFuture && bIsFuture) return 1;      // future before past/live
-                              // both already started/past: most recent first
-                              return tb - ta;
-                            })
-                            .map((booking) => {
-                            const slotId = booking.slot?._id;
-                            const totalPositionsBooked = slotStats[slotId]?.totalPositionsBooked || 0;
-                            const matchTime = booking.slot?.matchTime || '';
-                            const targetMs = matchTime ? new Date(matchTime).getTime() : 0;
-                            const diff = Math.max(0, targetMs - now);
-                            const totalSeconds = Math.floor(diff / 1000);
-                            const days = Math.floor(totalSeconds / 86400);
-                            const hours = Math.floor((totalSeconds % 86400) / 3600);
-                            const minutes = Math.floor((totalSeconds % 3600) / 60);
-                            const seconds = totalSeconds % 60;
-                            const pad = (n: number) => n.toString().padStart(2, '0');
-                            const countdownText = days > 0
-                              ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-                              : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-                            
-                            return (
-                              <div 
-                                key={booking.slot?._id || booking._id} 
-                                onClick={() => handleCardClick(booking)}
-                                style={{ cursor: 'pointer' }}
-                              >
-                                <Card 
-                                  booking={booking} 
-                                  totalPositionsBooked={totalPositionsBooked}
-                                  renderExtra={booking.slot ? () => (
-                                    <div style={{ lineHeight: 1.2 }}>
-                                      {/* Countdown if future, else show Started */}
-                                      <div title={formatDateTime(booking.slot!.matchTime)}>
-                                        {targetMs > now ? countdownText : 'Started'}
-                                      </div>
-                                      {/* Always-visible local time */}
-                                      {/* <div style={{ fontSize: 12, opacity: 0.8 }}>
+                      <Card
+                        booking={booking}
+                        totalPositionsBooked={totalPositionsBooked}
+                        renderExtra={booking.slot ? () => (
+                          <div style={{ lineHeight: 1.2 }}>
+                            {/* Countdown if future, else show Started */}
+                            <div title={formatDateTime(booking.slot!.matchTime)}>
+                              {targetMs > now ? countdownText : 'Started'}
+                            </div>
+                            {/* Always-visible local time */}
+                            {/* <div style={{ fontSize: 12, opacity: 0.8 }}>
                                         {formatDateTime(booking.slot!.matchTime)}
                                       </div> */}
-                                    </div>
-                                  ) : undefined}
-                                />
-                              </div>
-                            );
-                          })
-                        )}
+                          </div>
+                        ) : undefined}
+                      />
                     </div>
+                  );
+                })
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Match Details Modal */}
+      {showModal && selectedMatch && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h2 className="modal-title">Match Details</h2>
+              <button
+                onClick={closeModal}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-content">
+              {/* Match Info */}
+              <div className="match-info-section">
+                <h3 className="match-info-title">
+                  MATCH #{selectedMatch.slot.matchIndex} - {selectedMatch.slot.slotType?.toUpperCase()}
+                </h3>
+                <div className="match-info-grid">
+                  <div className="match-info-item">
+                    <div className="match-info-label">Tournament</div>
+                    <div className="match-info-value">{selectedMatch.slot.tournamentName}</div>
+                  </div>
+                  <div className="match-info-item">
+                    <div className="match-info-label">Map</div>
+                    <div className="match-info-value">{selectedMatch.slot.mapName}</div>
+                  </div>
+                  <div className="match-info-item">
+                    <div className="match-info-label">Match Time</div>
+                    <div className="match-info-value">{formatDateTime(selectedMatch.slot.matchTime)}</div>
+                  </div>
+                  <div className="match-info-item">
+                    <div className="match-info-label">Per Kill</div>
+                    <div className="match-info-value">₹{selectedMatch.slot.perKill}</div>
+                  </div>
+                  <div className="match-info-item">
+                    <div className="match-info-label">PRIZE POOL</div>
+                    <div className="match-info-value">₹{selectedMatch.slot.totalWinningPrice}</div>
+                  </div>
+                  <div className="match-info-item">
+                    <div className="match-info-label">Special Rules</div>
+                    <div className="match-info-value">{selectedMatch.slot.specialRules}</div>
+                  </div>
+                  {selectedMatch.slot?.roomId && (
+                    <div className="match-info-item">
+                      <div className="match-info-label">Room ID</div>
+                      <div className="match-info-value">{selectedMatch.slot.roomId}</div>
+                    </div>
+                  )}
+                  {selectedMatch.slot?.roomPassword && (
+                    <div className="match-info-item">
+                      <div className="match-info-label">Match Password</div>
+                      <div className="match-info-value">{selectedMatch.slot.roomPassword}</div>
+                    </div>
+                  )}
+                  {selectedMatch.slot.streamLink && (
+                    <div className="match-info-item">
+                      <div className="match-info-label">Stream Link</div>
+                      <div className="match-info-value">
+                        <a
+                          href={selectedMatch.slot.streamLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'white', textDecoration: 'underline' }}
+                        >
+                          Watch Live Stream
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
-            </section>
+              </div>
 
-            {/* Match Details Modal */}
-            {showModal && selectedMatch && (
-              <div className="modal-overlay">
-                <div className="modal-container">
-                  <div className="modal-header">
-                    <h2 className="modal-title">Match Details</h2>
-                    <button 
-                      onClick={closeModal}
-                      className="modal-close"
-                    >
-                      ×
-                    </button>
+              {/* User's Bookings Summary */}
+              <div className="summary-section">
+                <h4 className="summary-title">Match Statistics</h4>
+                <div className="summary-stats">
+                  <div className="summary-stat">
+                    <div className="summary-stat-value">{selectedMatch.totalPositions}</div>
+                    <div className="summary-stat-label">Your Positions</div>
                   </div>
-                  
-                  <div className="modal-content">
-                    {/* Match Info */}
-                    <div className="match-info-section">
-                      <h3 className="match-info-title">
-                        MATCH #{selectedMatch.slot.matchIndex} - {selectedMatch.slot.slotType?.toUpperCase()}
-                      </h3>
-                      <div className="match-info-grid">
-                        <div className="match-info-item">
-                          <div className="match-info-label">Tournament</div>
-                          <div className="match-info-value">{selectedMatch.slot.tournamentName}</div>
-                        </div>
-                        <div className="match-info-item">
-                          <div className="match-info-label">Map</div>
-                          <div className="match-info-value">{selectedMatch.slot.mapName}</div>
-                        </div>
-                        <div className="match-info-item">
-                          <div className="match-info-label">Match Time</div>
-                          <div className="match-info-value">{formatDateTime(selectedMatch.slot.matchTime)}</div>
-                        </div>
-                        <div className="match-info-item">
-                          <div className="match-info-label">Per Kill</div>
-                          <div className="match-info-value">₹{selectedMatch.slot.perKill}</div>
-                        </div>
-                        <div className="match-info-item">
-                          <div className="match-info-label">PRIZE POOL</div>
-                          <div className="match-info-value">₹{selectedMatch.slot.totalWinningPrice}</div>
-                        </div>
-                        <div className="match-info-item">
-                          <div className="match-info-label">Special Rules</div>
-                          <div className="match-info-value">{selectedMatch.slot.specialRules || 'None'}</div>
-                        </div>
-                        {selectedMatch.slot.streamLink && (
-                          <div className="match-info-item">
-                            <div className="match-info-label">Stream Link</div>
-                            <div className="match-info-value">
-                              <a 
-                                href={selectedMatch.slot.streamLink} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{ color: 'white', textDecoration: 'underline' }}
-                              >
-                                Watch Live Stream
-                              </a>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* User's Bookings Summary */}
-                    <div className="summary-section">
-                      <h4 className="summary-title">Match Statistics</h4>
-                      <div className="summary-stats">
-                        <div className="summary-stat">
-                          <div className="summary-stat-value">{selectedMatch.totalPositions}</div>
-                          <div className="summary-stat-label">Your Positions</div>
-                        </div>
-                        <div className="summary-stat">
-                          <div className="summary-stat-value">{selectedMatch.totalPositionsBookedFromAllUsers || 0}</div>
-                          <div className="summary-stat-label">Total Positions Booked (All Users)</div>
-                        </div>
-                        <div className="summary-stat">
-                          <div className="summary-stat-value">₹{selectedMatch.bookings.reduce((sum, b) => sum + b.totalAmount, 0)}</div>
-                          <div className="summary-stat-label">Your Total Amount</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Detailed Booking List */}
-                    <div className="bookings-section">
-                      <h4 className="section-title">Your Booking Details ({selectedMatch.totalPositions} of {selectedMatch.totalPositionsBookedFromAllUsers || 0} total positions booked)</h4>
-                      <div>
-                        {selectedMatch.bookings.map((booking, index) => (
-                          <div key={booking._id} className="booking-card">
-                            <div className="booking-header">
-                              <h5 className="booking-number">Booking #{index + 1}</h5>
-                              <span className="booking-date">
-                                {formatDate(booking.createdAt)}
-                              </span>
-                            </div>
-
-                            <div className="booking-details">
-                              <div className="booking-detail">
-                                <div className="booking-detail-label">Amount</div>
-                                <div className="booking-detail-value">₹{booking.totalAmount}</div>
-                              </div>
-                              <div className="booking-detail">
-                                <div className="booking-detail-label">Status</div>
-                                <div className="booking-detail-value">{booking.status}</div>
-                              </div>
-                            </div>
-
-                            {/* Selected Positions */}
-                            <div className="positions-section">
-                              <p className="positions-title">Selected Positions</p>
-                              <div>
-                                {booking.playerIndex && booking.playerIndex.length > 0 ? (
-                                  // Use playerIndex to show proper team and position format
-                                  booking.playerIndex.map((pIdx, idx) => {
-                                    let teamNumber, positionLetter;
-                                    
-                                    // Debug logging
-                                    console.log(`[Ongoing] Processing playerIndex ${pIdx}, slotType: ${booking.slotType}, gameMode: ${booking.slot?.gameMode}`);
-                                    
-                                    // Use gameMode from slot object (more reliable than slotType)
-                                    const gameMode = booking.slot?.gameMode;
-                                    console.log(`[Ongoing] Using gameMode: ${gameMode}`);
-                                    
-                                    // Determine team and position based on game mode
-                                    if (gameMode === 'Solo' || gameMode === 'solo') {
-                                      // Solo: 1 = Team 1, 2 = Team 2, 3 = Team 3, etc.
-                                      teamNumber = pIdx;
-                                      positionLetter = 'A';
-                                    } else if (gameMode === 'Duo' || gameMode === 'duo') {
-                                      // Duo: 1,2 = Team 1, 3,4 = Team 2, 5,6 = Team 3, etc.
-                                      teamNumber = Math.ceil(pIdx / 2);
-                                      positionLetter = (pIdx % 2 === 1) ? 'A' : 'B';
-                                    } else if (gameMode === 'Squad' || gameMode === 'squad') {
-                                      // Squad: 1,2,3,4 = Team 1, 5,6,7,8 = Team 2, 9,10,11,12 = Team 3, etc.
-                                      teamNumber = Math.ceil(pIdx / 4);
-                                      const posInTeam = ((pIdx - 1) % 4) + 1;
-                                      const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
-                                      positionLetter = posMap[posInTeam];
-                                    } else {
-                                      // Fallback for other modes - treat as squad
-                                      teamNumber = Math.ceil(pIdx / 4);
-                                      const posInTeam = ((pIdx - 1) % 4) + 1;
-                                      const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
-                                      positionLetter = posMap[posInTeam];
-                                    }
-                                    
-                                    console.log(`[Ongoing] Result: pIdx=${pIdx} -> Team-${teamNumber} ${positionLetter}`);
-                                    
-                                    return (
-                                      <div key={idx} className="position-item">
-                                        <span className="position-badge">Team-{teamNumber} {positionLetter}</span>
-                                      </div>
-                                    );
-                                  })
-                                ) : (
-                                  // Fallback to original display if playerIndex not available
-                                  Object.entries(booking.selectedPositions).map(([team, positions]) => (
-                                    <div key={team} className="team-positions">
-                                      <span className="team-name">{team.toUpperCase()}:</span>
-                                      {positions.map((pos, idx) => (
-                                        <span key={idx} className="position-badge">{pos}</span>
-                                      ))}
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Player Names */}
-                            <div className="players-section">
-                              <p className="players-title">Player Names</p>
-                              <div className="player-names">
-                                {Object.entries(booking.playerNames).map(([position, name]) => (
-                                  <div key={position} className="player-item">
-                                    <span className="player-position">{position}:</span>
-                                    <span className="player-name">{name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="summary-stat">
+                    <div className="summary-stat-value">{selectedMatch.totalPositionsBookedFromAllUsers || 0}</div>
+                    <div className="summary-stat-label">Total Positions Booked (All Users)</div>
                   </div>
-
-                  <div className="modal-footer">
-                    <button 
-                      onClick={closeModal}
-                      className="close-button"
-                    >
-                      Close
-                    </button>
+                  <div className="summary-stat">
+                    <div className="summary-stat-value">₹{selectedMatch.bookings.reduce((sum, b) => sum + b.totalAmount, 0)}</div>
+                    <div className="summary-stat-label">Your Total Amount</div>
                   </div>
                 </div>
               </div>
-            )}
 
-            <Footer />
-        </>
-    )
+              {/* Detailed Booking List */}
+              <div className="bookings-section">
+                <h4 className="section-title">Your Booking Details ({selectedMatch.totalPositions} of {selectedMatch.totalPositionsBookedFromAllUsers || 0} total positions booked)</h4>
+                <div>
+                  {selectedMatch.bookings.map((booking, index) => (
+                    <div key={booking._id} className="booking-card">
+                      <div className="booking-header">
+                        <h5 className="booking-number">Booking #{index + 1}</h5>
+                        <span className="booking-date">
+                          {formatDate(booking.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="booking-details">
+                        <div className="booking-detail">
+                          <div className="booking-detail-label">Amount</div>
+                          <div className="booking-detail-value">₹{booking.totalAmount}</div>
+                        </div>
+                        <div className="booking-detail">
+                          <div className="booking-detail-label">Status</div>
+                          <div className="booking-detail-value">{booking.status}</div>
+                        </div>
+                      </div>
+
+                      {/* Selected Positions */}
+                      <div className="positions-section">
+                        <p className="positions-title">Selected Positions</p>
+                        <div>
+                          {booking.playerIndex && booking.playerIndex.length > 0 ? (
+                            // Use playerIndex to show proper team and position format
+                            booking.playerIndex.map((pIdx, idx) => {
+                              let teamNumber, positionLetter;
+
+                              // Debug logging
+                              console.log(`[Ongoing] Processing playerIndex ${pIdx}, slotType: ${booking.slotType}, gameMode: ${booking.slot?.gameMode}`);
+
+                              // Use gameMode from slot object (more reliable than slotType)
+                              const gameMode = booking.slot?.gameMode;
+                              console.log(`[Ongoing] Using gameMode: ${gameMode}`);
+
+                              // Determine team and position based on game mode
+                              if (gameMode === 'Solo' || gameMode === 'solo') {
+                                // Solo: 1 = Team 1, 2 = Team 2, 3 = Team 3, etc.
+                                teamNumber = pIdx;
+                                positionLetter = 'A';
+                              } else if (gameMode === 'Duo' || gameMode === 'duo') {
+                                // Duo: 1,2 = Team 1, 3,4 = Team 2, 5,6 = Team 3, etc.
+                                teamNumber = Math.ceil(pIdx / 2);
+                                positionLetter = (pIdx % 2 === 1) ? 'A' : 'B';
+                              } else if (gameMode === 'Squad' || gameMode === 'squad') {
+                                // Squad: 1,2,3,4 = Team 1, 5,6,7,8 = Team 2, 9,10,11,12 = Team 3, etc.
+                                teamNumber = Math.ceil(pIdx / 4);
+                                const posInTeam = ((pIdx - 1) % 4) + 1;
+                                const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                                positionLetter = posMap[posInTeam];
+                              } else {
+                                // Fallback for other modes - treat as squad
+                                teamNumber = Math.ceil(pIdx / 4);
+                                const posInTeam = ((pIdx - 1) % 4) + 1;
+                                const posMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+                                positionLetter = posMap[posInTeam];
+                              }
+
+                              console.log(`[Ongoing] Result: pIdx=${pIdx} -> Team-${teamNumber} ${positionLetter}`);
+
+                              return (
+                                <div key={idx} className="position-item">
+                                  <span className="position-badge">Team-{teamNumber} {positionLetter}</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            // Fallback to original display if playerIndex not available
+                            Object.entries(booking.selectedPositions).map(([team, positions]) => (
+                              <div key={team} className="team-positions">
+                                <span className="team-name">{team.toUpperCase()}:</span>
+                                {positions.map((pos, idx) => (
+                                  <span key={idx} className="position-badge">{pos}</span>
+                                ))}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Player Names */}
+                      <div className="players-section">
+                        <p className="players-title">Player Names</p>
+                        <div className="player-names">
+                          {Object.entries(booking.playerNames).map(([position, name]) => (
+                            <div key={position} className="player-item">
+                              <span className="player-position">{position}:</span>
+                              <span className="player-name">{name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                onClick={closeModal}
+                className="close-button"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </>
+  )
 }
 
 export default Ongoing

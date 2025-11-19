@@ -120,6 +120,8 @@ const Wallets = () => {
     const [addAmount, setAddAmount] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [upiId, setUpiId] = useState('');
+    const [withdrawalType, setWithdrawalType] = useState<'upi' | 'redeem'>('upi');
+    const [email, setEmail] = useState('');
     // Remove accountHolderName, use userId for withdrawal
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -620,9 +622,22 @@ const Wallets = () => {
 
         // No minimum withdrawal amount restriction
 
-        if (!upiId) {
-            setMessage('Please enter UPI ID');
-            return;
+        if (withdrawalType === 'upi') {
+            if (!upiId) {
+                setMessage('Please enter UPI ID');
+                return;
+            }
+        } else {
+            if (!email || !email.trim()) {
+                setMessage('Please enter email address');
+                return;
+            }
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email.trim())) {
+                setMessage('Please enter a valid email address');
+                return;
+            }
         }
 
         // if (parseFloat(withdrawAmount) > totalEarnings) {
@@ -649,17 +664,30 @@ const Wallets = () => {
                 socket = io(import.meta.env.VITE_API_URL);
                 socket.emit('join', userId);
             }
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/wallet/tranzupi/withdraw`, {
+            // Choose endpoint based on withdrawal type
+            const endpoint = withdrawalType === 'upi' 
+                ? `${import.meta.env.VITE_API_URL}/api/wallet/tranzupi/withdraw`
+                : `${import.meta.env.VITE_API_URL}/api/wallet/redeem-code/withdraw`;
+            
+            const requestBody = withdrawalType === 'upi'
+                ? {
+                    amount: parseFloat(withdrawAmount),
+                    upi_id: upiId,
+                    userId: userId
+                }
+                : {
+                    amount: parseFloat(withdrawAmount),
+                    userId: userId,
+                    email: email.trim()
+                };
+            
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    amount: parseFloat(withdrawAmount),
-                    upi_id: upiId,
-                    userId: userId
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await response.json();
@@ -674,6 +702,8 @@ const Wallets = () => {
                     setShowWithdrawModal(false);
                     setWithdrawAmount('');
                     setUpiId('');
+                    setEmail('');
+                    setWithdrawalType('upi');
                     // No need to reset accountHolderName
                     // Refresh transaction history to show the pending withdrawal
                     fetchTransactionHistory();
@@ -688,6 +718,8 @@ const Wallets = () => {
                     setShowWithdrawModal(false);
                     setWithdrawAmount('');
                     setUpiId('');
+                    setEmail('');
+                    setWithdrawalType('upi');
                     // No need to reset accountHolderName
                 }
             } else {
@@ -804,13 +836,25 @@ const Wallets = () => {
                 )}
                 {/* Withdraw Money Modal */}
                 {showWithdrawModal && (
-                    <div className="modal-overlay" onClick={() => setShowWithdrawModal(false)}>
+                    <div className="modal-overlay" onClick={() => {
+                        setShowWithdrawModal(false);
+                        setWithdrawalType('upi');
+                        setWithdrawAmount('');
+                        setUpiId('');
+                        setEmail('');
+                    }}>
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
-                                <h3>Withdraw Money via TranzUPI</h3>
+                                <h3>WITHDRAW MONEY</h3>
                                 <button
                                     className="close-btn"
-                                    onClick={() => setShowWithdrawModal(false)}
+                                    onClick={() => {
+                                        setShowWithdrawModal(false);
+                                        setWithdrawalType('upi');
+                                        setWithdrawAmount('');
+                                        setUpiId('');
+                                        setEmail('');
+                                    }}
                                 >
                                     ×
                                 </button>
@@ -824,10 +868,31 @@ const Wallets = () => {
                                 )}
                                 {/* Dynamic runtime message (errors or additional info) */}
                                 {message && (
-                                    <div className={`message-alert ${message.includes('❌') ? 'error' : 'success'}`}>
+                                    <div className={`message-alert ${message.includes('❌') ? 'error' : 'success'}`} style={{ whiteSpace: 'pre-line' }}>
                                         {message}
                                     </div>
                                 )}
+                                
+                                {/* Withdrawal Type Selection Buttons */}
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                                    <button
+                                        type="button"
+                                        className={`btn ${withdrawalType === 'upi' ? 'orange' : 'secondary'}`}
+                                        onClick={() => setWithdrawalType('upi')}
+                                        style={{ flex: 1 }}
+                                    >
+                                        UPI
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`btn ${withdrawalType === 'redeem' ? 'orange' : 'secondary'}`}
+                                        onClick={() => setWithdrawalType('redeem')}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Redeem Code
+                                    </button>
+                                </div>
+
                                 <div className="form-group">
                                     <label>Amount (INR)</label>
                                     <input
@@ -838,23 +903,38 @@ const Wallets = () => {
                                         max={totalEarnings}
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label>UPI ID</label>
-                                    <input
-                                        type="text"
-                                        value={upiId}
-                                        onChange={(e) => setUpiId(e.target.value)}
-                                        placeholder="Enter UPI ID (e.g., user@paytm)"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Account Holder Name</label>
-                                    <input
-                                        type="text"
-                                        // Remove accountHolderName input field from UI
-                                        placeholder="Enter account holder name"
-                                    />
-                                </div>
+                                
+                                {withdrawalType === 'upi' ? (
+                                    <>
+                                        <div className="form-group">
+                                            <label>UPI ID</label>
+                                            <input
+                                                type="text"
+                                                value={upiId}
+                                                onChange={(e) => setUpiId(e.target.value)}
+                                                placeholder="Enter UPI ID (e.g., user@paytm)"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Account Holder Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter account holder name"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="form-group">
+                                        <label>Email</label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="Enter your email address"
+                                        />
+                                    </div>
+                                )}
+                                
                                 <div className="modal-actions">
                                     <button
                                         className="btn orange"
@@ -865,7 +945,13 @@ const Wallets = () => {
                                     </button>
                                     <button
                                         className="btn secondary"
-                                        onClick={() => setShowWithdrawModal(false)}
+                                        onClick={() => {
+                                            setShowWithdrawModal(false);
+                                            setWithdrawalType('upi');
+                                            setWithdrawAmount('');
+                                            setUpiId('');
+                                            setEmail('');
+                                        }}
                                     >
                                         Cancel
                                     </button>

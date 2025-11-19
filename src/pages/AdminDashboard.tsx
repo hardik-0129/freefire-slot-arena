@@ -269,6 +269,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState(section || 'dashboard');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
   // Update activeSection when section prop changes
   useEffect(() => {
@@ -763,6 +764,13 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
   const [loadingGameModes, setLoadingGameModes] = useState(false);
 
   // Banner management state
+  interface BannerImage {
+    url: string;
+    title: string;
+    position: number;
+    _id?: string;
+  }
+
   type BannerState = {
     _id?: string;
     title: string;
@@ -771,6 +779,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
     buttonLink: string;
     backgroundImage: string;
     bannerImages: string[];
+    imageGallery?: BannerImage[];
   };
 
   const [bannerData, setBannerData] = useState<BannerState>({
@@ -1115,6 +1124,51 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
     }
   };
 
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this booking? The entry fee will be refunded to the user\'s wallet.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Booking deleted successfully. ₹${data.refundAmount} refunded to ${data.userEmail || 'user'}.`,
+        });
+        // Refresh bookings
+        fetchSlotBookings();
+        // Refresh user bookings if modal is open
+        if (selectedUserForBookings) {
+          fetchUserBookings(selectedUserForBookings._id);
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: data.msg || data.error || 'Failed to delete booking',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: 'An error occurred while deleting the booking',
+      });
+    }
+  };
+
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
@@ -1351,6 +1405,24 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
 
       if (response.ok) {
         const data = await response.json();
+        // Handle imageGallery with position
+        let imageGallery: BannerImage[] = [];
+        if (data.imageGallery && Array.isArray(data.imageGallery)) {
+          imageGallery = data.imageGallery.map((img: any) => ({
+            url: img.url || img,
+            title: img.title || '',
+            position: img.position || 0,
+            _id: img._id
+          })).sort((a: BannerImage, b: BannerImage) => a.position - b.position);
+        } else if (data.bannerImages && Array.isArray(data.bannerImages)) {
+          // Convert old bannerImages format to imageGallery format
+          imageGallery = data.bannerImages.map((img: string, idx: number) => ({
+            url: img,
+            title: '',
+            position: idx + 1
+          }));
+        }
+        
         setBannerData({
           _id: data._id,
           title: data.title,
@@ -1358,7 +1430,8 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
           buttonText: data.buttonText,
           buttonLink: data.buttonLink,
           backgroundImage: data.backgroundImage,
-          bannerImages: data.bannerImages || []
+          bannerImages: data.bannerImages || [],
+          imageGallery: imageGallery
         } as any);
       }
     } catch (error) {
@@ -1593,6 +1666,81 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle drag and drop for banner images
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (dropIndex: number) => {
+    if (draggedIndex === null || draggedIndex === dropIndex || !bannerData.imageGallery) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newImageGallery = [...bannerData.imageGallery];
+    const draggedItem = newImageGallery[draggedIndex];
+    
+    // Remove the dragged item from its current position
+    newImageGallery.splice(draggedIndex, 1);
+    // Insert at new position
+    newImageGallery.splice(dropIndex, 0, draggedItem);
+    
+    // Update positions based on new order (1, 2, 3, etc.)
+    // Preserve all existing fields including _id
+    const updatedGallery = newImageGallery.map((img, idx) => ({
+      ...img,
+      position: idx + 1
+    }));
+
+    // Update local state
+    setBannerData({
+      ...bannerData,
+      imageGallery: updatedGallery
+    });
+
+    // Save to backend - Only update positions, not other fields
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/banner/admin/update-positions`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          imageGallery: updatedGallery
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Banner positions updated! Position 1 will show first.",
+        });
+        // Refresh banner data to ensure order is correct
+        await fetchBannerData();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.msg || 'Failed to update banner positions');
+      }
+    } catch (error) {
+      console.error('Error updating banner positions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update banner positions",
+        variant: "destructive",
+      });
+      // Revert on error
+      fetchBannerData();
+    }
+
+    setDraggedIndex(null);
   };
 
   // Remove individual banner image
@@ -2798,29 +2946,54 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                 {/* <p className="text-gray-300"><strong className="text-white">Title:</strong> {sanitizeText(bannerData.title)}</p> */}
                 {/* <p className="text-gray-300"><strong className="text-white">Subtitle:</strong> {bannerData.subtitle}</p> */}
                 {/* Status removed by request */}
-                {bannerData.bannerImages && bannerData.bannerImages.length > 0 && (
+                {(bannerData.imageGallery && bannerData.imageGallery.length > 0) || (bannerData.bannerImages && bannerData.bannerImages.length > 0) ? (
                   <div>
-                    <p className="mb-2 text-white"><strong>Banner Images ({bannerData.bannerImages.length}):</strong></p>
+                    <p className="mb-2 text-white">
+                      <strong>Banner Images ({(bannerData.imageGallery || []).length || bannerData.bannerImages.length}):</strong>
+                      <span className="text-sm text-gray-400 ml-2">(Drag to reorder - Position 1 shows first)</span>
+                    </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {bannerData.bannerImages.map((image, index) => (
-                        <div key={index} className="relative group">
-                        <img
-                            src={image}
-                          alt={`Banner ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
-                        />
+                      {(bannerData.imageGallery && bannerData.imageGallery.length > 0
+                        ? bannerData.imageGallery.sort((a, b) => a.position - b.position)
+                        : bannerData.bannerImages.map((url, idx) => ({ url, title: '', position: idx + 1 }))
+                      ).map((image: BannerImage, index: number) => (
+                        <div 
+                          key={image._id || index} 
+                          className={`relative group cursor-move ${draggedIndex === index ? 'opacity-50' : ''}`}
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(index)}
+                        >
+                          <img
+                            src={image.url}
+                            alt={`Banner Position ${image.position}`}
+                            className="w-full h-32 object-cover rounded-lg border border-[#2A2A2A]"
+                            draggable={false}
+                          />
+                          <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            Position: {image.position}
+                          </div>
                           <button
-                            className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                            className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-10"
                             title="Delete image"
-                            onClick={() => handleRemoveBannerImage(bannerData._id as any, toRelativeUploadsPath(image as any))}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveBannerImage(bannerData._id as any, toRelativeUploadsPath(image.url as any));
+                            }}
                           >
                             Delete
                           </button>
+                          <div className="absolute inset-0 border-2 border-dashed border-blue-500 opacity-0 group-hover:opacity-100 rounded-lg pointer-events-none transition">
+                            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                              Drag to reorder
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           )}
@@ -2918,13 +3091,11 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
   const [loadingUserTransactions, setLoadingUserTransactions] = useState(false);
 
 
-  const openUserBookings = async (user: any) => {
+  const fetchUserBookings = async (userId: string) => {
     try {
-      setSelectedUserForBookings(user);
-      setShowUserBookingsModal(true);
       setLoadingUserBookings(true);
       const token = localStorage.getItem('adminToken');
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/user/${user._id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/slots/user/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch user bookings');
@@ -2938,6 +3109,12 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
     } finally {
       setLoadingUserBookings(false);
     }
+  };
+
+  const openUserBookings = async (user: any) => {
+    setSelectedUserForBookings(user);
+    setShowUserBookingsModal(true);
+    await fetchUserBookings(user._id);
   };
 
   const openUserTransactions = async (user: any) => {
@@ -3349,7 +3526,13 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                 type="text"
                 value={usersEmailSearch}
                 onChange={(e) => setUsersEmailSearch(e.target.value)}
-                placeholder="Search by email"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    setUsersPage(1); // Reset to first page when searching
+                    fetchUsers();
+                  }
+                }}
+                placeholder="Search by email (Press Enter to search)"
                 className="w-full bg-[#222] border border-[#333] text-white rounded px-3 py-2 pr-10"
                 disabled={isSearchingUsers}
               />
@@ -3385,8 +3568,8 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                   <th className="text-left p-3 text-white">Email</th>
                   <th className="text-left p-3 text-white">Phone</th>
                   <th className="text-left p-3 text-white">User ID</th>
-                  <th className="text-left p-3 text-white">Free Fire Username</th>
-                  <th className="text-left p-3 text-white">Total Balance</th>
+                  <th className="text-left p-3 text-white">F F Username</th>
+                  <th className="text-left p-3 text-white">Balance</th>
                   <th className="text-left p-3 text-white">Free Pass</th>
                   <th className="text-left p-3 text-white">Joined</th>
                   <th className="text-right p-3 text-white">Actions</th>
@@ -3401,7 +3584,13 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                         {user.email}
                       </div>
                     </td>
-                    <td className="p-3 text-white">{user.phone}</td>
+                    <td className="p-3 text-white">
+                      {user.phone ? (() => {
+                        // Extract only digits and limit to 10 digits
+                        const phoneDigits = String(user.phone).replace(/\D/g, '').slice(0, 12);
+                        return phoneDigits;
+                      })() : '-'}
+                    </td>
                     <td className="p-3">
                       <span className="bg-[#2A2A2A] px-2 py-1 rounded text-cyan-300 font-mono">
                         {(user.referCode || user.userId || user.referralCode || user.refCode || user._id) as any}
@@ -3409,7 +3598,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                     </td>
                     <td className="p-3">
                       <span className="bg-[#2A2A2A] px-2 py-1 rounded text-yellow-400 font-mono">
-                        {user.freeFireUsername}
+                        {user.freeFireUsername ? String(user.freeFireUsername).slice(0, 12) : '-'}
                       </span>
                     </td>
                     <td className="p-3">
@@ -4055,6 +4244,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                       <th className="text-right px-4 py-3 text-white">Entry Fee</th>
                       <th className="text-right px-4 py-3 text-white">Total Amount</th>
                       <th className="text-left px-4 py-3 text-white">Booked On</th>
+                      <th className="text-center px-4 py-3 text-white">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#2A2A2A]">
@@ -4069,6 +4259,19 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                         <td className="px-4 py-3 text-right text-white">₹{b.slot?.entryFee ?? 0}</td>
                         <td className="px-4 py-3 text-right text-white">₹{b.totalAmount ?? 0}</td>
                         <td className="px-4 py-3 text-white whitespace-nowrap">{b.createdAt ? new Date(b.createdAt).toLocaleString('en-IN') : '-'}</td>
+                        <td className="px-4 py-3 text-center">
+                          {b.slot?.status === 'upcoming' && (
+                          <button
+                            onClick={() => handleDeleteBooking(b._id)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete booking and refund entry fee"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -4166,8 +4369,16 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                   <Label htmlFor="editUserPhoneHL" className="text-white">Phone</Label>
                   <Input
                     id="editUserPhoneHL"
+                    type="tel"
+                    maxLength={10}
                     value={editUserData.phone}
-                    onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                      if (value.length <= 10) {
+                        setEditUserData({ ...editUserData, phone: value });
+                      }
+                    }}
+                    placeholder="Enter 10 digit phone number"
                     className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
                   />
                 </div>
@@ -4484,9 +4695,16 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                 <Label htmlFor="newUserPhone" className="text-white">Phone *</Label>
                 <Input
                   id="newUserPhone"
+                  type="tel"
+                  maxLength={10}
                   value={newUserData.phone}
-                  onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
-                  placeholder="Enter phone number"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                    if (value.length <= 10) {
+                      setNewUserData({ ...newUserData, phone: value });
+                    }
+                  }}
+                  placeholder="Enter 10 digit phone number"
                   className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
                 />
               </div>
@@ -5424,7 +5642,7 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>  
             )}
           </div>
         </DialogContent>
@@ -5840,9 +6058,16 @@ const AdminDashboard = ({ hideLayout = false, section }: AdminDashboardProps = {
                 <Label htmlFor="newUserPhone" className="text-white">Phone *</Label>
                 <Input
                   id="newUserPhone"
+                  type="tel"
+                  maxLength={10}
                   value={newUserData.phone}
-                  onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
-                  placeholder="Enter phone number"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                    if (value.length <= 10) {
+                      setNewUserData({ ...newUserData, phone: value });
+                    }
+                  }}
+                  placeholder="Enter 10 digit phone number"
                   className="bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-400"
                 />
               </div>

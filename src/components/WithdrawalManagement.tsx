@@ -27,9 +27,12 @@ interface WithdrawalRequest {
     referredBy?: string | null;
   };
   metadata: {
-    upiId: string;
-    beneficiaryName: string;
+    upiId?: string;
+    beneficiaryName?: string;
+    email?: string;
+    withdrawalType?: string;
   };
+  paymentMethod?: string;
   createdAt: string;
   status: string;
   externalTxnId?: string;
@@ -334,14 +337,31 @@ const WithdrawalManagement: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">UPI ID:</span>
-                      <span className="text-blue-400">{withdrawal.metadata.upiId}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">Beneficiary:</span>
-                      <span className="text-gray-300">{withdrawal.metadata.beneficiaryName}</span>
-                    </div>
+                    {withdrawal.paymentMethod === 'REDEEM_CODE' || withdrawal.metadata?.withdrawalType === 'REDEEM_CODE' ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">Withdrawal Type:</span>
+                          <span className="text-yellow-400">Redeem Code</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">Email:</span>
+                          <span className="text-blue-400">{withdrawal.metadata?.email || 'N/A'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">UPI ID:</span>
+                          <span className="text-blue-400">{withdrawal.metadata?.upiId || 'N/A'}</span>
+                        </div>
+                        {withdrawal.metadata?.beneficiaryName && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">Beneficiary:</span>
+                            <span className="text-gray-300">{withdrawal.metadata.beneficiaryName}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white">Transaction ID:</span>
                       <span className="text-gray-400 text-sm">{withdrawal.transactionId}</span>
@@ -449,7 +469,11 @@ const WithdrawalManagement: React.FC = () => {
               <div className="bg-[#2A2A2A] p-3 rounded">
                 <p className="text-white"><strong>Amount:</strong> ₹{selectedWithdrawal.amount}</p>
                 <p className="text-white"><strong>User:</strong> {selectedWithdrawal.userId.name}</p>
-                <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata.upiId}</p>
+                {selectedWithdrawal.paymentMethod === 'REDEEM_CODE' || selectedWithdrawal.metadata?.withdrawalType === 'REDEEM_CODE' ? (
+                  <p className="text-white"><strong>Email:</strong> {selectedWithdrawal.metadata?.email || 'N/A'}</p>
+                ) : (
+                  <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata?.upiId || 'N/A'}</p>
+                )}
               </div>
             )}
             <div>
@@ -514,18 +538,22 @@ const WithdrawalManagement: React.FC = () => {
               <div className="bg-[#2A2A2A] p-3 rounded">
                 <p className="text-white"><strong>Amount:</strong> ₹{selectedWithdrawal.amount}</p>
                 <p className="text-white"><strong>User:</strong> {selectedWithdrawal.userId.name}</p>
-                <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata.upiId}</p>
+                {selectedWithdrawal.paymentMethod === 'REDEEM_CODE' || selectedWithdrawal.metadata?.withdrawalType === 'REDEEM_CODE' ? (
+                  <p className="text-white"><strong>Email:</strong> {selectedWithdrawal.metadata?.email || 'N/A'}</p>
+                ) : (
+                  <p className="text-white"><strong>UPI ID:</strong> {selectedWithdrawal.metadata?.upiId || 'N/A'}</p>
+                )}
               </div>
             )}
-            {selectedWithdrawal && (
+            {selectedWithdrawal && (selectedWithdrawal.paymentMethod !== 'REDEEM_CODE' && selectedWithdrawal.metadata?.withdrawalType !== 'REDEEM_CODE') && (
               <div className="bg-[#111111] p-3 rounded border border-[#2A2A2A]">
                 <p className="text-sm text-gray-300 mb-2">Scan this UPI QR to pay the user (Google Pay/PhonePe/BHIM).</p>
                 {(() => {
-                  const upi = selectedWithdrawal.metadata.upiId;
+                  const upi = selectedWithdrawal.metadata?.upiId;
                   const name = selectedWithdrawal.userId.name;
                   const amount = Math.max(0, Number(selectedWithdrawal.amount));
                   const note = `Tournament Withdrawal - ${selectedWithdrawal.transactionId}`;
-                  const upiLink = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+                  const upiLink = `upi://pay?pa=${encodeURIComponent(upi || '')}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
                   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(upiLink)}`;
                   return (
                     <div className="flex justify-center items-center">

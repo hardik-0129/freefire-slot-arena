@@ -55,10 +55,6 @@ const Upcoming = () => {
         totalPositions: number;
         totalBookingsFromAllUsers?: number;
         totalPositionsBookedFromAllUsers?: number;
-        notification?: {
-            roomId?: string;
-            matchPassword?: string;
-        };
     } | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [slotStats, setSlotStats] = useState<{ [key: string]: any }>({});
@@ -189,40 +185,12 @@ const Upcoming = () => {
             } catch (error) {
                 console.error('Error fetching total positions booked:', error);
             }
-            // Try to fetch notification data for this match
-            let notificationData = null;
-            try {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    const notificationResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/notification/by-bookings`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (notificationResponse.ok) {
-                        const responseData = await notificationResponse.json();
-                        console.log('Notification data:', responseData);
-                        // Find notification for this match
-                        const matchNotification = responseData.notifications?.find((n: any) => 
-                            n.type === 'match' && n.metadata?.matchId === slotId
-                        );
-                        if (matchNotification) {
-                            console.log('Match notification found:', matchNotification);
-                            notificationData = {
-                                roomId: matchNotification.metadata?.roomId,
-                                matchPassword: matchNotification.metadata?.matchPassword
-                            };
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching notification data:', error);
-            }
 
             setSelectedMatch({
                 slot: booking.slot,
                 bookings: allBookingsForThisSlot,
                 totalPositions: totalUserPositions,
-                totalPositionsBookedFromAllUsers: totalPositionsBookedFromAllUsers,
-                notification: notificationData
+                totalPositionsBookedFromAllUsers: totalPositionsBookedFromAllUsers
             });
             setShowModal(true);
         }
@@ -359,18 +327,18 @@ const Upcoming = () => {
                                     </div>
                                     <div className="match-info-item">
                                         <div className="match-info-label">Special Rules</div>
-                                        <div className="match-info-value">{selectedMatch.slot.specialRules || 'None'}</div>
+                                        <div className="match-info-value">{selectedMatch.slot.specialRules}</div>
                                     </div>
-                                    {selectedMatch.notification?.roomId && (
+                                    {selectedMatch.slot?.roomId && (
                                         <div className="match-info-item">
                                             <div className="match-info-label">Room ID</div>
-                                            <div className="match-info-value">{selectedMatch.notification.roomId}</div>
+                                            <div className="match-info-value">{selectedMatch.slot.roomId}</div>
                                         </div>
                                     )}
-                                    {selectedMatch.notification?.matchPassword && (
+                                    {selectedMatch.slot?.roomPassword && (
                                         <div className="match-info-item">
                                             <div className="match-info-label">Match Password</div>
-                                            <div className="match-info-value">{selectedMatch.notification.matchPassword}</div>
+                                            <div className="match-info-value">{selectedMatch.slot.roomPassword}</div>
                                         </div>
                                     )}
                                     {selectedMatch.slot.streamLink && (

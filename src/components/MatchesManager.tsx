@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import axios from 'axios';
 
 type StatusFilter = 'all' | 'upcoming' | 'live' | 'completed' | 'cancelled';
@@ -144,6 +144,9 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
   const [existingBanners, setExistingBanners] = useState<string[]>([]);
   const [selectedExistingBanner, setSelectedExistingBanner] = useState<string | null>(null);
   const [showBannerGallery, setShowBannerGallery] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     setLocalSlots(slots || []);
@@ -151,6 +154,11 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
     const banners = [...new Set(slots.map((slot: any) => slot.bannerImage).filter(Boolean))];
     setExistingBanners(banners);
   }, [slots]);
+
+  // Reset to page 1 when filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, dateFilter, customDateFrom, customDateTo, searchQuery]);
 
   // Fetch existing banners when modal opens
   useEffect(() => {
@@ -208,6 +216,21 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-white">Active Matches</CardTitle>  
         <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search by match # (e.g., 639)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
+              className="w-[200px] pl-10 bg-[#111] text-white border-[#2A2A2A] placeholder:text-gray-500"
+            />
+          </div>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
             <SelectTrigger className="w-[180px] bg-[#111] text-white border-[#2A2A2A]">
               <SelectValue placeholder="Filter status" />
@@ -687,9 +710,18 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {localSlots
+        {(() => {
+          // Filter and sort all slots first
+          const filteredSlots = localSlots
             .filter((slot: any) => {
+              // Search filter by matchIndex
+              if (searchQuery.trim()) {
+                const query = searchQuery.trim().replace(/^#/, ''); // Remove # if present
+                const matchIndex = slot.matchIndex?.toString() || '';
+                if (!matchIndex.includes(query)) {
+                  return false;
+                }
+              }
               if (statusFilter !== 'all') {
                 const st = (slot.status || 'upcoming').toLowerCase();
                 if (st !== statusFilter) return false;
@@ -737,15 +769,28 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
               }
             })
             .sort((a: any, b: any) => {
-              // For completed list, show latest first; otherwise earliest first
+              // For completed list, show latest first; for 'all' show oldest first (latest last)
               const timeA = new Date(a.matchTime || 0).getTime();
               const timeB = new Date(b.matchTime || 0).getTime();
               if (statusFilter === 'completed') {
                 return timeB - timeA; // latest first
               }
+              if (statusFilter === 'all') {
+                return timeB - timeA; // oldest first (latest last)
+              }
               return timeA - timeB; // upcoming/live by earliest first
-            })
-            .map((slot: any) => (
+            });
+
+          // Calculate pagination
+          const totalPages = Math.ceil(filteredSlots.length / itemsPerPage);
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          const paginatedSlots = filteredSlots.slice(startIndex, endIndex);
+
+          return (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedSlots.map((slot: any) => (
             <div key={slot._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
@@ -982,8 +1027,78 @@ const MatchesManager: React.FC<MatchesManagerProps> = ({
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+                ))}
+              </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#2A2A2A]">
+                  <div className="text-sm text-gray-400">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredSlots.length)} of {filteredSlots.length} matches
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="bg-[#111] text-white border-[#2A2A2A] hover:bg-[#2A2A2A] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // Show first page, last page, current page, and pages around current
+                          if (page === 1 || page === totalPages) return true;
+                          if (Math.abs(page - currentPage) <= 1) return true;
+                          return false;
+                        })
+                        .map((page, index, array) => {
+                          // Add ellipsis if there's a gap
+                          const prevPage = array[index - 1];
+                          const showEllipsis = prevPage && page - prevPage > 1;
+                          
+                          return (
+                            <React.Fragment key={page}>
+                              {showEllipsis && (
+                                <span className="px-2 text-gray-400">...</span>
+                              )}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className={
+                                  currentPage === page
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                    : "bg-[#111] text-white border-[#2A2A2A] hover:bg-[#2A2A2A]"
+                                }
+                              >
+                                {page}
+                              </Button>
+                            </React.Fragment>
+                          );
+                        })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="bg-[#111] text-white border-[#2A2A2A] hover:bg-[#2A2A2A] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </CardContent>
     </Card>
     </>
