@@ -261,10 +261,13 @@ const DashboardAnalytics = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] [&_.recharts-cartesian-axis-tick-value]:fill-white [&_.recharts-cartesian-axis-tick_text]:fill-white [&_text]:fill-white">
+        <CardContent className="overflow-visible">
+          <ChartContainer config={chartConfig} className="h-[300px] [&_.recharts-cartesian-axis-tick-value]:fill-white [&_.recharts-cartesian-axis-tick_text]:fill-white [&_text]:fill-white [&_.recharts-wrapper]:overflow-visible [&_.recharts-surface]:overflow-visible [&_svg]:overflow-visible">
             {chartType === 'bar' ? (
-              <BarChart data={filteredData}>
+              <BarChart 
+                data={filteredData}
+                margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
                 <XAxis 
                   dataKey="date" 
@@ -278,6 +281,7 @@ const DashboardAnalytics = () => {
                   tick={{ fill: '#ffffff', fontSize: 12, stroke: '#ffffff' }}
                   style={{ fill: '#ffffff', color: '#ffffff' }}
                   className="text-white"
+                  domain={['auto', 'auto']}
                 />
                 <ChartTooltip 
                   content={
@@ -321,11 +325,12 @@ const DashboardAnalytics = () => {
                           return (
                             <text
                               x={Number(x) + Number(width) / 2}
-                              y={Number(y) - 5}
+                              y={Math.max(Number(y) - 8, 15)}
                               fill="#ffffff"
                               fontSize={11}
                               textAnchor="middle"
                               dominantBaseline="bottom"
+                              style={{ pointerEvents: 'none' }}
                             >
                               {`${value}${changeText}`}
                             </text>
@@ -368,11 +373,12 @@ const DashboardAnalytics = () => {
                           return (
                             <text
                               x={Number(x) + Number(width) / 2}
-                              y={Number(y) - 5}
+                              y={Math.max(Number(y) - 8, 15)}
                               fill="#ffffff"
                               fontSize={11}
                               textAnchor="middle"
                               dominantBaseline="bottom"
+                              style={{ pointerEvents: 'none' }}
                             >
                               {`${value}${changeText}`}
                             </text>
